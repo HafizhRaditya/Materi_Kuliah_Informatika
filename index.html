@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="id" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Catatan Kuliah Informatika</title>
+  <meta name="description" content="Situs belajar lokal: catatan mata kuliah Informatika, dari Logika Informatika sampai OOP.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Lompat ke konten</a>
+
+  <header class="topbar">
+    <button class="icon-btn menu-btn" id="btnMenu" aria-label="Buka daftar materi" aria-expanded="false">
+      <span class="burger"></span>
+    </button>
+
+    <a class="brand" href="#/">
+      <span class="brand-mark">&lt;/&gt;</span>
+      <span class="brand-text">
+        <strong>Catatan Kuliah</strong>
+        <small>Teknik Informatika · Unsoed</small>
+      </span>
+    </a>
+
+    <div class="search-wrap">
+      <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="11" cy="11" r="7"></circle><line x1="16.5" y1="16.5" x2="21" y2="21"></line>
+      </svg>
+      <input id="search" type="search" placeholder="Cari materi, tag, atau isi…" autocomplete="off" spellcheck="false" aria-label="Cari materi">
+      <kbd class="search-kbd">/</kbd>
+    </div>
+
+    <button class="icon-btn" id="btnTheme" aria-label="Ganti mode terang/gelap" title="Ganti tema">
+      <svg class="ico-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"></circle><path d="M12 2v2.6M12 19.4V22M4.2 4.2l1.9 1.9M17.9 17.9l1.9 1.9M2 12h2.6M19.4 12H22M4.2 19.8l1.9-1.9M17.9 6.1l1.9-1.9"></path></svg>
+      <svg class="ico-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.5A8.5 8.5 0 1 1 9.5 3.5a7 7 0 0 0 11 11z"></path></svg>
+    </button>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar" id="sidebar">
+      <nav id="nav" aria-label="Daftar materi"></nav>
+    </aside>
+    <div class="overlay" id="overlay" hidden></div>
+    <main id="main" tabindex="-1"></main>
+  </div>
+
+  <!-- 1. Wadah data (harus paling atas) -->
+  <script src="js/store.js"></script>
+
+  <!-- 2. File konten. Tambah topik baru? Buat file di /data lalu daftarkan satu baris di sini. -->
+  <script src="data/kategori.js"></script>
+  <script src="data/logika-informatika.js"></script>
+  <script src="data/algoritma-dasar.js"></script>
+  <script src="data/basis-data.js"></script>
+  <script src="data/orkom.js"></script>
+  <script src="data/pti.js"></script>
+  <script src="data/matematika-dasar.js"></script>
+  <script src="data/struktur-data.js"></script>
+  <script src="data/basis-data-2.js"></script>
+  <script src="data/sistem-operasi.js"></script>
+  <script src="data/web-desain.js"></script>
+  <script src="data/matematika-diskrit.js"></script>
+  <script src="data/probstat.js"></script>
+  <script src="data/ecommerce.js"></script>
+  <script src="data/oop.js"></script>
+  <script src="data/kecerdasan-buatan.js"></script>
+  <script src="data/jaringan-komputer.js"></script>
+  <script src="data/pemrograman-web.js"></script>
+  <script src="data/ads.js"></script>
+  <script src="data/aljabar-linear.js"></script>
+  <script src="data/data-mining.js"></script>
+  <script src="data/spk.js"></script>
+  <script src="data/rpl.js"></script>
+  <script src="data/imk.js"></script>
+  <script src="data/multimedia.js"></script>
+  <script src="data/forensik.js"></script>
+  <script src="data/fuzzy.js"></script>
+  <script src="data/pemweb2.js"></script>
+  <script src="data/sisfo.js"></script>
+  <script src="data/ukpl.js"></script>
+  <script src="data/mpi.js"></script>
+  <script src="data/mobile.js"></script>
+  <script src="data/kwu.js"></script>
+  <script src="data/lanjutan.js"></script>
+  <script src="data/glosarium.js"></script>
+
+  <!-- 3. Mesin aplikasi -->
+  <script src="js/highlight.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

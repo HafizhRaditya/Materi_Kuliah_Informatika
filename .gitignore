@@ -1,0 +1,19 @@
+# Hasil kompilasi C/C++
+*.exe
+*.o
+*.obj
+*.out
+
+# Hasil build C# (.NET)
+bin/
+obj/
+
+# Berkas sistem
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Berkas kerja pribadi, bukan bagian situs
+PROMPT-SESI-BARU.md
+percobaanpart2.c
+_cek.html
