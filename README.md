@@ -9,13 +9,17 @@ untuk apa**, **kenapa begitu**, dan **langkah praktiknya bagaimana**.
 
 ---
 
-## Cara menjalankan
+## Cara membuka
 
-**Klik dua kali `index.html`.** Selesai — tidak perlu server, tidak perlu
-internet, tidak perlu memasang apa pun.
+**Versi daring:** https://hafizhraditya.github.io/Materi_Kuliah_Informatika/
+
+**Versi luring:** klik dua kali `index.html`. Selesai — tidak perlu server,
+tidak perlu internet, tidak perlu memasang apa pun.
 
 Situs ini sengaja dibuat tanpa `fetch()` dan tanpa *build step*, supaya
-benar-benar bisa dibuka langsung dari berkas (`file://`).
+benar-benar bisa dibuka langsung dari berkas (`file://`) maupun disajikan
+apa adanya lewat GitHub Pages. Berkas `.nojekyll` di akar mematikan pemrosesan
+Jekyll, yang kalau dibiarkan akan mengabaikan berkas berawalan titik.
 
 ### Pintasan papan ketik
 
