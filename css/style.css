@@ -285,6 +285,13 @@ h1 { font-size: 34px; line-height: 1.2; letter-spacing: -.02em; margin: 0 0 12px
 }
 .sec h2 { font-size: 14px; letter-spacing: .09em; text-transform: uppercase; margin: 0; color: var(--muted); }
 
+/* Teks prosa sesekali memuat untaian panjang tanpa spasi — alamat
+   situs, nama berkas, identifier. Tanpa aturan ini untaian itu
+   tidak bisa dipecah dan mendorong halaman melebar di layar
+   sempit. break-word hanya bekerja saat satu kata pun tidak muat,
+   jadi kata biasa tidak terpengaruh sama sekali. */
+.prose { overflow-wrap: break-word; }
+
 .prose p { margin: 0 0 14px; }
 .prose p:last-child { margin-bottom: 0; }
 .prose ul { margin: 0 0 14px; padding-left: 22px; }
@@ -321,7 +328,14 @@ h1 { font-size: 34px; line-height: 1.2; letter-spacing: -.02em; margin: 0 0 12px
   font-family: var(--mono); font-size: .875em;
   background: var(--surface-2); border: 1px solid var(--border);
   padding: 1px 5px; border-radius: 5px;
-  color: var(--text); white-space: nowrap;
+  color: var(--text);
+  /* pre-wrap, BUKAN nowrap: kode sebaris yang panjang seperti
+     rumus EAC harus boleh pecah di spasi, kalau tidak ia mendorong
+     seluruh halaman melebar di layar sempit. break-word cuma
+     bekerja kalau satu kata pun tidak muat, jadi "contoh.c" tetap
+     utuh. pre-wrap dipilih supaya spasi di dalam kode terjaga. */
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
 }
 
 /* LOGIC SYNTAX — kartu bedah syntax */
@@ -342,12 +356,22 @@ h1 { font-size: 34px; line-height: 1.2; letter-spacing: -.02em; margin: 0 0 12px
 .logic-body p:last-child { margin-bottom: 0; }
 
 /* KODE */
-.lang-tabs { display: flex; gap: 4px; margin-bottom: 10px; }
+/* Satu topik bisa punya belasan bahasa, dan deretan tabnya jauh
+   lebih lebar daripada layar ponsel. Digulir sendiri supaya
+   halamannya tidak ikut melebar; flex-shrink dimatikan supaya
+   tabnya tidak gepeng saat dipaksa muat. */
+.lang-tabs {
+  display: flex; gap: 4px; margin-bottom: 10px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  padding-bottom: 2px;
+}
 .lang-tab {
   padding: 6px 15px; border-radius: 8px;
   background: transparent; color: var(--muted);
   border: 1px solid var(--border);
   font: 600 13px var(--sans); cursor: pointer;
+  flex: 0 0 auto; white-space: nowrap;
 }
 .lang-tab:hover { color: var(--text); background: var(--surface); }
 .lang-tab[aria-selected="true"] {
