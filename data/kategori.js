@@ -173,6 +173,11 @@ KATEGORI.push(
     ringkas: 'Semester 5 — pola pikir wirausaha, gagasan usaha, pemasaran, keuangan, dan rencana bisnis.'
   },
   {
+    id: 'kaminfo',
+    nama: 'Keamanan Informasi',
+    ringkas: 'Di luar berkas kuliah — CIA & risiko, kriptografi terapan, autentikasi & hak akses, serta SMKI.'
+  },
+  {
     id: 'lanjutan',
     nama: 'Materi Pelengkap',
     ringkas: 'Di luar silabus — Big-O, sorting O(n log n), dynamic programming, Dijkstra.'
