@@ -32,7 +32,7 @@ Jekyll, yang kalau dibiarkan akan mengabaikan berkas berawalan titik.
 
 ## Isi saat ini
 
-**163 topik** di **33 mata kuliah**, ditambah glosarium.
+**168 topik** di **34 mata kuliah**, ditambah glosarium.
 
 | Semester | Mata kuliah |
 |----------|-------------|
@@ -40,7 +40,7 @@ Jekyll, yang kalau dibiarkan akan mengabaikan berkas berawalan titik.
 | **2** | Struktur Data · Basis Data II · Sistem Operasi · Web Desain · Matematika Diskrit · Probabilitas dan Statistika · E-Commerce |
 | **3** | Pemrograman Berorientasi Objek · Kecerdasan Buatan · Jaringan Komputer · Pemrograman Web · Analisis & Desain Sistem · Aljabar Linear |
 | **4** | Data Mining · Sistem Pendukung Keputusan · Rekayasa Perangkat Lunak · Interaksi Manusia & Komputer · Teknologi Multimedia · Komputer Forensik · Logika Fuzzy · Pemrograman Web II |
-| **5** | Sistem Informasi · Uji Kualitas Perangkat Lunak · Manajemen Proyek Informatika · Pemrograman Mobile · Kewirausahaan |
+| **5** | Sistem Informasi · Uji Kualitas Perangkat Lunak · Manajemen Proyek Informatika · Audit Sistem Informasi · Pemrograman Mobile · Kewirausahaan |
 | — | Materi Pelengkap (Big-O, sorting O(n log n), dynamic programming, Dijkstra) |
 
 Urutan kategori di sidebar mengikuti urutan kurikulum, bukan abjad.

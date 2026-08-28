@@ -158,6 +158,11 @@ KATEGORI.push(
     ringkas: 'Semester 5 — lingkup, jalur kritis, risiko, earned value, dan Scrum untuk proyek perangkat lunak.'
   },
   {
+    id: 'audit',
+    nama: 'Audit Sistem Informasi',
+    ringkas: 'Semester 5 — risiko audit, pengendalian internal, tata kelola TI, CAAT, dan kelangsungan usaha.'
+  },
+  {
     id: 'mobile',
     nama: 'Pemrograman Mobile',
     ringkas: 'Semester 5 — Kotlin & Jetpack Compose, lalu Dart & Flutter untuk lintas peron.'
