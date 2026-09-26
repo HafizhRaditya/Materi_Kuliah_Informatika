@@ -11,6 +11,10 @@
    berikut angkanya, dan diperiksa ulang dengan kode. Sisanya
    disusun dari pengetahuan umum aljabar linear, dipilih yang
    benar-benar terpakai di Informatika.
+
+   Tiga topik tambahan (kebebasan linear & rank, ortogonalitas &
+   kuadrat terkecil, SVD) disusun dari REFERENSI LUAR --
+   keterangan lengkapnya ada di kepala bagian tambahan di bawah.
    ============================================================ */
 
 TOPICS.push({
@@ -1575,5 +1579,1330 @@ Pertanyaannya satu; jawabannya selalu eigenvector.`,
     'Hitung PageRank untuk graf kecil berisi lima halaman, lalu jelaskan kenapa peringkatnya keluar seperti itu.',
     'Jelaskan fungsi faktor peredam pada PageRank, dan apa yang terjadi tanpanya.',
     'Jelaskan kenapa sifat simetris matriks kovarians penting bagi PCA.'
+  ]
+});
+
+
+/* ------------------------------------------------------------
+   TAMBAHAN dari referensi luar (tiga topik di bawah).
+
+   Pokok bahasan yang ada di RPS Aljabar Linear program studi
+   informatika kampus lain tetapi belum ada di tiga topik di
+   atas: basis dan ruang vektor (kebebasan linear, rank),
+   ruang hasil kali dalam (ortogonalitas, Gram-Schmidt,
+   kuadrat terkecil), dan dekomposisi nilai singular.
+
+   Seluruh perhitungan memakai Python murni -- tanpa numpy --
+   supaya setiap langkah terlihat. Program benar-benar
+   dijalankan dan keluarannya disalin apa adanya. Data
+   penilaian film dan citra di topik SVD adalah data TIRUAN.
+   ------------------------------------------------------------ */
+TOPICS.push({
+  id: 'alin-rank-basis',
+  judul: 'Kebebasan Linear, Basis & Rank',
+  kategori: 'aljabar-linear',
+  tag: ['bebas linear', 'basis', 'dimensi', 'rank', 'eselon baris tereduksi', 'multikolinearitas'],
+  ringkas: 'Berapa arah yang benar-benar baru di sekumpulan vektor — satu angka yang menentukan apakah SPL punya jawaban, dan apakah sebuah kolom data berguna.',
+
+  fungsi: `**Mengukur berapa banyak informasi yang benar-benar berbeda di sekumpulan vektor, dan memakai ukuran itu untuk menjawab pertanyaan tentang SPL dan data.**
+
+Terpakai di:
+
+- **Memeriksa SPL sebelum menyelesaikannya** — rank memberi tahu apakah jawabannya satu, tidak ada, atau tak hingga
+- **Membersihkan data** — kolom yang bisa dihitung dari kolom lain tidak membawa informasi baru, dan membuat model regresi tidak punya jawaban tunggal
+- **Grafika dan robotika** — apakah sekumpulan arah gerak benar-benar bisa menjangkau seluruh ruang
+- **Kompresi dan pembelajaran mesin** — data yang rank-nya rendah bisa diringkas dengan jauh lebih sedikit angka, gagasan yang dilanjutkan di topik SVD
+
+Yang paling penting dipahami: **banyaknya vektor tidak sama dengan banyaknya arah.** Tiga vektor di ruang tiga dimensi bisa saja cuma merentang sebuah bidang, kalau salah satunya bisa dibuat dari dua yang lain.
+
+Dan alat yang menjawab semuanya sama: **eselon baris tereduksi.** Kolom yang punya pivot membawa arah baru; kolom tanpa pivot bisa dibuat dari kolom-kolom sebelumnya — dan koefisiennya tertulis di kolom itu sendiri.`,
+
+  praktik: {
+    tujuan: 'Kamu bisa menghitung eselon baris tereduksi dengan pecahan tepat, membaca rank dan hubungan antar-kolom darinya, memakai rank untuk menentukan banyaknya jawaban SPL, dan menemukan kolom data yang berlebih.',
+    alat: ['Python 3 dengan modul fractions', 'Kertas untuk eliminasi kecil'],
+    langkah: [
+      { judul: 'Susun vektornya sebagai kolom',
+        isi: `Untuk memeriksa v1, v2, v3, letakkan ketiganya sebagai kolom matriks [v1 v2 v3].
+
+Pertanyaan "apakah ada c1, c2, c3 tidak semuanya nol dengan c1v1 + c2v2 + c3v3 = 0" sama dengan pertanyaan "apakah matriks itu punya jawaban taktrivial untuk Ac = 0".` },
+      { judul: 'Hitung eselon baris tereduksi dengan pecahan',
+        isi: `Pakai \`fractions.Fraction\` supaya tidak ada pembulatan. Setiap pivot dijadikan 1, dan semua isi lain di kolom pivot dijadikan 0.
+
+Dengan float, 1/3 × 3 bisa menjadi 0,9999999999999999, dan "apakah ini nol?" menjadi pertanyaan yang tidak punya jawaban pasti.` },
+      { judul: 'Baca rank dari kolom pivot',
+        isi: `Rank = banyaknya kolom pivot. Kalau rank sama dengan banyaknya vektor, semuanya bebas linear.
+
+Kalau lebih kecil, setiap kolom tanpa pivot bisa dibuat dari kolom pivot sebelumnya.` },
+      { judul: 'Baca koefisien hubungannya',
+        isi: `Isi kolom tanpa pivot di eselon baris tereduksi adalah koefisiennya. Kalau kolom 3 berisi −1 dan 2 di baris pivot kolom 1 dan 2, maka v3 = −1·v1 + 2·v2.
+
+Selalu periksa dengan menghitung kombinasinya kembali.` },
+      { judul: 'Bandingkan rank A dengan rank [A|b]',
+        isi: `Untuk SPL Ax = b dengan n peubah:
+
+- rank [A|b] > rank A: tidak ada jawaban
+- rank A = rank [A|b] = n: tepat satu jawaban
+- rank A = rank [A|b] < n: tak hingga, dengan n − rank peubah bebas` },
+      { judul: 'Periksa kolom data sebelum membuat model',
+        isi: `Susun data sebagai matriks — baris adalah pengamatan, kolom adalah fitur — lalu hitung rank-nya.
+
+Kalau rank lebih kecil dari banyaknya kolom, ada kolom yang bisa dihitung dari kolom lain. Buang salah satunya sebelum menjalankan regresi.` }
+    ],
+    cek: [
+      'Kamu bisa menentukan apakah sekumpulan vektor bebas linear dari eselon baris tereduksinya',
+      'Kamu bisa menuliskan vektor yang bergantung sebagai kombinasi vektor lain, dan hasilnya terbukti saat dihitung kembali',
+      'Kamu bisa meramal banyaknya jawaban SPL dari rank sebelum menyelesaikannya',
+      'Kamu memeriksa rank tabel fitur sebelum membuat model regresi'
+    ]
+  },
+
+  judulLogicSyntax: 'Bedah Konsep — kenapa kolom tanpa pivot tidak membawa arah baru',
+
+  konsep: `Topik SPL menyebut tiga kemungkinan jawaban: tepat satu, tidak ada, atau tak hingga. Topik ini menjelaskan **dari mana** tiga kemungkinan itu datang, dengan satu angka: **rank**.
+
+**Kombinasi linear dan kebebasan linear**
+
+Kombinasi linear dari v1, v2, v3 adalah c1v1 + c2v2 + c3v3 untuk bilangan c apa saja. Himpunan semua kombinasi linear itu disebut **rentang** vektor-vektornya.
+
+Vektor-vektor disebut **bebas linear** kalau satu-satunya cara membuat vektor nol adalah semua c = 0. Kalau ada cara lain, salah satunya bisa dibuat dari yang lain — ia **bergantung**, dan tidak menambah apa pun ke rentangnya.
+
+**Contoh: tiga vektor yang cuma merentang bidang**
+
+v1 = [1, 2, 3], v2 = [4, 5, 6], v3 = [7, 8, 9]. Eselon baris tereduksi dari [v1 v2 v3]:
+
+| | kolom 1 | kolom 2 | kolom 3 |
+|---|---|---|---|
+| baris 1 | **1** | 0 | −1 |
+| baris 2 | 0 | **1** | 2 |
+| baris 3 | 0 | 0 | 0 |
+
+Pivot cuma di kolom 1 dan 2, jadi **rank = 2**. Kolom 3 tanpa pivot, dan isinya langsung memberi koefisiennya: **v3 = −1·v1 + 2·v2**. Periksa: −[1, 2, 3] + 2·[4, 5, 6] = [7, 8, 9].
+
+Tiga vektor di ruang tiga dimensi, tetapi rentangnya cuma sebuah **bidang**. v3 tidak membawa arah baru.
+
+Ganti v3 dengan [7, 8, 10] — beda satu angka — dan pivotnya ada di ketiga kolom. Rank 3, bebas linear, dan ketiganya menjadi **basis** R³: setiap vektor di ruang tiga dimensi bisa dibuat dari ketiganya dengan tepat satu cara.
+
+**Basis, dimensi, dan koordinat**
+
+**Basis** adalah himpunan vektor yang bebas linear dan merentang seluruh ruang. **Dimensi** adalah banyaknya vektor di basis — dan setiap basis dari ruang yang sama punya banyak vektor yang sama.
+
+Koordinat selalu relatif terhadap basis. x = [5, 1] dalam basis biasa. Terhadap basis b1 = [1, 1], b2 = [1, −1], koordinatnya **(3, 2)**, karena 3·[1, 1] + 2·[1, −1] = [5, 1]. Vektornya sama; angkanya berbeda karena "penggarisnya" berbeda.
+
+Ini bukan sekadar permainan notasi. Kompresi JPEG di Teknologi Multimedia menyimpan blok citra dalam **basis kosinus**, bukan basis piksel — karena di basis itu kebanyakan koordinatnya hampir nol dan bisa dibuang.
+
+**Rank menentukan banyaknya jawaban SPL**
+
+Untuk Ax = b dengan tiga peubah:
+
+| Kasus | rank A | rank [A∣b] | Jawaban |
+|---|---|---|---|
+| rank penuh | 3 | 3 | tepat satu |
+| rank 2, b sejalan | 2 | 2 | tak hingga, 1 peubah bebas |
+| rank 2, b menyimpang | 2 | 3 | **tidak ada** |
+
+Ketiga baris dibaca dengan cara yang sama:
+
+- **rank [A∣b] > rank A**: menambahkan b menambah arah baru. b tidak bisa dibuat dari kolom-kolom A, jadi tidak ada x yang memenuhi Ax = b.
+- **rank = banyaknya peubah**: setiap peubah "dikunci" satu pivot. Jawabannya tunggal.
+- **rank < banyaknya peubah**: peubah tanpa pivot boleh diberi nilai apa saja, dan peubah lain menyesuaikan. Jawabannya tak hingga.
+
+Ini aturan yang di buku teks disebut teorema Rouché–Capelli. Kasus proyek kalori di topik SPL adalah baris pertama: tiga menu, tiga persamaan, rank penuh, satu kombinasi.
+
+**Kolom data yang berlebih**
+
+Tabel nilai enam mahasiswa dengan kolom tugas, UTS, UAS, dan nilai akhir. Empat kolom, tetapi **rank = 3**. Eselon baris tereduksi menunjuk kolom yang tanpa pivot — nilai akhir — dan sekaligus menuliskan rumusnya:
+
+**akhir = 1/5·tugas + 3/10·UTS + 1/2·UAS**
+
+Kolom akhir tidak membawa informasi apa pun yang belum ada di tiga kolom lain. Kalau keempatnya dipakai bersama sebagai peubah penjelas dalam regresi, persamaan normalnya tidak punya jawaban tunggal — masalah yang di statistika disebut **multikolinearitas**. Pustaka statistik biasanya memperingatkan atau diam-diam membuang satu kolom; lebih baik kamu yang menemukannya lebih dulu.`,
+
+  logicSyntax: [
+    {
+      bahasa: 'python',
+      kode: "from fractions import Fraction as F\n\ndef rref(M):\n    A = [[F(x) for x in baris] for baris in M]\n    m, n = len(A), len(A[0])\n    pivot, r = [], 0\n    for c in range(n):\n        p = next((i for i in range(r, m) if A[i][c] != 0), None)\n        if p is None:\n            continue                  # kolom ini tanpa pivot\n        A[r], A[p] = A[p], A[r]\n        A[r] = [x / A[r][c] for x in A[r]]\n        for i in range(m):\n            if i != r and A[i][c] != 0:\n                k = A[i][c]\n                A[i] = [a - k * b for a, b in zip(A[i], A[r])]\n        pivot.append(c)\n        r += 1\n    return A, pivot",
+      penjelasan: `Eliminasi Gauss-Jordan dalam belasan baris — dan dua keputusan kecil di dalamnya yang menentukan apakah hasilnya bisa dipercaya.
+
+**Kenapa \`Fraction\`.**
+
+Rank adalah soal "apakah sebuah isi tepat nol atau tidak". Dengan float, eliminasi menghasilkan sisa seperti 4,4 × 10⁻¹⁶ di tempat yang seharusnya nol. Apakah itu nol? Tidak ada jawaban pasti — harus memilih ambang, dan ambang yang salah memberi rank yang salah.
+
+Dengan pecahan, tidak ada sisa. Nol adalah nol. Untuk matriks kecil dan angka bulat — kebanyakan soal kuliah dan banyak data bersih — ini cara yang paling jujur. Untuk matriks besar dari data pengukuran, pustaka numerik menghitung rank dengan SVD dan ambang yang dipilih dari ketelitian float, bahan topik SVD.
+
+**Kenapa baris pivot dicari, bukan diambil begitu saja.**
+
+\`next(...)\` mencari baris pertama dari r ke bawah yang isinya di kolom c tidak nol. Kalau tidak ada, kolom itu dilewati: **ia tidak punya pivot**, dan r tidak bertambah. Kolom berikutnya diperiksa di baris yang sama.
+
+Inilah yang membuat kolom tanpa pivot muncul. Kolom itu sudah "habis" dinolkan oleh kolom-kolom sebelumnya — artinya ia sudah bisa dibuat dari mereka.
+
+**Kenapa semua baris dinolkan, bukan cuma yang di bawah.**
+
+Eliminasi Gauss biasa cuma menolkan di bawah pivot, menghasilkan bentuk tangga. Gauss-Jordan menolkan di atas juga (\`for i in range(m)\`, bukan \`range(r + 1, m)\`).
+
+Hasilnya: setiap kolom pivot menjadi kolom satuan — satu angka 1, sisanya 0. Dan kolom tanpa pivot kemudian berisi **tepat** koefisien yang dibutuhkan untuk membuatnya dari kolom-kolom pivot. Tidak perlu substitusi balik.
+
+**Kenapa isi kolom tanpa pivot adalah koefisiennya.**
+
+Operasi baris tidak mengubah hubungan linear antar-kolom. Kalau di matriks akhir kolom 3 = −1·kolom 1 + 2·kolom 2 — dan itu jelas terlihat, karena kolom 1 dan 2 sudah menjadi [1, 0, 0] dan [0, 1, 0] — maka hubungan yang sama berlaku di matriks asli. Jadi v3 = −v1 + 2v2.
+
+Sifat ini yang membuat eselon baris tereduksi berguna jauh melampaui menyelesaikan SPL: ia sekaligus menunjukkan kolom mana yang berlebih dan bagaimana kolom itu dibuat.`
+    },
+    {
+      bahasa: 'python',
+      kode: "for nama, M, b in kasus:\n    rA  = len(rref(M)[1])\n    rAb = len(rref([baris + [bi] for baris, bi in zip(M, b)])[1])\n    if rA < rAb:\n        jawab = 'TIDAK ADA'\n    elif rA == len(M[0]):\n        jawab = 'tepat satu'\n    else:\n        jawab = 'tak hingga (' + str(len(M[0]) - rA) + ' bebas)'\n\n# rank penuh            3  3  tepat satu\n# rank 2, b sejalan     2  2  tak hingga (1 bebas)\n# rank 2, b menyimpang  2  3  TIDAK ADA",
+      penjelasan: `Tiga cabang \`if\` yang menggantikan seluruh tabel kasus SPL — dan setiap cabangnya punya alasan geometris.
+
+**Cabang pertama: rank [A|b] lebih besar.**
+
+Kolom-kolom A merentang sebuah ruang — di contoh ini bidang, karena rank A = 2. SPL Ax = b bertanya: bisakah b dibuat sebagai kombinasi kolom-kolom A?
+
+Kalau menambahkan b sebagai kolom ke-4 menaikkan rank, berarti b membawa arah yang **tidak ada** di bidang itu. b menunjuk keluar bidang. Tidak ada kombinasi kolom A yang bisa menjangkaunya.
+
+Di contoh: b = [6, 15, 24] ada di bidang (rank tetap 2), tetapi b = [6, 15, 25] — beda satu angka — sudah keluar.
+
+**Cabang kedua: rank sama dengan banyaknya peubah.**
+
+Setiap peubah punya pivot, dan setiap pivot "mengunci" nilai peubahnya. Tidak ada kebebasan tersisa. Satu jawaban.
+
+Ini juga syarat matriks persegi punya invers: rank penuh sama dengan determinan tidak nol — yang dibahas di topik vektor dan matriks.
+
+**Cabang ketiga: rank lebih kecil dari banyaknya peubah.**
+
+b bisa dijangkau, tetapi ada peubah tanpa pivot. Peubah itu boleh diberi nilai apa saja, dan peubah pivot menyesuaikan supaya persamaannya tetap terpenuhi. Setiap pilihan memberi jawaban yang berbeda — tak hingga banyaknya.
+
+Banyaknya peubah bebas adalah banyaknya peubah dikurangi rank. Dalam bahasa aljabar linear, itu dimensi **ruang nol** A: ruang semua x yang memenuhi Ax = 0. Setiap jawaban SPL adalah satu jawaban khusus ditambah sembarang anggota ruang nol itu.
+
+**Kenapa ini lebih baik daripada langsung menyelesaikan.**
+
+Kode yang langsung menghitung invers akan gagal di baris kedua dan ketiga dengan pesan "matriks singular" — tanpa memberi tahu apakah masalahnya tidak ada jawaban atau terlalu banyak jawaban. Kode yang lebih buruk, dengan float, bahkan tidak gagal: ia mengembalikan angka-angka raksasa yang tidak berarti.
+
+Memeriksa rank lebih dulu memberi diagnosis yang jelas sebelum perhitungan apa pun yang bisa menyesatkan.`
+    }
+  ],
+
+  kode: { python: String.raw`# ============================================
+# Kebebasan linear, basis, dan rank
+# ============================================
+from fractions import Fraction as F
+
+def rref(M):
+    """Bentuk eselon baris tereduksi dengan pecahan tepat.
+    Mengembalikan (matriks hasil, daftar kolom pivot)."""
+    A = [[F(x) for x in baris] for baris in M]
+    m, n = len(A), len(A[0])
+    pivot, r = [], 0
+    for c in range(n):
+        p = next((i for i in range(r, m) if A[i][c] != 0), None)
+        if p is None:
+            continue                       # kolom ini tidak punya pivot
+        A[r], A[p] = A[p], A[r]
+        A[r] = [x / A[r][c] for x in A[r]]
+        for i in range(m):
+            if i != r and A[i][c] != 0:
+                k = A[i][c]
+                A[i] = [a - k * b for a, b in zip(A[i], A[r])]
+        pivot.append(c)
+        r += 1
+        if r == m:
+            break
+    return A, pivot
+
+def tulis(A, awal="  "):
+    for baris in A:
+        print(awal + "[" + "  ".join(format(str(x), ">5") for x in baris) + " ]")
+
+def kolom(vektor):
+    """Susun vektor-vektor sebagai kolom matriks."""
+    return [list(baris) for baris in zip(*vektor)]
+
+# --------------------------------------------
+# 1. Bebas linear atau tidak?
+# --------------------------------------------
+print("--- apakah v1, v2, v3 bebas linear? ---")
+v1, v2, v3 = [1, 2, 3], [4, 5, 6], [7, 8, 9]
+print("  v1 = " + str(v1) + ", v2 = " + str(v2) + ", v3 = " + str(v3))
+R, piv = rref(kolom([v1, v2, v3]))
+print("\n  eselon baris tereduksi dari [v1 v2 v3]:")
+tulis(R)
+print("\n  kolom pivot : " + str([p + 1 for p in piv]) + "   -> rank = " + str(len(piv)))
+print("  kolom 3 tanpa pivot: v3 bisa dibuat dari v1 dan v2")
+a, b = R[0][2], R[1][2]           # isi kolom 3 = koefisiennya
+print("  koefisiennya dibaca dari kolom 3: v3 = ("
+      + str(a) + ")*v1 + (" + str(b) + ")*v2")
+gabung = [int(a * x + b * y) for x, y in zip(v1, v2)]
+print("  cek: (" + str(a) + ")*v1 + (" + str(b) + ")*v2 = " + str(gabung))
+print()
+print("  Tiga vektor di ruang 3 dimensi, tetapi cuma merentang BIDANG")
+print("  (2 dimensi). v3 tidak membawa arah baru apa pun.")
+
+print("\n  bandingkan dengan w3 = [7, 8, 10]:")
+_, piv = rref(kolom([v1, v2, [7, 8, 10]]))
+print("  kolom pivot : " + str([p + 1 for p in piv]) + "   -> rank = " + str(len(piv))
+      + " -> bebas linear, basis R^3")
+
+# --------------------------------------------
+# 2. Rank menentukan banyaknya jawaban SPL
+# --------------------------------------------
+print("\n--- rank dan banyaknya jawaban SPL Ax = b (3 peubah) ---")
+A = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+kasus = [
+    ("rank penuh", [[1, 2, 3], [4, 5, 6], [7, 8, 10]], [6, 15, 25]),
+    ("rank 2, b sejalan", A, [6, 15, 24]),
+    ("rank 2, b menyimpang", A, [6, 15, 25]),
+]
+print("  kasus                 rank A  rank [A|b]  jawaban")
+for nama, M, b in kasus:
+    rA = len(rref(M)[1])
+    rAb = len(rref([baris + [bi] for baris, bi in zip(M, b)])[1])
+    if rA < rAb:
+        jawab = "TIDAK ADA"
+    elif rA == len(M[0]):
+        jawab = "tepat satu"
+    else:
+        jawab = "tak hingga (" + str(len(M[0]) - rA) + " bebas)"
+    print("  " + format(nama, "<21") + format(rA, ">6") + format(rAb, ">11") + "   " + jawab)
+print()
+print("  rank [A|b] > rank A : b membawa arah yang tidak bisa dibuat")
+print("                        kolom A -> mustahil")
+print("  rank = banyak peubah: setiap peubah 'dikunci' satu pivot")
+print("  rank < banyak peubah: peubah tanpa pivot bebas memilih nilai")
+
+# --------------------------------------------
+# 3. Koordinat terhadap basis lain
+# --------------------------------------------
+print("\n--- koordinat x = [5, 1] terhadap basis b1 = [1, 1], b2 = [1, -1] ---")
+R, _ = rref([[1, 1, 5], [1, -1, 1]])
+c1, c2 = R[0][2], R[1][2]
+print("  selesaikan c1*b1 + c2*b2 = x  ->  c1 = " + str(c1) + ", c2 = " + str(c2))
+print("  cek: " + str(c1) + "*[1, 1] + " + str(c2) + "*[1, -1] = "
+      + str([int(c1 + c2), int(c1 - c2)]))
+print("  Vektor yang sama, angka yang berbeda: koordinat selalu")
+print("  relatif terhadap basis yang dipilih.")
+
+# --------------------------------------------
+# 4. Kolom data yang berlebih
+# --------------------------------------------
+print("\n--- tabel nilai: adakah kolom yang tidak membawa informasi? ---")
+nilai = [  # tugas, uts, uas, akhir = 0.2 tugas + 0.3 uts + 0.5 uas
+    [80, 70, 75], [90, 60, 85], [70, 85, 65],
+    [85, 75, 90], [60, 90, 70], [95, 80, 60],
+]
+data = [[t, u, s, F(2, 10) * t + F(3, 10) * u + F(5, 10) * s] for t, u, s in nilai]
+print("  tugas  uts  uas  akhir")
+for t, u, s, a in data:
+    print("  " + format(t, ">5") + format(u, ">5") + format(s, ">5") + format(float(a), ">7.1f"))
+R, piv = rref(data)
+print("\n  4 kolom, rank = " + str(len(piv)))
+print("  kolom tanpa pivot: " + str([["tugas", "uts", "uas", "akhir"][c]
+                                     for c in range(4) if c not in piv]))
+print("  kolom akhir dibaca dari RREF: "
+      + " + ".join(str(R[i][3]) + "*" + ["tugas", "uts", "uas"][piv[i]] for i in range(3)))
+print()
+print("  Kolom 'akhir' sepenuhnya ditentukan tiga kolom lain. Model")
+print("  regresi yang memakai keempatnya tidak punya jawaban tunggal")
+print("  -- masalah yang di statistika disebut multikolinearitas.")` },
+  output: `--- apakah v1, v2, v3 bebas linear? ---
+  v1 = [1, 2, 3], v2 = [4, 5, 6], v3 = [7, 8, 9]
+
+  eselon baris tereduksi dari [v1 v2 v3]:
+  [    1      0     -1 ]
+  [    0      1      2 ]
+  [    0      0      0 ]
+
+  kolom pivot : [1, 2]   -> rank = 2
+  kolom 3 tanpa pivot: v3 bisa dibuat dari v1 dan v2
+  koefisiennya dibaca dari kolom 3: v3 = (-1)*v1 + (2)*v2
+  cek: (-1)*v1 + (2)*v2 = [7, 8, 9]
+
+  Tiga vektor di ruang 3 dimensi, tetapi cuma merentang BIDANG
+  (2 dimensi). v3 tidak membawa arah baru apa pun.
+
+  bandingkan dengan w3 = [7, 8, 10]:
+  kolom pivot : [1, 2, 3]   -> rank = 3 -> bebas linear, basis R^3
+
+--- rank dan banyaknya jawaban SPL Ax = b (3 peubah) ---
+  kasus                 rank A  rank [A|b]  jawaban
+  rank penuh                3          3   tepat satu
+  rank 2, b sejalan         2          2   tak hingga (1 bebas)
+  rank 2, b menyimpang      2          3   TIDAK ADA
+
+  rank [A|b] > rank A : b membawa arah yang tidak bisa dibuat
+                        kolom A -> mustahil
+  rank = banyak peubah: setiap peubah 'dikunci' satu pivot
+  rank < banyak peubah: peubah tanpa pivot bebas memilih nilai
+
+--- koordinat x = [5, 1] terhadap basis b1 = [1, 1], b2 = [1, -1] ---
+  selesaikan c1*b1 + c2*b2 = x  ->  c1 = 3, c2 = 2
+  cek: 3*[1, 1] + 2*[1, -1] = [5, 1]
+  Vektor yang sama, angka yang berbeda: koordinat selalu
+  relatif terhadap basis yang dipilih.
+
+--- tabel nilai: adakah kolom yang tidak membawa informasi? ---
+  tugas  uts  uas  akhir
+     80   70   75   74.5
+     90   60   85   78.5
+     70   85   65   72.0
+     85   75   90   84.5
+     60   90   70   74.0
+     95   80   60   73.0
+
+  4 kolom, rank = 3
+  kolom tanpa pivot: ['akhir']
+  kolom akhir dibaca dari RREF: 1/5*tugas + 3/10*uts + 1/2*uas
+
+  Kolom 'akhir' sepenuhnya ditentukan tiga kolom lain. Model
+  regresi yang memakai keempatnya tidak punya jawaban tunggal
+  -- masalah yang di statistika disebut multikolinearitas.`,
+
+  kompleksitas: {
+    tabel: [
+      { operasi: 'Eselon baris tereduksi matriks m × n', waktu: 'O(m · n · min(m, n))', memori: 'O(m · n)' },
+      { operasi: 'Rank dari eselon baris', waktu: 'O(1)', memori: 'banyaknya kolom pivot' },
+      { operasi: 'Memeriksa banyaknya jawaban SPL', waktu: 'dua kali eselon baris', memori: 'A dan [A∣b]' },
+      { operasi: 'Pecahan tepat vs float', waktu: 'pecahan bisa jauh lebih lambat', memori: 'pembilang dan penyebut bisa membesar' }
+    ],
+    intuisi: `Eliminasi melakukan paling banyak min(m, n) langkah pivot, dan setiap langkah memperbarui seluruh matriks — itulah O(m · n · min(m, n)), kira-kira n³ untuk matriks persegi, sama dengan eliminasi Gauss di topik SPL.
+
+Baris terakhir adalah pertukaran yang harus disadari. Pecahan memberi jawaban tepat, tetapi pembilang dan penyebutnya bisa tumbuh sangat besar di matriks yang besar, sehingga setiap operasi makin mahal. Untuk soal kuliah dan tabel data kecil, itu tidak terasa. Untuk matriks ribuan baris dari data pengukuran — yang toh tidak pernah tepat — pustaka numerik memakai float dengan ambang toleransi, dan menghitung rank dari nilai singular.`
+  },
+
+  kesalahanUmum: [
+    {
+      salah: 'Menganggap n vektor di ruang n dimensi pasti membentuk basis.',
+      kenapa: 'Vektor-vektor itu harus bebas linear. [1, 2, 3], [4, 5, 6], dan [7, 8, 9] adalah tiga vektor di R³ tetapi cuma merentang sebuah bidang.',
+      benar: 'Hitung rank matriks yang kolomnya vektor-vektor itu, dan pastikan sama dengan n.'
+    },
+    {
+      salah: 'Menghitung rank dengan float lalu memeriksa apakah sebuah isi sama dengan nol.',
+      kenapa: 'Eliminasi dengan float meninggalkan sisa pembulatan seperti 1e-16 di tempat yang seharusnya nol, sehingga rank terhitung lebih besar dari sebenarnya.',
+      benar: 'Pakai pecahan tepat untuk matriks kecil, atau ambang toleransi yang dipilih dari ketelitian float dan besar isi matriks.'
+    },
+    {
+      salah: 'Membaca koefisien hubungan dari kolom tanpa pivot dengan tanda dibalik.',
+      kenapa: 'Isi kolom tanpa pivot di eselon baris tereduksi langsung adalah koefisiennya: kolom berisi −1 dan 2 berarti v3 = −v1 + 2v2. Membalik tanda memberi hubungan yang salah.',
+      benar: 'Baca isinya apa adanya, lalu selalu periksa dengan menghitung kombinasinya kembali.'
+    },
+    {
+      salah: 'Menyimpulkan SPL tidak punya jawaban karena matriksnya singular.',
+      kenapa: 'Matriks singular bisa berarti tidak ada jawaban atau tak hingga jawaban, tergantung apakah b berada di rentang kolom A.',
+      benar: 'Bandingkan rank A dengan rank [A∣b] untuk membedakan kedua kasus.'
+    },
+    {
+      salah: 'Memasukkan semua kolom data ke model regresi tanpa memeriksa ketergantungannya.',
+      kenapa: 'Kolom yang merupakan kombinasi kolom lain, seperti nilai akhir yang dihitung dari tugas, UTS, dan UAS, membuat persamaan normal singular sehingga koefisiennya tidak tunggal.',
+      benar: 'Hitung rank tabel fitur, temukan kolom tanpa pivot, dan buang kolom yang berlebih.'
+    },
+    {
+      salah: 'Menganggap koordinat sebuah vektor adalah sifat vektor itu sendiri.',
+      kenapa: 'Koordinat bergantung pada basis. [5, 1] di basis biasa adalah (3, 2) di basis [1, 1] dan [1, −1].',
+      benar: 'Selalu sebut basisnya saat menulis koordinat, dan ubah basis dengan menyelesaikan SPL.'
+    }
+  ],
+
+  analogi: `Bayangkan kamu menyusun **resep minuman** dari tiga bahan dasar: kopi, susu, dan gula.
+
+**Bebas linear.** Tiga bahan itu bebas linear: tidak ada yang bisa dibuat dari campuran dua yang lain. Kopi tidak bisa dibuat dari susu dan gula. Dengan ketiganya, kamu bisa membuat minuman dengan takaran kopi, susu, dan gula apa pun — tiga "arah" rasa, tiga dimensi.
+
+**Bergantung.** Sekarang temanmu menambahkan bahan keempat: **kopi susu kemasan** — yang isinya sebenarnya satu bagian kopi dan dua bagian susu. Rak bahanmu sekarang punya empat botol, tetapi kamu tidak bisa membuat satu minuman pun yang sebelumnya tidak bisa kamu buat. Kopi susu kemasan bisa dibuat dari kopi dan susu. Empat botol, tetapi tetap tiga dimensi. Rank-nya 3.
+
+Kopi susu kemasan itu adalah kolom tanpa pivot. Dan resepnya — "satu kopi, dua susu" — adalah isi kolom itu di eselon baris tereduksi.
+
+**Basis dan koordinat.** Warung sebelah tidak menjual kopi dan susu terpisah. Mereka punya "kopi hitam kental" dan "kopi susu encer". Dua botol itu tetap bisa membuat semua campuran kopi-dan-susu yang bisa kamu buat — hanya takarannya berbeda. Minuman yang sama; resep yang ditulis dengan angka berbeda karena bahan dasarnya berbeda. Itulah koordinat terhadap basis lain.
+
+**SPL.** Pelanggan memesan minuman dengan rasa tertentu. Kalau rasanya bisa dibuat dari bahan di rak — rank tidak naik saat pesanan ditambahkan — kamu bisa membuatnya. Kalau pelanggan minta **teh**, dan tidak ada teh di rak, tidak ada takaran kopi, susu, dan gula yang bisa membuatnya. Pesanan itu menambah arah baru: rank [A∣b] lebih besar dari rank A.
+
+Dan kalau kamu punya kopi susu kemasan **dan** kopi **dan** susu, satu pesanan bisa dibuat dengan banyak cara — lebih banyak kemasan dan lebih sedikit kopi terpisah, atau sebaliknya. Tak hingga resep untuk minuman yang sama. Itulah peubah bebas.`,
+
+  latihan: [
+    'Tentukan apakah [1, 0, 2], [0, 1, 3], dan [2, 3, 13] bebas linear, dan kalau tidak, tulis hubungannya.',
+    'Hitung eselon baris tereduksi matriks 3 × 4 pilihanmu dengan fungsi rref, lalu periksa hasilnya dengan tangan.',
+    'Beri contoh tiga vektor di R³ yang rank-nya 1, dan jelaskan secara geometris apa yang mereka rentang.',
+    'Tentukan koordinat [7, 3] terhadap basis [2, 1] dan [1, 1].',
+    'Buat SPL tiga peubah yang tidak punya jawaban, lalu tunjukkan dengan rank A dan rank [A∣b].',
+    'Buat SPL tiga peubah dengan tak hingga jawaban, tentukan banyaknya peubah bebas, dan tuliskan dua jawaban berbeda.',
+    'Tambahkan kolom "rata-rata UTS dan UAS" ke tabel nilai di topik ini, lalu tentukan rank tabel baru dan kolom mana yang berlebih.',
+    'Jalankan eliminasi yang sama dengan float untuk matriks [1, 2, 3], [4, 5, 6], [7, 8, 9], lalu tunjukkan isi yang seharusnya nol.',
+    'Jelaskan kenapa matriks persegi punya invers tepat ketika rank-nya penuh.',
+    'Jelaskan dengan kata-katamu sendiri kenapa operasi baris tidak mengubah hubungan linear antar-kolom.'
+  ]
+});
+
+
+TOPICS.push({
+  id: 'alin-ortogonal',
+  judul: 'Ortogonalitas, Gram-Schmidt & Kuadrat Terkecil',
+  kategori: 'aljabar-linear',
+  tag: ['ortogonal', 'proyeksi', 'basis ortonormal', 'Gram-Schmidt', 'kuadrat terkecil', 'persamaan normal', 'QR'],
+  ringkas: 'Titik terdekat selalu dicapai lewat garis tegak lurus — dan dari satu fakta itu lahir regresi linear, basis yang mudah dipakai, dan cara menyelesaikan SPL yang tidak punya jawaban.',
+
+  fungsi: `**Menemukan titik terdekat di sebuah ruang, membangun basis yang vektornya saling tegak lurus, dan memberi jawaban terbaik untuk SPL yang tidak punya jawaban tepat.**
+
+Terpakai di:
+
+- **Regresi dan pencocokan kurva** — garis terbaik melewati data adalah jawaban kuadrat terkecil sebuah SPL yang terlalu banyak persamaannya
+- **Grafika 3D** — memproyeksikan titik ke bidang, membangun sumbu kamera yang saling tegak lurus
+- **Pengolahan sinyal** — dekomposisi ke basis yang saling tegak lurus, seperti basis kosinus di JPEG
+- **Pustaka numerik** — dekomposisi QR, yang dibangun dari gagasan Gram-Schmidt, adalah cara standar menyelesaikan masalah kuadrat terkecil
+
+Yang paling penting dipahami: **sisa dari proyeksi selalu tegak lurus.** Titik terdekat dari b ke sebuah garis atau bidang adalah titik di mana garis penghubungnya tegak lurus garis atau bidang itu. Semua isi topik ini adalah akibat dari satu fakta itu.
+
+Dan satu pelajaran numerik yang terlihat di program: **rumus yang sama bisa tidak sama tahan terhadap pembulatan.** Gram-Schmidt klasik dan termodifikasi setara secara matematis, tetapi yang klasik kehilangan ketegaklurusannya saat vektornya hampir sejajar.`,
+
+  praktik: {
+    tujuan: 'Kamu bisa menghitung proyeksi dan membuktikan sisanya tegak lurus, membangun basis ortonormal dengan Gram-Schmidt termodifikasi, dan menyelesaikan SPL yang terlalu banyak persamaannya dengan kuadrat terkecil.',
+    alat: ['Python 3 dengan modul math', 'Kertas untuk proyeksi dua dimensi'],
+    langkah: [
+      { judul: 'Hitung proyeksi dan sisanya',
+        isi: `Proyeksi b pada arah a: \`(a·b / a·a) a\`. Sisanya: b dikurangi proyeksi.
+
+Hitung hasil kali titik sisa dengan a. Kalau bukan nol (sampai pembulatan), ada yang salah.` },
+      { judul: 'Gambar di bidang',
+        isi: `Untuk b = [3, 4] dan a = [1, 1], gambar b, garis arah a, titik proyeksi [3,5; 3,5], dan sisa [−0,5; 0,5].
+
+Sisa itu adalah garis dari b ke titik terdekat di garis a — dan ia tegak lurus garis a.` },
+      { judul: 'Tulis Gram-Schmidt termodifikasi',
+        isi: `Untuk setiap vektor v, kurangi komponennya di arah setiap q yang sudah ada — dengan koefisien dihitung dari w yang **sudah dikurangi sebagian**, bukan dari v asli. Lalu normalkan.
+
+Perbedaan dengan versi klasik cuma satu kata di satu baris, tetapi menentukan ketahanannya terhadap pembulatan.` },
+      { judul: 'Periksa ketegaklurusan hasilnya',
+        isi: `Hitung QᵀQ — setiap pasangan qᵢ·qⱼ — dan bandingkan dengan matriks identitas. Simpangan terbesarnya adalah ukuran seberapa ortonormal basisnya.
+
+Coba dengan vektor yang hampir sejajar, dan bandingkan versi klasik dengan termodifikasi.` },
+      { judul: 'Susun SPL dari data',
+        isi: `Untuk mencocokkan garis y = c0 + c1·x ke n titik, setiap titik memberi satu persamaan: c0 + c1·xᵢ = yᵢ. Matriks A punya kolom semua-satu dan kolom x.
+
+Dengan n > 2, SPL ini hampir pasti tidak punya jawaban tepat.` },
+      { judul: 'Selesaikan persamaan normal',
+        isi: `Hitung AᵀA (2 × 2) dan Aᵀy (2 × 1), lalu selesaikan AᵀA c = Aᵀy. Untuk dua peubah, Cramer atau invers 2 × 2 cukup.
+
+Periksa: sisa y − Ac harus tegak lurus setiap kolom A.` }
+    ],
+    cek: [
+      'Proyeksi yang kamu hitung punya sisa yang tegak lurus arah proyeksinya',
+      'Basis ortonormal hasil Gram-Schmidt-mu memberi QᵀQ yang dekat dengan identitas',
+      'Kamu bisa menunjukkan bahwa Gram-Schmidt klasik gagal pada vektor yang hampir sejajar',
+      'Garis kuadrat terkecilmu sama dengan hasil regresi di Probabilitas dan Statistika untuk data yang sama'
+    ]
+  },
+
+  judulLogicSyntax: 'Bedah Konsep — kenapa jarak terdekat selalu tegak lurus',
+
+  konsep: `Topik vektor dan matriks memperkenalkan hasil kali titik untuk mengukur kemiripan arah. Topik ini memakainya untuk satu hal lagi: **ketegaklurusan**. Dua vektor ortogonal — tegak lurus — kalau hasil kali titiknya nol.
+
+**Proyeksi: bayangan di sebuah arah**
+
+Proyeksi b pada arah a adalah titik di garis a yang **paling dekat** ke b:
+
+proyeksi = (a·b / a·a) · a
+
+| Arah | Proyeksi b = [3, 4] | Sisa | Sisa · arah |
+|---|---|---|---|
+| a = [4, 0] | [3, 0] | [0, 4] | 0 |
+| c = [1, 1] | [3,5; 3,5] | [−0,5; 0,5] | 0 |
+
+Sisanya — b dikurangi proyeksinya — **selalu** tegak lurus arahnya.
+
+Kenapa titik terdekat harus di situ? Kalau sisanya tidak tegak lurus, menggeser titik sedikit di sepanjang garis akan memperpendek sisa itu — seperti menurunkan kaki segitiga siku-siku. Hanya saat tegak lurus tidak ada lagi arah geser yang memperpendeknya. Itu teorema Pythagoras, dipakai dalam arah sebaliknya.
+
+**Basis ortonormal: basis yang paling mudah dipakai**
+
+Basis ortonormal adalah basis yang vektornya saling tegak lurus dan masing-masing panjangnya 1. Dengan basis seperti itu, koordinat sebuah vektor cuma **hasil kali titiknya** dengan setiap vektor basis — tanpa perlu menyelesaikan SPL seperti di topik rank dan basis.
+
+**Gram-Schmidt: membuat basis ortonormal dari basis apa pun**
+
+Ambil vektor pertama, normalkan. Ambil vektor kedua, buang bagiannya yang searah vektor pertama — itu proyeksi — lalu normalkan sisanya. Ambil vektor ketiga, buang bagiannya yang searah kedua vektor sebelumnya, normalkan. Dan seterusnya.
+
+Dari [1, 1, 0], [1, 0, 1], [0, 1, 1]:
+
+| | Hasil | Panjang |
+|---|---|---|
+| q1 | [0,7071; 0,7071; 0] | 1 |
+| q2 | [0,4082; −0,4082; 0,8165] | 1 |
+| q3 | [−0,5774; 0,5774; 0,5774] | 1 |
+
+Hasil kali titik setiap pasangan sekitar 10⁻¹⁶ — nol sampai ketelitian float.
+
+**Rumus sama, ketahanan berbeda**
+
+Ada dua cara menghitung koefisien pembuangan: dari vektor **asli** v (klasik), atau dari vektor yang **sudah dikurangi sebagian** (termodifikasi). Secara matematis keduanya menghasilkan hal yang sama. Dengan float, tidak:
+
+| e | Galat klasik | Galat termodifikasi |
+|---|---|---|
+| 0,01 | 1,8 × 10⁻¹² | 2,2 × 10⁻¹⁴ |
+| 10⁻⁵ | 4,8 × 10⁻⁸ | 5,9 × 10⁻¹³ |
+| 10⁻⁸ | **5,0 × 10⁻¹** | 7,1 × 10⁻⁹ |
+
+Vektornya [1, e, 0, 0], [1, 0, e, 0], [1, 0, 0, e] — hampir sejajar kalau e kecil. "Galat" adalah simpangan terbesar QᵀQ dari identitas. Galat 0,5 berarti dua "vektor tegak lurus" hasil versi klasik sebenarnya membentuk sudut 60 derajat. Versi termodifikasi juga tidak sempurna — galatnya ikut membesar saat vektornya makin sejajar — tetapi jauh lebih tahan.
+
+**Kuadrat terkecil: jawaban terbaik untuk SPL tanpa jawaban**
+
+Delapan titik data — pengguna serentak dan waktu respons — dan kita ingin garis y = c0 + c1·x. Setiap titik memberi satu persamaan. Delapan persamaan, dua peubah: tidak ada c0, c1 yang memenuhi semuanya.
+
+Dalam bahasa ruang kolom: y tidak berada di rentang kolom A. Jadi yang dicari adalah titik di rentang kolom A yang **paling dekat** ke y — proyeksi y ke ruang kolom A. Dan karena sisanya harus tegak lurus setiap kolom A:
+
+Aᵀ(y − Ac) = 0, yaitu **AᵀA c = Aᵀy**
+
+Itulah **persamaan normal**. Untuk data ini, AᵀA = [[8, 360], [360, 20400]], dan jawabannya **c0 = 31,70, c1 = 1,306**. Sisanya dikali kolom semua-satu memberi 2,8 × 10⁻¹³, dan dikali kolom x memberi 1,6 × 10⁻¹¹ — nol sampai pembulatan.
+
+Garis ini persis sama dengan garis regresi di topik korelasi dan regresi Probabilitas dan Statistika, yang dihitung dengan rumus Sxy/Sxx. Dua mata kuliah, dua rumus, satu garis — karena regresi linear **adalah** proyeksi.`,
+
+  logicSyntax: [
+    {
+      bahasa: 'python',
+      kode: "def gram_schmidt(vs, termodifikasi=False):\n    qs = []\n    for v in vs:\n        w = list(v)\n        for q in qs:\n            # klasik: koefisien dari v ASLI\n            # termodifikasi: dari w yang SUDAH dikurangi\n            k = dot(q, w) if termodifikasi else dot(q, v)\n            w = kurang(w, kali(k, q))\n        qs.append(kali(1 / norma(w), w))\n    return qs\n\n# [1,e,0,0], [1,0,e,0], [1,0,0,e] dengan e = 1e-8:\n#   galat klasik 5.0e-01   termodifikasi 7.1e-09",
+      penjelasan: `Sepuluh baris, dan perbedaan antara hasil yang benar dan hasil yang salah sepenuhnya ada di satu ekspresi bersyarat.
+
+**Apa yang dilakukan setiap putaran dalam.**
+
+w dimulai sebagai salinan v. Untuk setiap q yang sudah jadi, bagian w yang searah q dibuang: \`w − (q·w) q\`. Karena q panjangnya 1, q·w adalah panjang bayangan w pada q — proyeksi dari topik ini, dengan penyebut a·a = 1.
+
+Setelah semua q diproses, w tegak lurus semua q sebelumnya. Dinormalkan, ia menjadi q baru.
+
+**Kenapa klasik dan termodifikasi setara secara matematis.**
+
+Setelah bagian searah q1 dibuang, w tegak lurus q1. Koefisien untuk q2 dari v asli adalah q2·v; dari w, q2·w = q2·(v − (q1·v)q1) = q2·v − (q1·v)(q2·q1). Karena q2 tegak lurus q1, suku terakhir nol, dan keduanya sama.
+
+Kata kuncinya: **karena q2 tegak lurus q1**. Di atas kertas, itu tepat. Dengan float, q2·q1 bukan nol melainkan sekitar 10⁻¹⁶ — atau jauh lebih besar kalau q2 sendiri dihitung dengan galat.
+
+**Kenapa klasik gagal pada vektor yang hampir sejajar.**
+
+Vektor [1, e, 0, 0] dan [1, 0, e, 0] dengan e = 10⁻⁸ hampir sama. Membuang bagian searah dari yang kedua berarti mengurangkan dua bilangan yang hampir sama — pembatalan, sama dengan masalah turunan numerik di Matematika Dasar. Yang tersisa kecil, dan sebagian besar digitnya galat pembulatan.
+
+Versi klasik lalu menghitung koefisien untuk q berikutnya dari v asli, yang **masih** memuat komponen besar di arah q1. Galat kecil di q2 dikalikan komponen besar itu, dan hasilnya galat besar di q3. Galat 0,5 di tabel artinya q2 dan q3 tidak tegak lurus sama sekali.
+
+**Kenapa termodifikasi bertahan.**
+
+Versi termodifikasi menghitung koefisien dari w yang **sudah** dibersihkan dari arah q1. Komponen besar itu sudah dibuang lebih dulu, jadi galat di q2 cuma dikalikan sisa yang kecil. Galatnya tetap tumbuh saat vektornya makin sejajar — 7,1 × 10⁻⁹ di e = 10⁻⁸ — tetapi tidak meledak.
+
+**Pelajaran yang lebih luas.**
+
+Dua algoritme yang setara secara matematis bisa berbeda jauh ketahanannya terhadap pembulatan. Urutan operasi penting. Karena itu pustaka numerik yang serius tidak memakai rumus buku teks apa adanya: dekomposisi QR di pustaka seperti LAPACK memakai refleksi Householder, yang lebih tahan lagi daripada kedua versi Gram-Schmidt.`
+    },
+    {
+      bahasa: 'python',
+      kode: "A   = [[1, x] for x in xs]                    # 8 x 2\nAtA = [[dot(kolom_i, kolom_j) ...]]            # [[8, 360], [360, 20400]]\nAty = [dot(kolom_i, ys) ...]                   # [723.7, 38051.0]\n# selesaikan AtA c = Aty  (Cramer 2 x 2)\n# c0 = 31.70, c1 = 1.306\n\nsisa = [y - (c0 + c1 * x) for x, y in zip(xs, ys)]\ndot(sisa, [1] * 8)     # 2.8e-13   tegak lurus kolom 1\ndot(sisa, xs)          # 1.6e-11   tegak lurus kolom 2",
+      penjelasan: `Delapan persamaan yang tidak bisa dipenuhi sekaligus, diubah menjadi dua persamaan yang bisa — dan dua baris terakhir yang membuktikan bahwa jawabannya memang yang terbaik.
+
+**Dari mana persamaan normal.**
+
+Ac adalah titik di ruang kolom A — sebuah bidang dua dimensi di dalam ruang delapan dimensi, karena A punya dua kolom. y adalah titik di ruang delapan dimensi yang tidak berada di bidang itu.
+
+Titik terdekat di bidang ke y adalah proyeksinya, dan sisa y − Ac harus tegak lurus bidang — artinya tegak lurus **setiap** kolom A. Ditulis sekaligus: Aᵀ(y − Ac) = 0. Pindahkan suku: AᵀA c = Aᵀy.
+
+Tidak ada turunan, tidak ada minimisasi. Cuma syarat tegak lurus. Meski begitu, hasilnya sama persis dengan menurunkan jumlah kuadrat sisa dan menyamakannya dengan nol — dua jalan ke jawaban yang sama.
+
+**Isi AᵀA dan Aᵀy.**
+
+AᵀA = [[8, 360], [360, 20400]]. Isi-isinya adalah hasil kali titik antar-kolom: 8 = banyaknya titik, 360 = jumlah x, 20400 = jumlah x². Aᵀy = [jumlah y, jumlah x·y].
+
+Itu persis jumlahan-jumlahan yang muncul di rumus regresi Sxy/Sxx di Probabilitas dan Statistika, hanya belum dikurangi rata-ratanya. Rumus statistika adalah persamaan normal yang sudah diselesaikan dengan tangan untuk kasus dua peubah.
+
+**Dua baris pemeriksaan.**
+
+Sisa dikali kolom semua-satu: 2,8 × 10⁻¹³. Sisa dikali kolom x: 1,6 × 10⁻¹¹. Keduanya nol sampai pembulatan.
+
+Baris pertama juga punya arti statistika: jumlah sisa nol, jadi garisnya tidak condong ke atas atau ke bawah secara rata-rata. Baris kedua: sisa tidak punya pola lurus terhadap x yang tersisa — semua pola lurus sudah diambil garisnya.
+
+**Kapan persamaan normal tidak dipakai.**
+
+AᵀA "mengkuadratkan" kepekaan masalah terhadap pembulatan. Kalau kolom-kolom A hampir sejajar — misalnya x dari 1000 sampai 1008, sehingga kolom x hampir sejajar kolom satu — galatnya bisa besar.
+
+Pustaka numerik karena itu menyelesaikan kuadrat terkecil lewat dekomposisi QR: A dipecah menjadi Q ortonormal (hasil Gram-Schmidt atau Householder) dan R segitiga atas, lalu Rc = Qᵀy diselesaikan dengan substitusi balik — tanpa pernah membentuk AᵀA. Untuk data kecil yang rapi seperti di sini, persamaan normal sudah cukup.`
+    }
+  ],
+
+  kode: { python: String.raw`# ============================================
+# Ortogonalitas, proyeksi, Gram-Schmidt, kuadrat terkecil
+# ============================================
+import math
+
+def dot(a, b):
+    return sum(x * y for x, y in zip(a, b))
+
+def kali(k, v):
+    return [k * x for x in v]
+
+def kurang(a, b):
+    return [x - y for x, y in zip(a, b)]
+
+def norma(v):
+    return math.sqrt(dot(v, v))
+
+def fmt(v, d=4):
+    return "[" + ", ".join(format(x, "." + str(d) + "f") for x in v) + "]"
+
+# --------------------------------------------
+# 1. Proyeksi: bayangan b pada arah a
+# --------------------------------------------
+print("--- proyeksi b = [3, 4] pada a = [4, 0] dan pada c = [1, 1] ---")
+b = [3, 4]
+for nama, a in [("a", [4, 0]), ("c", [1, 1])]:
+    p = kali(dot(a, b) / dot(a, a), a)
+    sisa = kurang(b, p)
+    print("  proyeksi pada " + nama + " = " + fmt(p, 2) + "   sisa = " + fmt(sisa, 2)
+          + "   sisa . " + nama + " = " + format(dot(sisa, a), "g"))
+print("  Sisanya selalu TEGAK LURUS arah proyeksi (hasil kali titik 0).")
+print("  Proyeksi adalah titik di garis itu yang PALING DEKAT ke b.")
+
+# --------------------------------------------
+# 2. Gram-Schmidt: membuat basis ortonormal
+# --------------------------------------------
+def gram_schmidt(vs, termodifikasi=False):
+    qs = []
+    for v in vs:
+        w = list(v)
+        for q in qs:
+            # klasik: koefisien dihitung dari v ASLI
+            # termodifikasi: dari w yang SUDAH dikurangi sebagian
+            k = dot(q, w) if termodifikasi else dot(q, v)
+            w = kurang(w, kali(k, q))
+        qs.append(kali(1 / norma(w), w))
+    return qs
+
+def galat_ortogonal(qs):
+    """Simpangan terbesar Q^T Q dari matriks identitas."""
+    n = len(qs)
+    return max(abs(dot(qs[i], qs[j]) - (1 if i == j else 0))
+               for i in range(n) for j in range(n))
+
+print("\n--- Gram-Schmidt pada tiga vektor ---")
+vs = [[1, 1, 0], [1, 0, 1], [0, 1, 1]]
+qs = gram_schmidt(vs)
+for i, q in enumerate(qs, 1):
+    print("  q" + str(i) + " = " + fmt(q) + "   panjang " + format(norma(q), ".4f"))
+print("  q1.q2 = " + format(dot(qs[0], qs[1]), ".1e") + ",  q1.q3 = "
+      + format(dot(qs[0], qs[2]), ".1e") + ",  q2.q3 = " + format(dot(qs[1], qs[2]), ".1e"))
+print("  Setiap langkah membuang bagian v yang searah q sebelumnya,")
+print("  lalu menormalkan sisanya menjadi panjang 1.")
+
+print("\n--- Gram-Schmidt pada vektor yang HAMPIR sejajar ---")
+print("  v1 = [1, e, 0, 0], v2 = [1, 0, e, 0], v3 = [1, 0, 0, e]")
+print("  e          galat klasik     galat termodifikasi")
+for e in [1e-2, 1e-5, 1e-8]:
+    vs = [[1, e, 0, 0], [1, 0, e, 0], [1, 0, 0, e]]
+    g1 = galat_ortogonal(gram_schmidt(vs))
+    g2 = galat_ortogonal(gram_schmidt(vs, termodifikasi=True))
+    print("  " + format(e, "<9g") + "  " + format(g1, "<16.1e") + " " + format(g2, ".1e"))
+print("  'Galat' = simpangan terbesar Q^T Q dari identitas; 0 = sempurna.")
+print("  Klasik kehilangan ketegaklurusan saat vektornya hampir sejajar;")
+print("  versi termodifikasi -- rumus sama, urutan beda -- jauh lebih tahan.")
+
+# --------------------------------------------
+# 3. Kuadrat terkecil: SPL yang tidak punya jawaban
+# --------------------------------------------
+print("\n--- 8 titik, 2 peubah: cari garis y = c0 + c1 x ---")
+xs = [10, 20, 30, 40, 50, 60, 70, 80]
+ys = [54.9, 65.0, 62.9, 79.0, 84.7, 99.0, 127.6, 150.6]
+A = [[1, x] for x in xs]
+print("  8 persamaan c0 + c1*x_i = y_i, cuma 2 peubah: tidak ada c0, c1")
+print("  yang memenuhi semuanya. Cari yang PALING DEKAT: selesaikan")
+print("  persamaan normal  A^T A c = A^T y")
+AtA = [[dot([r[i] for r in A], [r[j] for r in A]) for j in range(2)] for i in range(2)]
+Aty = [dot([r[i] for r in A], ys) for i in range(2)]
+det = AtA[0][0] * AtA[1][1] - AtA[0][1] * AtA[1][0]
+c0 = (Aty[0] * AtA[1][1] - AtA[0][1] * Aty[1]) / det
+c1 = (AtA[0][0] * Aty[1] - Aty[0] * AtA[1][0]) / det
+print("\n  A^T A = " + str(AtA) + "   A^T y = " + fmt(Aty, 1))
+print("  c0 = " + format(c0, ".2f") + ", c1 = " + format(c1, ".3f"))
+sisa = [y - (c0 + c1 * x) for x, y in zip(xs, ys)]
+print("\n  sisa . kolom 1 (semua 1) = " + format(dot(sisa, [1] * 8), ".1e"))
+print("  sisa . kolom 2 (x)       = " + format(dot(sisa, xs), ".1e"))
+print("  Sisanya tegak lurus kedua kolom A: Ac adalah PROYEKSI y ke")
+print("  ruang kolom A -- gagasan yang sama dengan bagian 1.")
+print("  Garis ini sama dengan regresi di topik Probabilitas dan")
+print("  Statistika: 31.70 + 1.306 x.")` },
+  output: `--- proyeksi b = [3, 4] pada a = [4, 0] dan pada c = [1, 1] ---
+  proyeksi pada a = [3.00, 0.00]   sisa = [0.00, 4.00]   sisa . a = 0
+  proyeksi pada c = [3.50, 3.50]   sisa = [-0.50, 0.50]   sisa . c = 0
+  Sisanya selalu TEGAK LURUS arah proyeksi (hasil kali titik 0).
+  Proyeksi adalah titik di garis itu yang PALING DEKAT ke b.
+
+--- Gram-Schmidt pada tiga vektor ---
+  q1 = [0.7071, 0.7071, 0.0000]   panjang 1.0000
+  q2 = [0.4082, -0.4082, 0.8165]   panjang 1.0000
+  q3 = [-0.5774, 0.5774, 0.5774]   panjang 1.0000
+  q1.q2 = 1.7e-16,  q1.q3 = 5.6e-17,  q2.q3 = -1.9e-16
+  Setiap langkah membuang bagian v yang searah q sebelumnya,
+  lalu menormalkan sisanya menjadi panjang 1.
+
+--- Gram-Schmidt pada vektor yang HAMPIR sejajar ---
+  v1 = [1, e, 0, 0], v2 = [1, 0, e, 0], v3 = [1, 0, 0, e]
+  e          galat klasik     galat termodifikasi
+  0.01       1.8e-12          2.2e-14
+  1e-05      4.8e-08          5.9e-13
+  1e-08      5.0e-01          7.1e-09
+  'Galat' = simpangan terbesar Q^T Q dari identitas; 0 = sempurna.
+  Klasik kehilangan ketegaklurusan saat vektornya hampir sejajar;
+  versi termodifikasi -- rumus sama, urutan beda -- jauh lebih tahan.
+
+--- 8 titik, 2 peubah: cari garis y = c0 + c1 x ---
+  8 persamaan c0 + c1*x_i = y_i, cuma 2 peubah: tidak ada c0, c1
+  yang memenuhi semuanya. Cari yang PALING DEKAT: selesaikan
+  persamaan normal  A^T A c = A^T y
+
+  A^T A = [[8, 360], [360, 20400]]   A^T y = [723.7, 38051.0]
+  c0 = 31.70, c1 = 1.306
+
+  sisa . kolom 1 (semua 1) = 2.8e-13
+  sisa . kolom 2 (x)       = 1.6e-11
+  Sisanya tegak lurus kedua kolom A: Ac adalah PROYEKSI y ke
+  ruang kolom A -- gagasan yang sama dengan bagian 1.
+  Garis ini sama dengan regresi di topik Probabilitas dan
+  Statistika: 31.70 + 1.306 x.`,
+
+  kompleksitas: {
+    tabel: [
+      { operasi: 'Proyeksi pada satu arah di Rⁿ', waktu: 'O(n)', memori: 'O(n)' },
+      { operasi: 'Gram-Schmidt k vektor di Rⁿ', waktu: 'O(n · k²)', memori: 'O(n · k)' },
+      { operasi: 'Membentuk AᵀA untuk A berukuran m × p', waktu: 'O(m · p²)', memori: 'O(p²)' },
+      { operasi: 'Menyelesaikan persamaan normal', waktu: 'O(p³)', memori: 'O(p²)' },
+      { operasi: 'Kuadrat terkecil lewat QR', waktu: 'O(m · p²)', memori: 'lebih tahan pembulatan' }
+    ],
+    intuisi: `Gram-Schmidt memproses setiap vektor terhadap semua q sebelumnya, dan setiap langkah butuh satu hasil kali titik di Rⁿ — jadi O(n · k²) untuk k vektor.
+
+Untuk kuadrat terkecil dengan m titik data dan p peubah, bagian mahalnya membentuk AᵀA: setiap pasangan kolom butuh m perkalian. Biasanya m jauh lebih besar dari p — ribuan data, beberapa peubah — sehingga biayanya tumbuh lurus dengan banyaknya data. Menyelesaikan sistem p × p yang dihasilkan hampir tidak terasa.
+
+QR punya orde biaya yang sama, dengan konstanta sedikit lebih besar. Harga tambahan itu dibayar untuk ketelitian, dan pustaka numerik hampir selalu memilih membayarnya.`
+  },
+
+  kesalahanUmum: [
+    {
+      salah: 'Membagi dengan panjang a, bukan dengan a·a, saat menghitung proyeksi.',
+      kenapa: 'Proyeksi b pada a adalah (a·b / a·a) a. Membagi dengan panjang a sekali saja menghasilkan vektor yang panjangnya salah, kecuali a sudah panjang 1.',
+      benar: 'Pakai a·a di penyebut, atau normalkan a lebih dulu lalu pakai (q·b) q.'
+    },
+    {
+      salah: 'Memakai Gram-Schmidt klasik pada vektor yang hampir sejajar.',
+      kenapa: 'Versi klasik menghitung koefisien dari vektor asli, sehingga galat pembulatan kecil diperbesar oleh komponen besar yang belum dibuang. Pada e = 1e-8, hasilnya menyimpang 0,5 dari ortonormal.',
+      benar: 'Pakai versi termodifikasi, dan untuk pekerjaan serius pakai dekomposisi QR dari pustaka numerik.'
+    },
+    {
+      salah: 'Menganggap vektor hasil Gram-Schmidt pasti tegak lurus tanpa memeriksanya.',
+      kenapa: 'Di atas kertas pasti, tetapi dengan float ketegaklurusan bisa hilang. Kesalahan itu tidak memunculkan pesan galat apa pun.',
+      benar: 'Hitung QᵀQ dan bandingkan dengan identitas, terutama untuk data yang vektornya bisa hampir sejajar.'
+    },
+    {
+      salah: 'Mencoba menyelesaikan SPL yang terlalu banyak persamaannya dengan invers A.',
+      kenapa: 'A tidak persegi, sehingga tidak punya invers, dan SPL-nya biasanya tidak punya jawaban tepat sama sekali.',
+      benar: 'Cari jawaban kuadrat terkecil dengan persamaan normal AᵀA c = Aᵀy atau dengan QR.'
+    },
+    {
+      salah: 'Memakai persamaan normal pada data yang kolomnya hampir sejajar.',
+      kenapa: 'Membentuk AᵀA mengkuadratkan kepekaan terhadap pembulatan. Kolom x yang nilainya berkisar sempit jauh dari nol hampir sejajar kolom satu, dan jawabannya bisa kehilangan banyak digit.',
+      benar: 'Pusatkan data dengan mengurangi rata-rata x lebih dulu, atau selesaikan lewat QR.'
+    },
+    {
+      salah: 'Menganggap regresi linear dan kuadrat terkecil di aljabar linear adalah dua hal berbeda.',
+      kenapa: 'Keduanya adalah proyeksi y ke ruang kolom matriks data, dan memberi garis yang persis sama untuk data yang sama.',
+      benar: 'Pahami rumus regresi Sxy/Sxx sebagai persamaan normal yang sudah diselesaikan untuk dua peubah.'
+    }
+  ],
+
+  analogi: `Bayangkan kamu berdiri di tengah **lapangan** dan ingin mencapai **jalan setapak lurus** yang melintas di dekatmu, dengan langkah sesedikit mungkin.
+
+**Proyeksi.** Kamu tidak berjalan miring ke sembarang titik di jalan. Kamu berjalan **tegak lurus** ke arah jalan — dan titik tempat kakimu menyentuh jalan adalah proyeksimu. Setiap titik lain di jalan lebih jauh. Kalau jalurmu miring sedikit saja, kamu bisa memperpendeknya dengan menggeser titik tujuan ke arah kakimu.
+
+**Basis ortonormal.** Petunjuk arah di kotamu memakai "utara" dan "timur" — saling tegak lurus. Untuk tahu seberapa jauh ke utara sebuah tempat, kamu cukup melihat bayangannya di arah utara, tanpa peduli arah timur. Bayangkan kalau petunjuk arahnya memakai "utara" dan "timur laut": pergi ke timur laut juga membawamu sedikit ke utara, dan menghitung posisi jadi soal SPL. Basis yang saling tegak lurus membuat setiap arah bisa diurus sendiri-sendiri.
+
+**Gram-Schmidt.** Kamu diberi dua arah yang tidak tegak lurus — utara dan timur laut — dan diminta membuat sepasang arah yang tegak lurus. Ambil utara apa adanya. Dari timur laut, buang bagiannya yang mengarah ke utara. Yang tersisa mengarah murni ke timur. Itu Gram-Schmidt.
+
+Sekarang dua arah yang diberikan **hampir sama**: utara, dan utara-sedikit-sekali-ke-timur. Membuang bagian utara dari arah kedua menyisakan sesuatu yang sangat kecil — dan kalau kompasmu sedikit tidak tepat, sisa kecil itu bisa mengarah ke mana saja. Itulah kenapa urutan hitungan yang teliti penting saat arahnya hampir sejajar.
+
+**Kuadrat terkecil.** Delapan temanmu masing-masing menancapkan bendera di lapangan, dan kamu diminta membuat satu jalan lurus yang "melewati semuanya". Tidak mungkin — benderanya tidak segaris. Jadi kamu memilih jalan yang membuat jumlah kuadrat jarak semua bendera ke jalan sekecil mungkin. Di jalan terbaik itu, tidak ada lagi cara menggeser atau memutar jalan yang mengurangi jarak total — dan itu, dalam bahasa aljabar linear, adalah syarat sisanya tegak lurus.`,
+
+  latihan: [
+    'Hitung proyeksi [2, 5] pada [3, 1], lalu tunjukkan bahwa sisanya tegak lurus [3, 1].',
+    'Hitung jarak dari titik [2, 5] ke garis yang melewati titik asal dengan arah [3, 1], memakai proyeksi.',
+    'Jalankan Gram-Schmidt pada [1, 0, 1], [1, 1, 0], [0, 1, 1] dengan tangan, lalu periksa dengan program.',
+    'Hitung koordinat [3, 1, 2] terhadap basis ortonormal hasil latihan nomor 3 dengan hasil kali titik saja.',
+    'Ulangi percobaan vektor hampir sejajar dengan e = 1e-6 dan 1e-10, lalu catat galat kedua versi Gram-Schmidt.',
+    'Cocokkan garis ke titik (1, 2), (2, 3), (3, 5), (4, 4), (5, 6) dengan persamaan normal, lalu periksa dengan statistics.linear_regression.',
+    'Cocokkan parabola y = c0 + c1·x + c2·x² ke titik yang sama dengan persamaan normal 3 × 3.',
+    'Tunjukkan bahwa jumlah sisa garis kuadrat terkecil selalu nol, dan jelaskan dengan syarat tegak lurus.',
+    'Ubah x di data waktu respons menjadi 1010, 1020, ..., 1080, lalu bandingkan kepekaan persamaan normal sebelum dan sesudah x dipusatkan.',
+    'Jelaskan kenapa rumus regresi Sxy/Sxx dan persamaan normal memberi garis yang sama.'
+  ]
+});
+
+
+TOPICS.push({
+  id: 'alin-svd',
+  judul: 'SVD & Aproksimasi Rank Rendah',
+  kategori: 'aljabar-linear',
+  tag: ['SVD', 'nilai singular', 'rank rendah', 'Eckart-Young', 'kompresi', 'sistem rekomendasi', 'faktor laten'],
+  ringkas: 'Setiap matriks adalah jumlah lapisan-lapisan sederhana yang diurutkan dari yang paling penting — dan membuang lapisan kecil adalah cara terbaik meringkasnya.',
+
+  fungsi: `**Memecah matriks apa pun menjadi jumlah lapisan berperingkat satu, diurutkan dari yang paling besar pengaruhnya, lalu menyimpan hanya lapisan-lapisan teratas.**
+
+Terpakai di:
+
+- **Sistem rekomendasi** — matriks penilaian pengguna × item diringkas menjadi beberapa "selera tersembunyi", dan dari situ nilai yang belum ada bisa diperkirakan
+- **Kompresi** — citra atau data yang punya struktur bisa disimpan sebagai beberapa lapisan, bukan seluruh isinya
+- **Mengurangi derau** — lapisan dengan nilai singular kecil sering cuma derau pengukuran
+- **PCA** — analisis komponen utama di Data Mining pada dasarnya SVD dari data yang sudah dipusatkan
+- **Rank numerik** — pustaka numerik menghitung rank dari banyaknya nilai singular yang tidak "hampir nol"
+
+Yang membuat SVD istimewa: **pendekatan terbaik yang mungkin, terbukti.** Di antara semua matriks dengan rank k, tidak ada yang lebih dekat ke matriks aslinya daripada k lapisan SVD teratas — dan galatnya bisa dihitung langsung dari nilai singular yang dibuang.
+
+Dan yang paling menarik untuk informatika: **SVD menemukan struktur yang tidak diberitahukan.** Dari angka-angka penilaian saja, ia memisahkan penggemar film aksi dari penggemar film romantis — tanpa pernah diberi tahu genre apa pun.`,
+
+  praktik: {
+    tujuan: 'Kamu bisa menghitung beberapa komponen SVD teratas dengan power iteration, menafsirkan vektor singular sebagai faktor tersembunyi, memilih banyaknya komponen dari nilai singular, dan menghitung penghematan penyimpanannya.',
+    alat: ['Python 3 dengan modul math dan random', 'Topik Transformasi Linear & Eigenvector untuk power iteration'],
+    langkah: [
+      { judul: 'Bentuk AᵀA',
+        isi: `Nilai singular A adalah akar eigenvalue AᵀA, dan vektor singular kanan v adalah eigenvector-nya. AᵀA simetris dan tidak negatif — jenis matriks yang paling mudah untuk power iteration.` },
+      { judul: 'Cari komponen pertama dengan power iteration',
+        isi: `Ulangi v ← AᵀA v, lalu normalkan, sampai tidak berubah. Eigenvalue λ = vᵀ(AᵀA)v, nilai singular σ = √λ, dan vektor singular kiri u = Av/σ.
+
+Ini power iteration yang sama dengan topik eigenvector.` },
+      { judul: 'Deflasi, lalu ulangi',
+        isi: `Kurangkan komponen yang sudah ditemukan: AᵀA ← AᵀA − λ v vᵀ. Power iteration berikutnya akan menemukan komponen terbesar kedua.
+
+Untuk matriks kecil ini cukup. Untuk matriks besar, pakai pustaka numerik — deflasi berulang menumpuk galat.` },
+      { judul: 'Baca nilai singularnya',
+        isi: `Hitung σ²/(jumlah kuadrat semua isi) untuk setiap komponen — bagian "energi" matriks yang dibawanya.
+
+Kalau beberapa komponen pertama membawa hampir semuanya, matriksnya punya struktur rank rendah yang bisa diringkas.` },
+      { judul: 'Tafsirkan vektor singularnya',
+        isi: `Lihat tanda dan besar isi v1, v2. Komponen yang semua isinya bertanda sama biasanya "besarnya secara umum". Komponen dengan tanda campuran memisahkan kelompok.
+
+Ingat: tanda vektor singular bebas — v dan −v sama sahnya. Yang bermakna adalah pola tandanya.` },
+      { judul: 'Hitung galat dan penyimpanan',
+        isi: `Susun ulang dengan k komponen: jumlah σᵢ uᵢ vᵢᵀ. Hitung galatnya, dan bandingkan dengan akar jumlah kuadrat nilai singular yang dibuang — keduanya harus sama.
+
+Penyimpanan k komponen untuk matriks m × n: k(m + n + 1) angka, dibandingkan m·n.` }
+    ],
+    cek: [
+      'Nilai singular yang kamu hitung turun berurutan, dan galat rank-k cocok dengan nilai singular yang dibuang',
+      'Kamu bisa menafsirkan dua komponen pertama matriks penilaian sebagai faktor tersembunyi',
+      'Kamu bisa menghitung pada k berapa penyimpanan rank rendah justru lebih besar dari aslinya',
+      'Kamu bisa menjelaskan kenapa bentuk tertentu, seperti garis diagonal, butuh banyak komponen'
+    ]
+  },
+
+  judulLogicSyntax: 'Bedah Konsep — kenapa lapisan teratas adalah ringkasan terbaik',
+
+  konsep: `Topik eigenvector menemukan arah yang tidak berubah saat matriks persegi dikenakan. Tetapi kebanyakan data tidak berbentuk persegi — 6 pengguna × 5 film, 1000 pelanggan × 50 produk. **SVD** memperluas gagasan itu ke matriks bentuk apa pun.
+
+**Bentuknya**
+
+Setiap matriks A berukuran m × n bisa ditulis sebagai:
+
+A = σ₁ u₁ v₁ᵀ + σ₂ u₂ v₂ᵀ + ... + σᵣ uᵣ vᵣᵀ
+
+Setiap suku adalah **lapisan** berperingkat satu: satu kolom u dikali satu baris vᵀ, diskalakan σ. Nilai singular σ₁ ≥ σ₂ ≥ ... ≥ 0 mengurutkan lapisan dari yang paling berpengaruh. Vektor u saling tegak lurus, begitu juga vektor v.
+
+**Contoh: penilaian film**
+
+| | Aksi1 | Aksi2 | Aksi3 | Roman1 | Roman2 |
+|---|---|---|---|---|---|
+| Ani | 5 | 4 | 5 | 1 | 1 |
+| Budi | 4 | 5 | 4 | 2 | 1 |
+| Citra | 5 | 5 | 4 | 1 | 2 |
+| Dodi | 1 | 2 | 1 | 5 | 4 |
+| Eka | 2 | 1 | 1 | 4 | 5 |
+| Fajar | 4 | 4 | 5 | 4 | 4 |
+
+Nilai singularnya: **17,953 · 7,467 · 1,876 · 1,462 · 0,527**. Bagian energinya: 83,9%, 14,5%, 0,9%, 0,6%, 0,1%. Dua komponen pertama membawa **98,4 persen** — matriks 6 × 5 ini hampir sepenuhnya dijelaskan dua faktor.
+
+**Apa arti dua faktor itu**
+
+| Film | v₁ | v₂ |
+|---|---|---|
+| Aksi1 | +0,50 | −0,29 |
+| Aksi2 | +0,50 | −0,27 |
+| Aksi3 | +0,49 | −0,31 |
+| Roman1 | +0,36 | +0,61 |
+| Roman2 | +0,36 | +0,61 |
+
+v₁ semuanya positif: faktor "seberapa suka film secara umum". v₂ memisahkan dua kelompok film dengan tanda berlawanan: faktor "selera aksi lawan roman".
+
+**Tidak ada yang memberi tahu SVD soal genre.** Ia cuma melihat angka, dan menemukan bahwa cara paling hemat menjelaskan angka-angka itu adalah dua faktor — yang kebetulan cocok dengan genre. Pada data sungguhan dengan ribuan film, faktor-faktor seperti ini disebut **faktor laten**, dan sering menangkap hal-hal yang tidak punya nama — gaya penyutradaraan, suasana, target umur.
+
+**Pendekatan terbaik: Eckart–Young**
+
+Susun ulang A dari k lapisan teratas saja. Galatnya:
+
+| k | Galat terhadap A | Akar jumlah σ² yang dibuang |
+|---|---|---|
+| 1 | 7,8545 | 7,8545 |
+| 2 | 2,4361 | 2,4361 |
+| 3 | 1,5544 | 1,5544 |
+| 4 | 0,5268 | 0,5268 |
+
+Kedua kolom **sama persis**. Itulah teorema Eckart–Young: pendekatan rank k terbaik adalah k lapisan SVD teratas, dan galatnya — dalam norma Frobenius, akar jumlah kuadrat semua isi — adalah akar jumlah kuadrat nilai singular yang dibuang. Tidak ada matriks rank 2 lain yang lebih dekat ke A.
+
+Dengan dua komponen, penilaian Ani menjadi 4,7 · 4,6 · 4,7 · 1,0 · 1,0 — hampir sama dengan aslinya. Dodi dan Eka menjadi identik: 1,4 · 1,4 · 1,2 · 4,5 · 4,5. Perbedaan kecil di antara mereka dibuang sebagai detail; yang tersisa adalah selera bersama mereka.
+
+Sistem rekomendasi memakai gagasan ini untuk mengisi **penilaian yang kosong**: kalau seorang pengguna belum menonton Roman2, faktor-faktornya memberi perkiraan berapa ia akan menilainya. (Pada data yang banyak kosongnya, SVD biasa tidak bisa langsung dipakai — metode faktorisasi matriks khusus mencari faktornya hanya dari isi yang ada. Gagasannya tetap sama.)
+
+**Citra: rank rendah adalah kompresi**
+
+Citra 16 × 16 berisi kotak, palang, dan garis diagonal. Nilai singular teratasnya: 7,82 · 2,62 · 0,80 · 0,80 · 0,80 · ...
+
+| k | Angka disimpan | Dari 256 | Galat relatif |
+|---|---|---|---|
+| 1 | 33 | 13% | 39,1% |
+| 2 | 66 | 26% | 24,0% |
+| 3 | 99 | 39% | 22,1% |
+| 4 | 132 | 52% | 20,0% |
+| 6 | 198 | 77% | 14,9% |
+| 8 | 264 | **103%** | 7,7% |
+
+Setiap lapisan butuh m + n + 1 angka: u, v, dan σ. Pada k = 8, penyimpanannya sudah **melebihi** citra aslinya.
+
+Program menggambar citranya dengan karakter teks. Kotak dan palang — bentuk yang sejajar sumbu — sudah jelas di k = 3. Garis diagonal tidak: setiap titiknya ada di baris **dan** kolom yang berbeda, sehingga tidak bisa diringkas sebagai sedikit perkalian kolom-kali-baris. Nilai singular 0,80 yang berulang itu adalah garis diagonal, tersebar rata di banyak lapisan.
+
+Pelajarannya: SVD menghemat banyak untuk data yang **punya struktur** — baris-baris yang mirip satu sama lain. Untuk data yang setiap bagiannya unik, penghematannya kecil. Itu juga sebabnya kompresi citra sungguhan seperti JPEG memakai cara lain yang lebih cocok untuk foto alam, yang dibahas di Teknologi Multimedia.`,
+
+  logicSyntax: [
+    {
+      bahasa: 'python',
+      kode: "def svd_atas(A, k, ulang=3000):\n    n = len(A[0])\n    B = [[dot(kolom(A, i), kolom(A, j)) for j in range(n)]\n         for i in range(n)]                      # B = A^T A\n    hasil = []\n    for _ in range(k):\n        v = [random.random() for _ in range(n)]\n        for _ in range(ulang):                   # power iteration\n            w = [dot(baris, v) for baris in B]\n            nw = math.sqrt(dot(w, w))\n            v = [x / nw for x in w]\n        lam = dot(v, [dot(baris, v) for baris in B])\n        s = math.sqrt(lam)                       # nilai singular\n        u = [dot(baris, v) / s for baris in A]   # u = A v / s\n        hasil.append((s, u, v))\n        B = [[B[i][j] - lam * v[i] * v[j] for j in range(n)]\n             for i in range(n)]                  # deflasi\n    return hasil",
+      penjelasan: `SVD dari nol, dengan dua alat yang sudah ada di topik-topik sebelumnya: power iteration dari topik eigenvector, dan proyeksi dari topik ortogonalitas.
+
+**Kenapa lewat AᵀA.**
+
+A tidak persegi, jadi tidak punya eigenvector. Tetapi AᵀA — berukuran n × n — persegi, simetris, dan semua eigenvalue-nya tidak negatif.
+
+Eigenvector AᵀA adalah vektor singular kanan v, dan eigenvalue-nya adalah σ². Alasannya: kalau A v = σ u dan Aᵀ u = σ v — definisi pasangan vektor singular — maka AᵀA v = Aᵀ(σ u) = σ² v.
+
+Jadi mencari SVD berubah menjadi mencari eigenvector matriks simetris — persis yang dikerjakan power iteration.
+
+**Kenapa power iteration menemukan yang terbesar dulu.**
+
+Setiap kali v dikalikan B, komponennya di arah eigenvector ke-i dikalikan λᵢ. Setelah ribuan kali, komponen dengan λ terbesar tumbuh jauh melampaui yang lain, dan v menunjuk ke arahnya. Itu penjelasan yang sama dengan topik eigenvector — di sini dipakai untuk menemukan lapisan SVD yang paling penting.
+
+**u dihitung, bukan dicari.**
+
+Setelah v dan σ diketahui, u = Av/σ langsung dari definisi. Tidak perlu power iteration kedua.
+
+**Deflasi: mengurangi yang sudah ditemukan.**
+
+\`B − λ v vᵀ\` menghapus komponen v dari B. Matriks yang tersisa punya eigenvector yang sama, kecuali v sekarang punya eigenvalue nol. Power iteration berikutnya otomatis menemukan komponen terbesar kedua.
+
+**Kenapa ini cuma untuk belajar.**
+
+Tiga kelemahan yang membuat pustaka numerik tidak memakai cara ini:
+
+- **Membentuk AᵀA mengkuadratkan kepekaan** — masalah yang sama dengan persamaan normal di topik ortogonalitas. Nilai singular kecil kehilangan banyak digit.
+- **Deflasi menumpuk galat** — setiap komponen yang tidak tepat mencemari yang berikutnya.
+- **Power iteration lambat** kalau dua nilai singular berdekatan, dan tidak bisa memilih arah kalau keduanya **sama** — seperti lima nilai 0,80 di contoh citra. Hasilnya tetap sah, karena setiap arah di ruang itu sama baiknya, tetapi tidak unik.
+
+Pustaka numerik memakai algoritme yang bekerja langsung pada A tanpa membentuk AᵀA — dimulai dengan bidiagonalisasi Golub–Kahan. Di Python, \`numpy.linalg.svd\` memanggil rutin LAPACK yang dibangun dari gagasan itu. Kode di atas ada supaya setiap langkahnya bisa dilihat.`
+    },
+    {
+      bahasa: 'python',
+      kode: "for k in range(1, 5):\n    Rk    = rakit(komp[:k], m, n)            # jumlah k lapisan teratas\n    galat = frobenius(selisih(R, Rk))\n    buang = math.sqrt(sum(s * s for s, _, _ in komp[k:]))\n\n# k   galat     akar(jumlah s^2 yang dibuang)\n# 1   7.8545    7.8545\n# 2   2.4361    2.4361\n# 3   1.5544    1.5544\n# 4   0.5268    0.5268",
+      penjelasan: `Dua cara menghitung galat, dan kenyataan bahwa keduanya selalu sama adalah isi teorema terpenting tentang SVD.
+
+**Cara pertama: langsung.**
+
+Rakit ulang matriks dari k lapisan teratas, kurangkan dari aslinya, lalu hitung akar jumlah kuadrat semua isi selisihnya — norma Frobenius. Itu jarak antara matriks asli dan pendekatannya.
+
+**Cara kedua: dari nilai singular saja.**
+
+Ambil nilai singular yang **tidak** dipakai, kuadratkan, jumlahkan, akarkan. Tanpa menyusun matriks apa pun.
+
+**Kenapa keduanya sama.**
+
+Selisih A − Aₖ adalah jumlah lapisan yang dibuang: σₖ₊₁ uₖ₊₁ vₖ₊₁ᵀ + .... Lapisan-lapisan itu saling "tegak lurus" dalam arti yang tepat — karena u-u saling tegak lurus dan v-v saling tegak lurus — sehingga kuadrat norma jumlahnya sama dengan jumlah kuadrat norma masing-masing. Dan norma setiap lapisan σ u vᵀ adalah σ, karena u dan v panjangnya 1.
+
+Itu teorema Pythagoras sekali lagi — untuk matriks.
+
+**Dan kenapa tidak ada yang lebih baik.**
+
+Bagian yang lebih dalam dari Eckart–Young: tidak ada matriks rank k **mana pun** yang lebih dekat ke A daripada Aₖ. Buktinya di luar cakupan topik ini, tetapi akibatnya sangat praktis: kalau kamu harus meringkas data dengan k faktor, SVD memberi ringkasan terbaik yang mungkin, dan nilai singular memberi tahu seberapa baik **sebelum** kamu menyusun apa pun.
+
+**Cara memilih k.**
+
+Lihat deretan nilai singular: 17,953 · 7,467 · 1,876 · 1,462 · 0,527. Ada lompatan jelas setelah yang kedua — dari 7,5 ke 1,9. Lapisan sebelum lompatan adalah struktur; lapisan sesudahnya sebagian besar adalah variasi kecil antar-orang.
+
+Aturan praktis lain: pilih k terkecil yang membawa, misalnya, 95 persen energi. Di sini k = 2 membawa 98,4 persen.
+
+Tidak ada aturan yang benar untuk semua kasus. Tetapi dengan nilai singular di tangan, pilihannya bisa dibuat dengan melihat angka, bukan menebak.`
+    }
+  ],
+
+  kode: { python: String.raw`# ============================================
+# SVD: memecah matriks menjadi lapisan-lapisan
+# ============================================
+import math
+import random
+
+random.seed(5)
+
+def dot(a, b):
+    return sum(x * y for x, y in zip(a, b))
+
+def kolom(A, j):
+    return [baris[j] for baris in A]
+
+def svd_atas(A, k, ulang=3000):
+    """k nilai singular terbesar lewat power iteration pada A^T A,
+    dengan deflasi setelah setiap komponen ditemukan."""
+    n = len(A[0])
+    B = [[dot(kolom(A, i), kolom(A, j)) for j in range(n)] for i in range(n)]
+    hasil = []
+    for _ in range(k):
+        v = [random.random() for _ in range(n)]
+        for _ in range(ulang):
+            w = [dot(baris, v) for baris in B]
+            nw = math.sqrt(dot(w, w))
+            if nw < 1e-12:
+                break
+            v = [x / nw for x in w]
+        lam = dot(v, [dot(baris, v) for baris in B])
+        if lam <= 1e-12:
+            break
+        s = math.sqrt(lam)
+        u = [dot(baris, v) / s for baris in A]
+        hasil.append((s, u, v))
+        B = [[B[i][j] - lam * v[i] * v[j] for j in range(n)] for i in range(n)]
+    return hasil
+
+def rakit(komponen, m, n):
+    return [[sum(s * u[i] * v[j] for s, u, v in komponen) for j in range(n)]
+            for i in range(m)]
+
+def frobenius(A):
+    return math.sqrt(sum(x * x for baris in A for x in baris))
+
+def selisih(A, B):
+    return [[a - b for a, b in zip(ra, rb)] for ra, rb in zip(A, B)]
+
+# --------------------------------------------
+# 1. Matriks penilaian: pengguna x film
+# --------------------------------------------
+FILM = ["Aksi1", "Aksi2", "Aksi3", "Roman1", "Roman2"]
+R = [
+    [5, 4, 5, 1, 1],     # Ani   -- suka aksi
+    [4, 5, 4, 2, 1],     # Budi  -- suka aksi
+    [5, 5, 4, 1, 2],     # Citra -- suka aksi
+    [1, 2, 1, 5, 4],     # Dodi  -- suka roman
+    [2, 1, 1, 4, 5],     # Eka   -- suka roman
+    [4, 4, 5, 4, 4],     # Fajar -- suka keduanya
+]
+NAMA = ["Ani", "Budi", "Citra", "Dodi", "Eka", "Fajar"]
+m, n = len(R), len(R[0])
+print("--- penilaian 6 pengguna untuk 5 film (1-5) ---")
+print("         " + "".join(format(f, ">8") for f in FILM))
+for nm, baris in zip(NAMA, R):
+    print("  " + format(nm, "<7") + "".join(format(x, ">8") for x in baris))
+
+komp = svd_atas(R, 5)
+print("\n  nilai singular : " + "  ".join(format(s, ".3f") for s, _, _ in komp))
+total = frobenius(R) ** 2
+print("  bagian 'energi' tiap komponen (s^2 / jumlah kuadrat semua isi):")
+print("                   " + "  ".join(format(s * s / total, ".1%") for s, _, _ in komp))
+
+print("\n  arah film komponen 1 dan 2:")
+for nama_k, (s, u, v) in zip(["v1", "v2"], komp[:2]):
+    tanda = 1 if max(v, key=abs) > 0 else -1    # arah SVD bebas tanda
+    print("  " + nama_k + " : " + "  ".join(format(f, ">6") + format(tanda * x, "+.2f")
+                                     for f, x in zip(FILM, v)))
+print("  v1 semua bertanda sama: 'seberapa suka film secara umum'.")
+print("  v2 memisahkan aksi dari roman: 'selera aksi lawan roman'.")
+print("  Tidak ada yang memberi tahu SVD soal genre -- ia menemukannya")
+print("  sendiri dari pola angka.")
+
+print("\n  mendekati R dengan k komponen saja:")
+print("  k   galat ||R - Rk||   akar(jumlah s^2 yang dibuang)")
+for k in range(1, 5):
+    Rk = rakit(komp[:k], m, n)
+    galat = frobenius(selisih(R, Rk))
+    buang = math.sqrt(sum(s * s for s, _, _ in komp[k:]))
+    print("  " + str(k) + format(galat, "12.4f") + format(buang, "19.4f"))
+print("  Dua kolom itu sama: galat pendekatan terbaik rank k persis")
+print("  sama dengan nilai singular yang dibuang (Eckart-Young).")
+
+R2 = rakit(komp[:2], m, n)
+print("\n  R dengan 2 komponen (dibulatkan 1 desimal):")
+for nm, baris in zip(NAMA, R2):
+    print("  " + format(nm, "<7") + "".join(format(x, ">8.1f") for x in baris))
+
+# --------------------------------------------
+# 2. Citra: rank rendah = kompresi
+# --------------------------------------------
+N = 16
+img = [[0.0] * N for _ in range(N)]
+for i in range(N):
+    for j in range(N):
+        kotak = 1.0 if 2 <= i <= 12 and 2 <= j <= 6 else 0.0
+        palang = 0.6 if 9 <= i <= 12 and 4 <= j <= 14 else 0.0
+        diagonal = 0.8 if i == j else 0.0
+        img[i][j] = max(kotak, palang, diagonal)
+
+GRADASI = " .:-=+*#%@"
+def ascii_baris(A, i):
+    return "".join(GRADASI[min(9, max(0, round(x * 9)))] for x in A[i])
+
+komp = svd_atas(img, 8)
+print("\n--- citra 16 x 16: kotak, palang, dan garis diagonal ---")
+print("  nilai singular: " + " ".join(format(s, ".2f") for s, _, _ in komp))
+A1, A3 = rakit(komp[:1], N, N), rakit(komp[:3], N, N)
+print("\n  " + format("asli", "<19") + format("k = 1", "<19") + "k = 3")
+for i in range(N):
+    print(("  " + ascii_baris(img, i) + "   " + ascii_baris(A1, i) + "   "
+           + ascii_baris(A3, i)).rstrip())
+
+print("\n  k   angka disimpan   dari 256   galat relatif")
+for k in [1, 2, 3, 4, 6, 8]:
+    Ak = rakit(komp[:k], N, N)
+    simpan = k * (N + N + 1)
+    rel = frobenius(selisih(img, Ak)) / frobenius(img)
+    print("  " + format(k, "<4") + format(simpan, ">14") + format(simpan / 256, ">10.0%")
+          + format(rel, ">15.1%"))
+print("  (k = 8 sudah butuh lebih banyak angka daripada citra aslinya)")
+print()
+print("  Kotak dan palang -- bentuk yang 'lurus sejajar sumbu' -- sudah")
+print("  muncul di k = 3. Garis diagonal butuh jauh lebih banyak")
+print("  komponen: setiap titiknya ada di baris DAN kolom berbeda,")
+print("  sehingga tidak bisa diringkas sebagai sedikit perkalian luar.")` },
+  output: `--- penilaian 6 pengguna untuk 5 film (1-5) ---
+            Aksi1   Aksi2   Aksi3  Roman1  Roman2
+  Ani           5       4       5       1       1
+  Budi          4       5       4       2       1
+  Citra         5       5       4       1       2
+  Dodi          1       2       1       5       4
+  Eka           2       1       1       4       5
+  Fajar         4       4       5       4       4
+
+  nilai singular : 17.953  7.467  1.876  1.462  0.527
+  bagian 'energi' tiap komponen (s^2 / jumlah kuadrat semua isi):
+                   83.9%  14.5%  0.9%  0.6%  0.1%
+
+  arah film komponen 1 dan 2:
+  v1 :  Aksi1+0.50   Aksi2+0.50   Aksi3+0.49  Roman1+0.36  Roman2+0.36
+  v2 :  Aksi1-0.29   Aksi2-0.27   Aksi3-0.31  Roman1+0.61  Roman2+0.61
+  v1 semua bertanda sama: 'seberapa suka film secara umum'.
+  v2 memisahkan aksi dari roman: 'selera aksi lawan roman'.
+  Tidak ada yang memberi tahu SVD soal genre -- ia menemukannya
+  sendiri dari pola angka.
+
+  mendekati R dengan k komponen saja:
+  k   galat ||R - Rk||   akar(jumlah s^2 yang dibuang)
+  1      7.8545             7.8545
+  2      2.4361             2.4361
+  3      1.5544             1.5544
+  4      0.5268             0.5268
+  Dua kolom itu sama: galat pendekatan terbaik rank k persis
+  sama dengan nilai singular yang dibuang (Eckart-Young).
+
+  R dengan 2 komponen (dibulatkan 1 desimal):
+  Ani         4.7     4.6     4.7     1.0     1.0
+  Budi        4.4     4.3     4.3     1.5     1.5
+  Citra       4.7     4.7     4.6     1.5     1.5
+  Dodi        1.4     1.4     1.2     4.5     4.5
+  Eka         1.4     1.4     1.2     4.5     4.5
+  Fajar       4.4     4.4     4.2     4.0     4.0
+
+--- citra 16 x 16: kotak, palang, dan garis diagonal ---
+  nilai singular: 7.82 2.62 0.80 0.80 0.80 0.80 0.80 0.74
+
+  asli               k = 1              k = 3
+  #
+   #                                     -            .-
+    @@@@@              %%%%%--::::::      @@@@@..
+    @@@@@              %%%%%--::::::      @@@@@..
+    @@@@@              %%%%%--::::::      @@@@@..
+    @@@@@              %%%%%--::::::      @@@@@..
+    @@@@@              %%%%%--::::::      @@@@@..
+    @@@@@#             %%%%%--::::::      @@@@@.......
+    @@@@@ #            %%%%%--::::::      @@@@@...... .
+    @@@@@++#+++++      @@@@@--------      @@@@@++******
+    @@@@@+++#++++      @@@@@--------      @@@@@++******
+    @@@@@++++#+++      @@@@@--------      @@@@@++******
+    @@@@@+++++#++      @@@@@--------      @@@@@++******
+               #                               ........
+                #                        .     .........
+                 #                       -            .-
+
+  k   angka disimpan   dari 256   galat relatif
+  1               33       13%          39.1%
+  2               66       26%          24.0%
+  3               99       39%          22.1%
+  4              132       52%          20.0%
+  6              198       77%          14.9%
+  8              264      103%           7.7%
+  (k = 8 sudah butuh lebih banyak angka daripada citra aslinya)
+
+  Kotak dan palang -- bentuk yang 'lurus sejajar sumbu' -- sudah
+  muncul di k = 3. Garis diagonal butuh jauh lebih banyak
+  komponen: setiap titiknya ada di baris DAN kolom berbeda,
+  sehingga tidak bisa diringkas sebagai sedikit perkalian luar.`,
+
+  kompleksitas: {
+    tabel: [
+      { operasi: 'SVD penuh matriks m × n (pustaka, m ≥ n)', waktu: 'O(m · n²)', memori: 'O(m · n)' },
+      { operasi: 'k komponen dengan power iteration, t putaran', waktu: 'O(m · n² + k · t · n²)', memori: 'O(n²) untuk AᵀA' },
+      { operasi: 'Menyimpan pendekatan rank k', waktu: '—', memori: 'k(m + n + 1) angka, dibanding m · n' },
+      { operasi: 'Merakit ulang satu isi dari k lapisan', waktu: 'O(k)', memori: 'O(1)' }
+    ],
+    intuisi: `SVD penuh mahal: kubik dalam ukuran matriks. Untuk matriks penilaian dengan jutaan pengguna dan ratusan ribu film, menghitungnya penuh tidak mungkin. Yang dipakai adalah metode yang hanya mencari k komponen teratas — varian canggih dari power iteration di topik ini — karena memang hanya itu yang dibutuhkan.
+
+Baris ketiga menentukan kapan rank rendah menguntungkan: k(m + n + 1) < m · n. Untuk citra 16 × 16, batasnya k < 7,8. Untuk matriks 1000 × 1000, k sampai sekitar 500 masih menghemat — dan data dengan struktur biasanya butuh jauh lebih sedikit.
+
+Baris terakhir adalah alasan sistem rekomendasi memakai bentuk ini: perkiraan penilaian satu pengguna untuk satu film cuma butuh k perkalian, berapa pun besar matriks aslinya.`
+  },
+
+  kesalahanUmum: [
+    {
+      salah: 'Menafsirkan tanda vektor singular sebagai bermakna mutlak.',
+      kenapa: 'Kalau σ u vᵀ adalah satu lapisan, maka σ (−u)(−v)ᵀ adalah lapisan yang sama. Pustaka yang berbeda bisa memberi tanda yang berlawanan untuk data yang sama.',
+      benar: 'Tafsirkan pola tanda di dalam satu vektor, misalnya aksi negatif dan roman positif, bukan tanda masing-masing isi.'
+    },
+    {
+      salah: 'Memilih banyaknya komponen tanpa melihat nilai singularnya.',
+      kenapa: 'Terlalu sedikit komponen membuang struktur yang nyata, terlalu banyak menyimpan derau dan bisa lebih boros dari data aslinya. Pada citra 16 × 16, k = 8 sudah butuh 264 angka untuk menggantikan 256.',
+      benar: 'Lihat deretan nilai singular, cari lompatan, atau pilih k yang membawa bagian energi yang cukup.'
+    },
+    {
+      salah: 'Menghitung SVD data besar dengan membentuk AᵀA dan power iteration berulang.',
+      kenapa: 'Membentuk AᵀA mengkuadratkan kepekaan terhadap pembulatan, dan deflasi berulang menumpuk galat, sehingga nilai singular kecil menjadi tidak teliti.',
+      benar: 'Pakai fungsi SVD pustaka numerik, atau metode SVD terpotong yang langsung mencari k komponen teratas.'
+    },
+    {
+      salah: 'Menganggap SVD bisa meringkas data apa pun dengan hemat.',
+      kenapa: 'Penghematan datang dari struktur, yaitu baris atau kolom yang mirip satu sama lain. Data yang setiap bagiannya unik, seperti garis diagonal di contoh citra, butuh banyak komponen.',
+      benar: 'Periksa seberapa cepat nilai singular turun sebelum memilih SVD sebagai cara kompresi.'
+    },
+    {
+      salah: 'Menjalankan SVD biasa pada matriks penilaian yang kebanyakan isinya kosong, dengan kosong diisi nol.',
+      kenapa: 'Nol dianggap sebagai penilaian sungguhan yang sangat buruk, sehingga faktor yang ditemukan mencerminkan film mana yang belum ditonton, bukan selera.',
+      benar: 'Pakai metode faktorisasi matriks yang mencari faktor hanya dari penilaian yang ada.'
+    },
+    {
+      salah: 'Menganggap nilai singular sama dengan eigenvalue A.',
+      kenapa: 'Nilai singular adalah akar eigenvalue AᵀA, dan selalu tidak negatif. Untuk matriks persegi yang tidak simetris, keduanya bisa sangat berbeda, dan eigenvalue bahkan bisa negatif atau kompleks.',
+      benar: 'Hitung nilai singular dari AᵀA atau dengan fungsi SVD, dan pakai eigenvalue hanya untuk pertanyaan tentang arah yang dipertahankan matriks persegi.'
+    }
+  ],
+
+  analogi: `Bayangkan kamu mendeskripsikan **selera musik** teman-teman sekelas kepada orang baru.
+
+**Lapisan pertama.** Kamu bisa mulai dengan satu kalimat: "sebagian orang suka musik secara umum, sebagian tidak terlalu." Satu kalimat itu sudah menjelaskan banyak hal — orang yang suka musik cenderung memberi nilai tinggi ke semua lagu. Itu komponen pertama: satu angka "seberapa suka musik" per orang, dan satu angka "seberapa populer" per lagu.
+
+**Lapisan kedua.** Lalu kamu menambah: "dan di antara mereka, ada yang condong ke rock, ada yang ke dangdut." Kalimat kedua menjelaskan sebagian besar sisanya. Itu komponen kedua, dengan tanda berlawanan untuk kedua kelompok lagu.
+
+**Lapisan-lapisan berikutnya** makin spesifik dan makin sedikit gunanya: "Budi suka lagu yang ada solo gitarnya", "Eka tidak suka lagu yang terlalu panjang". Benar, tetapi masing-masing cuma menjelaskan sedikit.
+
+Orang baru itu tidak perlu mendengar semua detail. Dua kalimat pertama sudah cukup untuk meramal dengan baik lagu mana yang akan disukai siapa. Itulah pendekatan rank rendah: simpan lapisan yang besar, buang yang kecil.
+
+**Eckart–Young.** Kalau kamu cuma boleh memakai dua kalimat, tidak ada dua kalimat lain yang lebih baik daripada dua lapisan SVD teratas. Dan sebelum mengucapkannya pun, kamu sudah tahu seberapa banyak yang akan hilang: sebesar lapisan-lapisan yang tidak kamu sebut.
+
+**Garis diagonal.** Sekarang bayangkan setiap teman menyukai **tepat satu** lagu, dan lagu setiap orang berbeda. Tidak ada pola bersama sama sekali. Tidak ada kalimat umum yang bisa meringkasnya; kamu terpaksa menyebut setiap orang satu per satu. Itulah garis diagonal di contoh citra — dan itulah kenapa SVD tidak bisa menghemat di sana.`,
+
+  latihan: [
+    'Hitung SVD matriks [[3, 0], [0, 1]] dengan tangan, lalu periksa dengan fungsi svd_atas.',
+    'Tunjukkan bahwa eigenvalue AᵀA untuk matriks penilaian di topik ini sama dengan kuadrat nilai singularnya.',
+    'Tambahkan pengguna ketujuh yang hanya suka film roman ke matriks penilaian, lalu lihat bagaimana v₂ berubah.',
+    'Hitung bagian energi setiap komponen untuk matriks penilaian pilihanmu sendiri, lalu tentukan k yang membawa 95 persen.',
+    'Susun ulang matriks penilaian dengan k = 1, lalu jelaskan apa yang hilang dibandingkan k = 2.',
+    'Buat citra 16 × 16 yang cuma berisi satu kotak, lalu tunjukkan bahwa rank-nya 1.',
+    'Hitung pada k berapa pendekatan rank rendah citra 64 × 48 mulai lebih boros dari aslinya.',
+    'Tambahkan derau acak kecil ke citra kotak, hitung nilai singularnya, lalu jelaskan kenapa nilai singular kecil sering dianggap derau.',
+    'Jelaskan kenapa garis diagonal butuh banyak komponen SVD, sedangkan kotak cuma satu.',
+    'Jelaskan kenapa mengisi penilaian kosong dengan nol lalu menjalankan SVD memberi rekomendasi yang buruk.'
   ]
 });
