@@ -10,6 +10,10 @@
    Bahasa yang dipakai di kelas adalah PHP dengan PDO, jadi blok
    kode di sini juga PHP -- dan benar-benar DIJALANKAN memakai
    PDO SQLite supaya hasilnya bisa dibuktikan, bukan diandaikan.
+
+   Tiga topik tambahan (merancang REST API, kueri di aplikasi
+   web, autentikasi sesi & token) disusun dari REFERENSI LUAR.
+   Keterangan lengkapnya ada di kepala bagian tambahan di bawah.
    ============================================================ */
 
 TOPICS.push({
@@ -1359,5 +1363,2039 @@ Dan **garam** adalah menambahkan **serpihan acak yang berbeda** ke setiap cetaka
     'Jelaskan kenapa SQL injection dicegah saat masuk sedangkan XSS dicegah saat keluar, dan apa akibatnya kalau keduanya ditukar.',
     'Jelaskan cara kerja token CSRF, dan kenapa penyerang tidak bisa menebaknya.',
     'Jelaskan kenapa pesan login gagal harus sama untuk username salah dan kata sandi salah.'
+  ]
+});
+
+
+/* ------------------------------------------------------------
+   TAMBAHAN dari referensi luar (tiga topik di bawah).
+
+   Dua topik pertama berkas ini berasal dari projek kuliah
+   sendiri. Tiga topik berikutnya disusun dari pokok bahasan
+   yang berulang di deskripsi mata kuliah Pemrograman Web
+   lanjut dan pengembangan API di kampus lain -- dasar HTTP,
+   rancangan API, autentikasi token/JWT, API yang memakai
+   basis data -- dilengkapi spesifikasi HTTP (RFC 9110) dan
+   dokumentasi resmi PHP.
+
+   Materi yang sudah ada di Pemrograman Web I (MVC, routing,
+   dasar sesi PHP) dan di topik Keamanan Aplikasi Web di atas
+   (bcrypt, SQL injection, XSS, CSRF) sengaja tidak diulang.
+
+   Seperti topik di atas, ketiga program PHP-nya benar-benar
+   dijalankan (PHP 8.4, PDO SQLite dalam memori), dan
+   keluarannya disalin apa adanya. Angka waktu di topik kueri
+   DIUKUR di satu mesin; angka jeda jaringan DIHITUNG.
+   ------------------------------------------------------------ */
+TOPICS.push({
+  id: 'pemweb2-rest-api',
+  judul: 'Merancang REST API dengan PHP',
+  kategori: 'pemweb2',
+  tag: ['REST', 'API', 'HTTP', 'kode status', 'idempoten', 'paginasi', 'JSON'],
+  ringkas: 'URL menunjuk benda, metode menyatakan tindakan, dan kode status memberi tahu pemanggil apa yang harus ia lakukan berikutnya.',
+
+  fungsi: `**Membuat aplikasi web bisa dipakai oleh program lain — aplikasi ponsel, halaman JavaScript, atau layanan lain — lewat pertukaran JSON di atas HTTP.**
+
+Terpakai di:
+
+- **Aplikasi ponsel** yang mengambil data dari peladen PHP-mu
+- **Halaman web dinamis** yang memuat data dengan \`fetch()\` tanpa memuat ulang halaman
+- **Integrasi antarsistem** — misalnya sistem akademik yang mengirim nilai ke sistem lain
+- **Proyek akhir** dengan pemisahan frontend dan backend
+- **Membaca dokumentasi API orang lain** — pola yang sama dipakai hampir semua layanan
+
+Yang paling sering diabaikan: **kode status.** Pemanggil API adalah program, bukan manusia. Ia tidak membaca pesan galat yang ramah — ia membaca angka 201, 404, atau 422, lalu memutuskan apa yang dilakukan. Menjawab semua kegagalan dengan 400 atau 500 membuat pemanggil cuma bisa menebak.
+
+Dan yang paling mahal kalau salah: **tindakan yang aman diulang.** Jaringan ponsel sering putus di tengah jalan, dan aplikasi yang baik mencoba ulang. Kalau API-mu tidak dirancang untuk itu, satu kali tekan tombol bisa menjadi tiga pesanan.`,
+
+  praktik: {
+    tujuan: 'Kamu punya API buku dengan jalur berbentuk kata benda, kode status yang berbeda untuk setiap jenis kegagalan, operasi PUT yang aman diulang, dan paginasi dengan meta — dan sudah mengujinya lewat HTTP sungguhan.',
+    alat: ['PHP 8 dengan ekstensi PDO SQLite atau MySQL', 'Peladen bawaan PHP (php -S)', 'curl dari Git Bash, atau Postman'],
+    langkah: [
+      { judul: 'Tulis daftar sumber daya, bukan daftar tindakan',
+        isi: `Sebelum menulis kode, tulis kata bendanya: \`/buku\` untuk koleksi, \`/buku/{id}\` untuk satu buku.
+
+Lalu pasangkan dengan metode: GET membaca, POST membuat, PUT mengganti, DELETE menghapus. Kalau kamu tergoda menulis \`/tambahBuku\`, itu tanda kata kerjanya belum dipindah ke metode.` },
+      { judul: 'Buat satu titik masuk',
+        isi: `Satu berkas \`index.php\` menerima semua permintaan dan meneruskannya ke fungsi penangan:
+
+- metode dari \`$_SERVER['REQUEST_METHOD']\`
+- jalur dari \`parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)\`
+- badan dari \`file_get_contents('php://input')\`
+
+Kirim jawabannya dengan \`http_response_code($status)\`, \`header('Content-Type: application/json')\`, lalu \`echo json_encode($isi)\`. Jalankan dengan \`php -S localhost:8000 index.php\`.` },
+      { judul: 'Pisahkan penangan dari HTTP',
+        isi: `Fungsi penangan menerima metode, jalur, dan badan, lalu **mengembalikan** status dan isi — ia tidak memanggil \`header()\` atau \`echo\` sendiri.
+
+Dengan begitu penangan bisa diuji langsung dari baris perintah, persis seperti program di topik ini, tanpa peramban dan tanpa peladen.` },
+      { judul: 'Beri kode status yang berbeda untuk setiap kegagalan',
+        isi: `Periksa berurutan: bisakah badannya dibaca (400)? Apakah isinya sah (422)? Apakah bertabrakan dengan data yang ada (409)? Apakah yang dicari ada (404)? Apakah metodenya didukung di jalur ini (405)?
+
+Urutan itu penting: pemanggil perlu tahu kegagalan **pertama** yang harus ia perbaiki.` },
+      { judul: 'Uji lewat HTTP sungguhan',
+        isi: `Kirim permintaan dengan curl dan opsi \`-i\` supaya baris status ikut tampil:
+
+\`curl -i -X POST localhost:8000/buku -H "Content-Type: application/json" -d '{"isbn":"9786020332956","judul":"Laskar Pelangi"}'\`
+
+Pastikan baris pertama jawabannya \`HTTP/1.1 201 Created\`, bukan 200.` },
+      { judul: 'Kirim permintaan yang sama tiga kali',
+        isi: `Ulangi POST yang sama tiga kali, lalu PUT yang sama tiga kali. Hitung jumlah baris dan periksa isinya.
+
+POST kedua dan ketiga harus ditolak — oleh kolom unik, bukan oleh pemeriksaan di PHP. PUT harus menghasilkan keadaan yang sama persis setiap kali.` },
+      { judul: 'Tambahkan paginasi sebelum datanya besar',
+        isi: `Terima \`halaman\` dan \`per_halaman\` dari query string, beri batas atas untuk \`per_halaman\` (misalnya 100), dan sertakan meta \`total\` serta \`jumlah_halaman\` di jawaban.
+
+Menambahkan paginasi setelah aplikasi ponsel terlanjur memakai API-mu berarti mengubah bentuk jawaban — dan itu merusak pemanggil lama.` },
+      { judul: 'Lengkapi header yang diwajibkan',
+        isi: `Jawaban 201 sebaiknya menyertakan header \`Location\` berisi alamat sumber daya baru, misalnya \`/buku/3\`.
+
+Jawaban 405 **wajib** menyertakan header \`Allow\` yang menyebut metode yang didukung jalur itu, misalnya \`Allow: GET, PUT, DELETE\`. Program di topik ini memanggil penangan langsung sehingga header tidak tampil, tetapi di \`index.php\` keduanya harus dikirim.` }
+    ],
+    cek: [
+      'Tidak ada satu pun jalur API-mu yang mengandung kata kerja',
+      'Badan rusak, isian salah, ISBN kembar, dan buku yang tidak ada masing-masing mendapat kode status berbeda',
+      'Tiga PUT yang sama menghasilkan keadaan yang sama, dan tiga POST yang sama tidak menghasilkan tiga baris',
+      'GET koleksi memakai paginasi dengan batas atas per halaman dan meta total'
+    ]
+  },
+
+  judulLogicSyntax: 'Bedah Kode — urutan pemeriksaan yang menentukan kode status, dan kenapa PUT boleh diulang',
+
+  konsep: `Aplikasi web yang kamu buat di Pemrograman Web I mengirim **halaman HTML** ke peramban. API mengirim **data** — biasanya JSON — ke program lain. Pemanggilnya bisa aplikasi ponsel, halaman JavaScript, atau peladen lain.
+
+Perbedaan itu mengubah satu hal penting: **pemanggilnya tidak bisa membaca.** Manusia yang melihat pesan "ISBN sudah terdaftar" paham harus berbuat apa. Program cuma melihat angka, dan harus memutuskan dari angka itu saja.
+
+REST adalah kebiasaan merancang API di atas HTTP supaya keputusan itu bisa diambil dengan pasti. Intinya tiga: **URL menunjuk benda, metode menyatakan tindakan, kode status menyatakan hasil.**
+
+**Benda di URL, tindakan di metode**
+
+| Metode | Artinya | Aman diulang (idempoten) |
+|---|---|---|
+| GET | membaca | ya |
+| POST | membuat sumber daya baru | **tidak** |
+| PUT | mengganti seluruh isi | ya |
+| PATCH | mengubah sebagian | tidak dijamin |
+| DELETE | menghapus | ya |
+
+Program di topik ini menjalankan alur lengkapnya:
+
+| Permintaan | Kode | Jawaban |
+|---|---|---|
+| POST /buku | 201 | id 1 |
+| POST /buku | 201 | id 2 |
+| GET /buku | 200 | daftar buku |
+| GET /buku/1 | 200 | buku nomor 1 |
+| PUT /buku/2 | 200 | id 2 |
+| DELETE /buku/1 | 204 | (kosong) |
+| GET /buku/1 | 404 | buku tidak ada |
+
+Tidak ada \`/tambahBuku\` atau \`/hapusBuku?id=1\`. Kata kerjanya sudah ada di metode.
+
+Ini bukan soal selera. Peramban, perayap mesin pencari, dan fitur pramuat menganggap GET **aman** — tidak mengubah apa pun — sehingga bebas mengikuti tautan GET kapan saja. Tautan \`GET /hapusBuku?id=1\` bisa dijalankan oleh perayap yang tidak pernah berniat menghapus apa-apa.
+
+**Kegagalan yang berbeda, kode yang berbeda**
+
+| Permintaan | Kode | Artinya |
+|---|---|---|
+| POST badan rusak | 400 | badannya tidak bisa dibaca sama sekali |
+| POST isbn "123", judul kosong | 422 | bisa dibaca, isinya melanggar aturan |
+| POST ISBN yang sudah ada | 409 | sah, tetapi bertabrakan dengan data |
+| GET /buku/99 | 404 | yang dicari tidak ada |
+| PATCH /buku/2 | 405 | jalurnya ada, metodenya tidak didukung |
+| GET /penulis | 404 | sumber daya tidak dikenal |
+
+Bedanya menentukan apa yang dilakukan **pemanggil**:
+
+- Pada **422**, ia menampilkan kolom mana yang salah, pengguna memperbaikinya, lalu mengirim ulang.
+- Pada **409**, mengirim ulang **tidak akan pernah** berhasil — ia harus menawarkan pilihan lain.
+- Pada **5xx**, kesalahannya di peladen, dan mencoba lagi nanti masuk akal.
+
+Dua kode yang tidak muncul di program ini tetapi akan kamu butuhkan di topik autentikasi: **401** berarti peladen belum tahu siapa pemanggilnya (belum masuk, atau tokennya tidak sah), sedangkan **403** berarti peladen tahu siapa pemanggilnya dan ia tidak berhak.
+
+**Aman diulang: PUT ya, POST tidak**
+
+Permintaan yang sama dikirim tiga kali — seperti yang terjadi saat aplikasi ponsel mencoba ulang karena jaringan tersendat:
+
+| Permintaan, tiga kali | Hasil |
+|---|---|
+| POST buku baru | 201, lalu 409, lalu 409 |
+| PUT stok = 5 | 200, 200, 200 — stok tetap **5** |
+
+PUT mengirim **keadaan akhir**. Diulang berapa kali pun, hasilnya sama. Itu yang disebut idempoten, dan itu yang membuat PUT aman dicoba ulang.
+
+POST membuat sumber daya **baru**. Di sini yang menyelamatkan adalah kolom ISBN yang \`UNIQUE\`: POST kedua dan ketiga ditolak basis data. Tanpa kolom unik itu, tiga POST menghasilkan tiga buku kembar.
+
+**Tindakan relatif tidak aman diulang**
+
+Mulai dari stok 5, perintah "tambah 1" terkirim tiga kali. Hasilnya **8**, bukan 6.
+
+Karena itu perintah relatif — tambah, kurangi — tidak boleh dipasang di PUT. Ia menjadi POST ke sumber daya yang mencatat kejadiannya, misalnya \`POST /buku/2/penerimaan\`, dan diberi **kunci idempotensi**: nilai unik dari pemanggil yang disimpan peladen, sehingga permintaan kedua dengan kunci yang sama dikenali sebagai ulangan. Ini pola yang sama dengan topik pembayaran di E-Commerce.
+
+**Paginasi**
+
+Setelah 95 buku contoh ditambahkan, total ada 97 buku:
+
+| | |
+|---|---|
+| permintaan | GET /buku?halaman=3&per_halaman=20 |
+| baris dikirim | id 42 sampai 61 (20 baris) |
+| meta | total 97, jumlah_halaman 5 |
+
+Tanpa paginasi, satu GET mengirim seluruh isi tabel. Dengan 97 baris itu tidak terasa; dengan seratus ribu baris, satu permintaan bisa menghabiskan memori peladen dan membuat aplikasi ponsel pemanggilnya macet.
+
+Meta \`total\` dan \`jumlah_halaman\` membuat pemanggil tahu kapan berhenti tanpa harus meminta halaman kosong lebih dulu. Topik berikutnya menunjukkan kenapa paginasi dengan \`OFFSET\` makin lambat di halaman yang jauh, dan apa penggantinya.
+
+**Satu catatan tentang program ini**
+
+Program memanggil fungsi \`tangani()\` langsung, tanpa peladen HTTP, supaya seluruh alurnya bisa dijalankan dan dibuktikan dalam satu kali eksekusi. Di aplikasi sungguhan, \`index.php\` membaca metode, jalur, dan badan dari permintaan, memanggil fungsi yang sama, lalu mengirim status dan JSON-nya — langkahnya ada di bagian praktik.`,
+
+  logicSyntax: [
+    {
+      bahasa: 'php',
+      kode: String.raw`$data = json_decode($badan, true);
+if (!is_array($data)) {
+    return jawab(400, ['galat' => 'badan bukan JSON yang sah']);
+}
+$galat = validasi($data);
+if ($galat) {
+    return jawab(422, ['galat' => $galat]);
+}
+try {
+    $q->execute([$data['isbn'], $data['judul'], $data['stok'] ?? 0]);
+} catch (PDOException $e) {
+    if ($e->getCode() === '23000') {         // pelanggaran batasan
+        return jawab(409, ['galat' => 'ISBN sudah terdaftar']);
+    }
+    throw $e;                                // galat lain -> 500
+}
+return jawab(201, ['id' => (int)$db->lastInsertId()]);`,
+      penjelasan: `Empat kemungkinan hasil, dan urutan pemeriksaannya mengikuti urutan pertanyaan yang akan diajukan pemanggil saat permintaannya ditolak.
+
+**Pertanyaan pertama: bisakah badannya dibaca?**
+
+\`json_decode\` mengembalikan \`null\` kalau teksnya bukan JSON yang sah. Pemeriksaan \`is_array\` menangkap itu, sekaligus menangkap JSON sah yang bukan objek — misalnya angka \`5\` atau teks \`"halo"\`.
+
+Kalau badannya tidak bisa dibaca, memeriksa isinya tidak ada artinya. Jawabannya **400**, dan pemanggil tahu bahwa kesalahannya ada di cara ia menyusun permintaan — kemungkinan besar kekeliruan program, bukan kesalahan pengguna.
+
+**Pertanyaan kedua: apakah isinya sah?**
+
+Badannya terbaca, tetapi ISBN-nya cuma tiga angka dan judulnya kosong. Jawabannya **422**, dan isinya menyebut **setiap** kolom yang salah sekaligus — bukan cuma yang pertama.
+
+Itu penting untuk pemanggil: aplikasi ponsel bisa menandai semua kolom yang salah di formulir dalam satu kali jalan, bukan memaksa pengguna memperbaiki satu, mengirim, lalu menemukan kesalahan berikutnya.
+
+**Pertanyaan ketiga: apakah bertabrakan dengan data yang ada?**
+
+Di sini ada godaan yang harus dilawan: memeriksa dengan \`SELECT\` apakah ISBN itu sudah ada, lalu baru \`INSERT\`.
+
+Itu terlihat benar, dan gagal justru saat paling dibutuhkan. Dua permintaan yang tiba hampir bersamaan — misalnya ulangan otomatis dari aplikasi ponsel — keduanya menjalankan \`SELECT\`, keduanya melihat ISBN belum ada, keduanya menjalankan \`INSERT\`. Hasilnya dua buku kembar.
+
+Yang bisa diandalkan cuma **batasan di basis data**. Kolom \`isbn\` dideklarasikan \`UNIQUE\`, jadi basis data sendiri yang menolak baris kedua, seberapa pun dekat waktunya. Kode PHP cukup menangkap penolakan itu dan menerjemahkannya menjadi **409**.
+
+**Dan kenapa ada \`throw $e\` di akhir.**
+
+\`23000\` adalah kode SQLSTATE untuk pelanggaran batasan, dan dipakai baik oleh SQLite maupun MySQL. PostgreSQL memakai kode yang lebih rinci di kelas yang sama — \`23505\` untuk nilai unik kembar — jadi di sana yang dicocokkan kode lengkapnya itu. Kode di luar kelas 23 berarti sesuatu yang sama sekali berbeda — diska penuh, sambungan terputus, tabel terkunci.
+
+Kalau semua \`PDOException\` dijawab 409, pemanggil diberi tahu "ISBN sudah terdaftar" padahal masalahnya diska penuh. Ia akan menyerah dan menampilkan pesan yang salah kepada pengguna, padahal mencoba lagi nanti mungkin berhasil.
+
+Melempar ulang galat yang tidak dikenali membuatnya menjadi **500** — dan 500 adalah jawaban yang jujur: kesalahannya ada di peladen.
+
+**Baru setelah ketiganya lolos: 201.**
+
+Bukan 200. 201 berarti "sesuatu yang baru telah dibuat", dan disertai id-nya supaya pemanggil tahu alamat sumber daya itu. Di \`index.php\` sungguhan, alamat itu juga dikirim lewat header \`Location\`.`
+    },
+    {
+      bahasa: 'php',
+      kode: String.raw`// PUT: mengirim KEADAAN AKHIR
+$q = $db->prepare("UPDATE buku SET isbn = ?, judul = ?, stok = ?
+                   WHERE id = ?");
+$q->execute([$data['isbn'], $data['judul'], $data['stok'] ?? 0, $id]);
+
+// perintah RELATIF: mengirim PERUBAHAN
+$db->exec("UPDATE buku SET stok = stok + 1 WHERE id = 2");
+
+// dikirim tiga kali karena jaringan tersendat:
+//   PUT stok = 5    -> stok 5, 5, 5
+//   stok + 1 dari 5 -> stok 6, 7, 8`,
+      penjelasan: `Dua pernyataan UPDATE yang sekilas mirip, dengan sifat yang sama sekali berbeda saat terkirim lebih dari sekali.
+
+**Kenapa permintaan bisa terkirim lebih dari sekali.**
+
+Aplikasi ponsel mengirim permintaan, lalu menunggu jawaban. Jawabannya tidak datang — sinyal hilang saat pengguna masuk lift.
+
+Dari sisi aplikasi, ada dua kemungkinan yang **tidak bisa dibedakan**: permintaannya tidak pernah sampai ke peladen, atau permintaannya sampai dan diproses, tetapi jawabannya yang hilang di jalan.
+
+Aplikasi yang baik mencoba ulang. Dan pada kemungkinan kedua, itu berarti peladen menerima permintaan yang sama dua kali.
+
+**PUT: keadaan akhir.**
+
+Pernyataan pertama berbunyi "stok buku ini **adalah** 5". Dijalankan sekali, stoknya 5. Dijalankan tiga kali, stoknya tetap 5. Peladen tidak perlu tahu apakah ini permintaan pertama atau ulangan — hasilnya sama.
+
+Itu arti idempoten: menjalankan sekali dan menjalankan berkali-kali memberi keadaan akhir yang sama. Dan karena itu, pemanggil boleh mencoba ulang PUT sebanyak yang ia mau tanpa khawatir.
+
+Perhatikan bahwa yang harus sama adalah **keadaan di peladen**, bukan jawabannya. DELETE yang diulang juga idempoten — bukunya tetap terhapus — meskipun beberapa API menjawab 204 untuk yang pertama dan 404 untuk berikutnya.
+
+**Perintah relatif: perubahan.**
+
+Pernyataan kedua berbunyi "tambah stok buku ini **satu**". Maksud pengirimnya satu kali penambahan. Terkirim tiga kali, stoknya naik tiga. Program di topik ini menunjukkannya: mulai dari 5, hasilnya 8.
+
+Peladen tidak punya cara membedakan "tiga penambahan yang disengaja" dari "satu penambahan yang terkirim tiga kali".
+
+**Jadi di mana perintah relatif ditempatkan?**
+
+Bukan di PUT — karena PUT menjanjikan aman diulang, dan perintah ini tidak.
+
+Ia menjadi POST yang **mencatat kejadiannya** — misalnya \`POST /buku/2/penerimaan\` dengan isi "diterima 1 eksemplar" — ditambah kunci idempotensi dari pemanggil. Peladen menyimpan kunci itu bersama catatannya. Permintaan kedua dengan kunci yang sama dikenali sebagai ulangan dan dijawab dengan hasil yang sudah ada, tanpa menambah stok lagi.
+
+Pola itu terasa berlebihan untuk stok buku perpustakaan. Untuk pembayaran, pemesanan tiket, atau apa pun yang melibatkan uang, pola itu wajib.`
+    }
+  ],
+
+  kode: { php: String.raw`<?php
+// ============================================
+// REST API dengan PHP: sumber daya, metode, kode status
+// ============================================
+
+$db = new PDO('sqlite::memory:');
+$db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+$db->exec("CREATE TABLE buku (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    isbn TEXT UNIQUE NOT NULL,
+    judul TEXT NOT NULL,
+    stok INTEGER NOT NULL DEFAULT 0)");
+
+// --------------------------------------------
+// Satu fungsi yang menangani seluruh permintaan
+// --------------------------------------------
+function jawab($status, $isi = null) {
+    return [$status, $isi];
+}
+
+function validasi($data) {
+    $galat = [];
+    if (!isset($data['isbn']) || !preg_match('/^\d{13}$/', $data['isbn'])) {
+        $galat['isbn'] = 'harus 13 angka';
+    }
+    if (!isset($data['judul']) || trim($data['judul']) === '') {
+        $galat['judul'] = 'wajib diisi';
+    }
+    if (isset($data['stok']) && (!is_int($data['stok']) || $data['stok'] < 0)) {
+        $galat['stok'] = 'bilangan bulat >= 0';
+    }
+    return $galat;
+}
+
+function tangani($db, $metode, $jalur, $badan = null) {
+    // /buku  atau  /buku/{id}
+    if (!preg_match('#^/buku(?:/(\d+))?$#', $jalur, $m)) {
+        return jawab(404, ['galat' => 'sumber daya tidak dikenal']);
+    }
+    $id = isset($m[1]) ? (int)$m[1] : null;
+
+    if ($metode === 'GET' && $id === null) {
+        $baris = $db->query("SELECT * FROM buku ORDER BY id")->fetchAll(PDO::FETCH_ASSOC);
+        return jawab(200, ['data' => $baris, 'jumlah' => count($baris)]);
+    }
+    if ($metode === 'GET') {
+        $q = $db->prepare("SELECT * FROM buku WHERE id = ?");
+        $q->execute([$id]);
+        $b = $q->fetch(PDO::FETCH_ASSOC);
+        return $b ? jawab(200, $b) : jawab(404, ['galat' => 'buku tidak ada']);
+    }
+    if ($metode === 'POST' && $id === null) {
+        $data = json_decode($badan, true);
+        if (!is_array($data)) {
+            return jawab(400, ['galat' => 'badan bukan JSON yang sah']);
+        }
+        $galat = validasi($data);
+        if ($galat) {
+            return jawab(422, ['galat' => $galat]);
+        }
+        try {
+            $q = $db->prepare("INSERT INTO buku (isbn, judul, stok) VALUES (?, ?, ?)");
+            $q->execute([$data['isbn'], $data['judul'], $data['stok'] ?? 0]);
+        } catch (PDOException $e) {
+            // 23000 = pelanggaran batasan (di sini: ISBN kembar).
+            // Galat lain BUKAN konflik -- biarkan meledak jadi 500.
+            if ($e->getCode() === '23000') {
+                return jawab(409, ['galat' => 'ISBN sudah terdaftar']);
+            }
+            throw $e;
+        }
+        return jawab(201, ['id' => (int)$db->lastInsertId()]);
+    }
+    if ($metode === 'PUT' && $id !== null) {
+        $data = json_decode($badan, true);
+        if (!is_array($data)) {
+            return jawab(400, ['galat' => 'badan bukan JSON yang sah']);
+        }
+        $galat = validasi($data);
+        if ($galat) {
+            return jawab(422, ['galat' => $galat]);
+        }
+        $q = $db->prepare("UPDATE buku SET isbn = ?, judul = ?, stok = ? WHERE id = ?");
+        $q->execute([$data['isbn'], $data['judul'], $data['stok'] ?? 0, $id]);
+        return $q->rowCount() ? jawab(200, ['id' => $id])
+                              : jawab(404, ['galat' => 'buku tidak ada']);
+    }
+    if ($metode === 'DELETE' && $id !== null) {
+        $q = $db->prepare("DELETE FROM buku WHERE id = ?");
+        $q->execute([$id]);
+        return jawab(204);
+    }
+    return jawab(405, ['galat' => 'metode tidak diizinkan untuk jalur ini']);
+}
+
+function kirim($db, $metode, $jalur, $badan = null) {
+    [$status, $isi] = tangani($db, $metode, $jalur, $badan);
+    $teks = $isi === null ? '(kosong)' : json_encode($isi, JSON_UNESCAPED_UNICODE);
+    if (strlen($teks) > 46) {
+        $teks = substr($teks, 0, 43) . '...';
+    }
+    printf("  %-6s %-9s %d  %s\n", $metode, $jalur, $status, $teks);
+    return $status;
+}
+
+// --------------------------------------------
+// 1. Alur normal
+// --------------------------------------------
+echo "--- alur normal: buat, baca, ubah, hapus ---\n";
+echo "  metode jalur     kode isi jawaban\n";
+kirim($db, 'POST', '/buku', '{"isbn":"9786020332956","judul":"Laskar Pelangi","stok":4}');
+kirim($db, 'POST', '/buku', '{"isbn":"9789792248616","judul":"Bumi Manusia","stok":2}');
+kirim($db, 'GET', '/buku');
+kirim($db, 'GET', '/buku/1');
+kirim($db, 'PUT', '/buku/2', '{"isbn":"9789792248616","judul":"Bumi Manusia","stok":7}');
+kirim($db, 'DELETE', '/buku/1');
+kirim($db, 'GET', '/buku/1');
+echo "\n";
+echo "  URL menunjuk BENDA (buku, buku nomor 2). Metode HTTP\n";
+echo "  menyatakan TINDAKAN. Tidak ada /tambahBuku atau\n";
+echo "  /hapusBuku?id=1 -- kata kerjanya sudah ada di metode.\n";
+
+// --------------------------------------------
+// 2. Kode status: tiap kegagalan punya arti berbeda
+// --------------------------------------------
+echo "\n--- kegagalan yang berbeda, kode yang berbeda ---\n";
+echo "  metode jalur     kode isi jawaban\n";
+kirim($db, 'POST', '/buku', '{isbn: rusak');
+kirim($db, 'POST', '/buku', '{"isbn":"123","judul":""}');
+kirim($db, 'POST', '/buku', '{"isbn":"9789792248616","judul":"Salinan"}');
+kirim($db, 'GET', '/buku/99');
+kirim($db, 'PATCH', '/buku/2', '{}');
+kirim($db, 'GET', '/penulis');
+echo "\n";
+echo "  400  badannya tidak bisa dibaca sama sekali\n";
+echo "  422  bisa dibaca, tetapi isinya melanggar aturan\n";
+echo "  409  sah, tetapi bertabrakan dengan data yang ada\n";
+echo "  404  yang dicari tidak ada\n";
+echo "  405  jalurnya ada, metodenya tidak didukung\n";
+echo "\n";
+echo "  Bedanya menentukan apa yang harus dilakukan PEMANGGIL.\n";
+echo "  Pada 422 ia memperbaiki isian dan mengirim ulang. Pada\n";
+echo "  409 mengirim ulang TIDAK akan pernah berhasil. Kalau\n";
+echo "  semuanya dijawab 400 atau 500, pemanggil cuma bisa\n";
+echo "  menebak.\n";
+
+// --------------------------------------------
+// 3. Idempoten: PUT dan DELETE boleh diulang, POST tidak
+// --------------------------------------------
+echo "\n--- mengirim permintaan yang SAMA tiga kali ---\n";
+$sebelum = (int)$db->query("SELECT COUNT(*) FROM buku")->fetchColumn();
+echo "  jumlah buku awal: $sebelum\n\n";
+$badan = '{"isbn":"9786024246945","judul":"Filosofi Teras","stok":3}';
+echo "  POST /buku, tiga kali:\n";
+for ($i = 0; $i < 3; $i++) {
+    echo "  "; kirim($db, 'POST', '/buku', $badan);
+}
+$badan2 = '{"isbn":"9789792248616","judul":"Bumi Manusia","stok":5}';
+echo "\n  PUT /buku/2, tiga kali:\n";
+for ($i = 0; $i < 3; $i++) {
+    echo "  "; kirim($db, 'PUT', '/buku/2', $badan2);
+}
+$stok = (int)$db->query("SELECT stok FROM buku WHERE id = 2")->fetchColumn();
+echo "\n  stok buku 2 setelah tiga PUT : $stok\n";
+$sesudah = (int)$db->query("SELECT COUNT(*) FROM buku")->fetchColumn();
+echo "  jumlah buku akhir             : $sesudah\n";
+echo "\n";
+echo "  PUT mengirim KEADAAN AKHIR ('stok = 5'). Diulang berapa\n";
+echo "  kali pun, hasilnya sama. Itu idempoten, dan itu yang\n";
+echo "  membuat PUT aman dicoba ulang saat jaringan putus.\n";
+echo "\n";
+echo "  POST membuat sumber daya BARU. Di sini ISBN yang unik\n";
+echo "  menyelamatkan: POST kedua dan ketiga ditolak 409. Tanpa\n";
+echo "  kolom unik itu, tiga POST menghasilkan tiga buku kembar.\n";
+echo "\n";
+echo "  Kalau sebuah tindakan harus lewat POST dan boleh dicoba\n";
+echo "  ulang, ia butuh kunci idempotensi -- persis seperti pada\n";
+echo "  pembayaran.\n";
+
+// --------------------------------------------
+// 4. Kenapa jangan 'stok = stok + 1' lewat PUT
+// --------------------------------------------
+echo "\n--- tindakan relatif tidak idempoten ---\n";
+$db->exec("UPDATE buku SET stok = 5 WHERE id = 2");
+for ($i = 0; $i < 3; $i++) {
+    $db->exec("UPDATE buku SET stok = stok + 1 WHERE id = 2");
+}
+$stok = (int)$db->query("SELECT stok FROM buku WHERE id = 2")->fetchColumn();
+echo "  mulai dari 5, kirim 'tambah 1' tiga kali -> stok $stok\n";
+echo "\n";
+echo "  Maksudnya menambah satu, dan karena jaringan tersendat\n";
+echo "  permintaannya terkirim tiga kali. Hasilnya bukan 6.\n";
+echo "\n";
+echo "  Karena itu tindakan relatif ('tambah', 'kurangi') tidak\n";
+echo "  boleh dipasang di PUT. Ia masuk POST ke sumber daya yang\n";
+echo "  mencatat kejadiannya -- misalnya POST /buku/2/penerimaan\n";
+echo "  -- dan diberi kunci idempotensi.\n";
+
+// --------------------------------------------
+// 5. Paginasi: jangan kirim semuanya
+// --------------------------------------------
+echo "\n--- paginasi ---\n";
+$q = $db->prepare("INSERT INTO buku (isbn, judul, stok) VALUES (?, ?, ?)");
+for ($i = 1; $i <= 95; $i++) {
+    $q->execute([sprintf("978000%07d", $i), "Buku contoh $i", $i % 9]);
+}
+$total = (int)$db->query("SELECT COUNT(*) FROM buku")->fetchColumn();
+$per = 20;
+$halaman = 3;
+$q = $db->prepare("SELECT id FROM buku ORDER BY id LIMIT ? OFFSET ?");
+$q->execute([$per, ($halaman - 1) * $per]);
+$ids = $q->fetchAll(PDO::FETCH_COLUMN);
+$meta = ['halaman' => $halaman, 'per_halaman' => $per,
+         'total' => $total, 'jumlah_halaman' => (int)ceil($total / $per)];
+echo "  GET /buku?halaman=3&per_halaman=20\n";
+echo "  meta : " . json_encode($meta) . "\n";
+echo "  id   : " . $ids[0] . " sampai " . end($ids) . " (" . count($ids) . " baris)\n";
+echo "\n";
+echo "  Tanpa paginasi, GET /buku mengirim seluruh " . $total . " baris --\n";
+echo "  dan saat datanya jadi seratus ribu, satu permintaan bisa\n";
+echo "  menjatuhkan peladen dan aplikasi ponsel pemanggilnya.\n";
+echo "\n";
+echo "  Meta 'total' dan 'jumlah_halaman' membuat pemanggil tahu\n";
+echo "  kapan berhenti, tanpa harus meminta halaman kosong dulu.\n";` },
+  output: `--- alur normal: buat, baca, ubah, hapus ---
+  metode jalur     kode isi jawaban
+  POST   /buku     201  {"id":1}
+  POST   /buku     201  {"id":2}
+  GET    /buku     200  {"data":[{"id":1,"isbn":"9786020332956","ju...
+  GET    /buku/1   200  {"id":1,"isbn":"9786020332956","judul":"Las...
+  PUT    /buku/2   200  {"id":2}
+  DELETE /buku/1   204  (kosong)
+  GET    /buku/1   404  {"galat":"buku tidak ada"}
+
+  URL menunjuk BENDA (buku, buku nomor 2). Metode HTTP
+  menyatakan TINDAKAN. Tidak ada /tambahBuku atau
+  /hapusBuku?id=1 -- kata kerjanya sudah ada di metode.
+
+--- kegagalan yang berbeda, kode yang berbeda ---
+  metode jalur     kode isi jawaban
+  POST   /buku     400  {"galat":"badan bukan JSON yang sah"}
+  POST   /buku     422  {"galat":{"isbn":"harus 13 angka","judul":"...
+  POST   /buku     409  {"galat":"ISBN sudah terdaftar"}
+  GET    /buku/99  404  {"galat":"buku tidak ada"}
+  PATCH  /buku/2   405  {"galat":"metode tidak diizinkan untuk jalu...
+  GET    /penulis  404  {"galat":"sumber daya tidak dikenal"}
+
+  400  badannya tidak bisa dibaca sama sekali
+  422  bisa dibaca, tetapi isinya melanggar aturan
+  409  sah, tetapi bertabrakan dengan data yang ada
+  404  yang dicari tidak ada
+  405  jalurnya ada, metodenya tidak didukung
+
+  Bedanya menentukan apa yang harus dilakukan PEMANGGIL.
+  Pada 422 ia memperbaiki isian dan mengirim ulang. Pada
+  409 mengirim ulang TIDAK akan pernah berhasil. Kalau
+  semuanya dijawab 400 atau 500, pemanggil cuma bisa
+  menebak.
+
+--- mengirim permintaan yang SAMA tiga kali ---
+  jumlah buku awal: 1
+
+  POST /buku, tiga kali:
+    POST   /buku     201  {"id":3}
+    POST   /buku     409  {"galat":"ISBN sudah terdaftar"}
+    POST   /buku     409  {"galat":"ISBN sudah terdaftar"}
+
+  PUT /buku/2, tiga kali:
+    PUT    /buku/2   200  {"id":2}
+    PUT    /buku/2   200  {"id":2}
+    PUT    /buku/2   200  {"id":2}
+
+  stok buku 2 setelah tiga PUT : 5
+  jumlah buku akhir             : 2
+
+  PUT mengirim KEADAAN AKHIR ('stok = 5'). Diulang berapa
+  kali pun, hasilnya sama. Itu idempoten, dan itu yang
+  membuat PUT aman dicoba ulang saat jaringan putus.
+
+  POST membuat sumber daya BARU. Di sini ISBN yang unik
+  menyelamatkan: POST kedua dan ketiga ditolak 409. Tanpa
+  kolom unik itu, tiga POST menghasilkan tiga buku kembar.
+
+  Kalau sebuah tindakan harus lewat POST dan boleh dicoba
+  ulang, ia butuh kunci idempotensi -- persis seperti pada
+  pembayaran.
+
+--- tindakan relatif tidak idempoten ---
+  mulai dari 5, kirim 'tambah 1' tiga kali -> stok 8
+
+  Maksudnya menambah satu, dan karena jaringan tersendat
+  permintaannya terkirim tiga kali. Hasilnya bukan 6.
+
+  Karena itu tindakan relatif ('tambah', 'kurangi') tidak
+  boleh dipasang di PUT. Ia masuk POST ke sumber daya yang
+  mencatat kejadiannya -- misalnya POST /buku/2/penerimaan
+  -- dan diberi kunci idempotensi.
+
+--- paginasi ---
+  GET /buku?halaman=3&per_halaman=20
+  meta : {"halaman":3,"per_halaman":20,"total":97,"jumlah_halaman":5}
+  id   : 42 sampai 61 (20 baris)
+
+  Tanpa paginasi, GET /buku mengirim seluruh 97 baris --
+  dan saat datanya jadi seratus ribu, satu permintaan bisa
+  menjatuhkan peladen dan aplikasi ponsel pemanggilnya.
+
+  Meta 'total' dan 'jumlah_halaman' membuat pemanggil tahu
+  kapan berhenti, tanpa harus meminta halaman kosong dulu.`,
+
+  kompleksitas: {
+    tabel: [
+      { operasi: 'GET /buku/{id}', waktu: 'O(log n)', memori: 'O(1), lewat indeks kunci primer' },
+      { operasi: 'GET /buku tanpa paginasi', waktu: 'O(n)', memori: 'O(n) — seluruh tabel masuk jawaban' },
+      { operasi: 'GET /buku dengan LIMIT p OFFSET k', waktu: 'O(k + p)', memori: 'O(p) — baris yang dilewati tetap dibaca' },
+      { operasi: 'POST dengan kolom UNIQUE', waktu: 'O(log n)', memori: 'pemeriksaan unik lewat indeks' },
+      { operasi: 'PUT atau DELETE /buku/{id}', waktu: 'O(log n)', memori: 'O(1)' }
+    ],
+    intuisi: `Hampir semua operasi pada satu sumber daya murah, karena ditemukan lewat indeks kunci primer atau indeks kolom unik. Yang mahal adalah operasi pada **koleksi**.
+
+GET koleksi tanpa paginasi tumbuh lurus dengan isi tabel — baik waktunya, memorinya, maupun ukuran jawaban yang harus dikirim lewat jaringan dan diurai oleh pemanggil. Di ponsel dengan sinyal lemah, ukuran jawaban itu yang paling terasa.
+
+Paginasi dengan \`OFFSET\` membatasi ukuran jawaban, tetapi tidak membatasi kerja basis data: untuk sampai ke halaman ke-900, basis data tetap membaca dan membuang semua baris sebelumnya. Topik berikutnya mengukurnya.
+
+Kolom \`UNIQUE\` tidak gratis — setiap INSERT juga memperbarui indeksnya — tetapi biayanya logaritmik, dan ia satu-satunya penjaga yang bekerja benar saat dua permintaan tiba bersamaan.`
+  },
+
+  kesalahanUmum: [
+    {
+      salah: 'Menaruh kata kerja di URL, misalnya /hapusBuku?id=1 yang dipanggil dengan GET.',
+      kenapa: 'GET dianggap aman oleh peramban, perayap mesin pencari, dan fitur pramuat, sehingga tautan seperti itu bisa dijalankan tanpa ada yang berniat menghapus. Kata kerja di URL juga menggandakan apa yang sudah dinyatakan metode.',
+      benar: 'Pakai kata benda di URL dan metode untuk tindakan, misalnya DELETE /buku/1, dan jangan pernah mengubah data lewat GET.'
+    },
+    {
+      salah: 'Menjawab semua permintaan dengan 200 dan menaruh keberhasilan di badan, misalnya {"sukses": false}.',
+      kenapa: 'Pemanggil, pustaka HTTP, cache, dan alat pemantau membaca kode status lebih dulu dan menganggap 200 sebagai berhasil. Kegagalan menjadi tidak terlihat oleh semua kecuali kode yang sengaja membaca badannya.',
+      benar: 'Kirim kode status yang sesuai dengan hasilnya, dan pakai badan untuk rincian seperti kolom mana yang salah.'
+    },
+    {
+      salah: 'Menjawab semua kegagalan dengan 400 atau 500.',
+      kenapa: 'Pemanggil tidak bisa membedakan isian yang perlu diperbaiki, data yang bertabrakan, dan peladen yang sedang bermasalah, padahal tindakan yang benar untuk ketiganya berbeda: memperbaiki, menyerah, atau mencoba lagi nanti.',
+      benar: 'Bedakan 400 untuk badan yang tidak terbaca, 422 untuk isian yang tidak sah, 409 untuk tabrakan, 404 untuk yang tidak ada, dan 405 untuk metode yang tidak didukung.'
+    },
+    {
+      salah: 'Mencegah data kembar dengan SELECT lebih dulu lalu INSERT, tanpa kolom UNIQUE.',
+      kenapa: 'Dua permintaan yang tiba hampir bersamaan sama-sama melihat data belum ada, lalu sama-sama menyisipkan. Ulangan otomatis dari aplikasi ponsel membuat keadaan itu jauh lebih sering dari yang dibayangkan.',
+      benar: 'Deklarasikan kolom unik di tabel, lalu tangkap pelanggaran batasannya dan terjemahkan menjadi 409.'
+    },
+    {
+      salah: 'Menangkap semua PDOException dan menjawabnya sebagai 409.',
+      kenapa: 'Galat seperti diska penuh atau sambungan terputus ikut dilaporkan sebagai data kembar, sehingga pemanggil menyerah dan menampilkan pesan yang salah, padahal mencoba lagi nanti mungkin berhasil.',
+      benar: 'Periksa kode SQLSTATE 23000 untuk pelanggaran batasan, dan lempar ulang galat lainnya supaya menjadi 500.'
+    },
+    {
+      salah: 'Mengirim pesan galat PDO mentah ke pemanggil.',
+      kenapa: 'Pesan mentah memuat nama tabel, nama kolom, dan kadang potongan kueri, yang membantu penyerang memetakan basis data. Pesannya juga tidak berguna bagi pengguna aplikasi.',
+      benar: 'Catat galat lengkapnya di log peladen, dan kirim ke pemanggil cuma kode status serta pesan umum.'
+    },
+    {
+      salah: 'Memasang perintah relatif seperti tambah stok satu di PUT.',
+      kenapa: 'PUT menjanjikan aman diulang, dan pemanggil akan mengulangnya saat jaringan tersendat. Perintah relatif yang diulang tiga kali menambah tiga, bukan satu.',
+      benar: 'Pakai PUT untuk keadaan akhir, dan jadikan perintah relatif sebagai POST yang mencatat kejadiannya dengan kunci idempotensi.'
+    },
+    {
+      salah: 'Membuat GET koleksi tanpa paginasi karena datanya masih sedikit.',
+      kenapa: 'Saat datanya tumbuh, satu permintaan menghabiskan memori peladen dan membuat pemanggil macet, dan menambahkan paginasi belakangan mengubah bentuk jawaban sehingga merusak pemanggil yang sudah ada.',
+      benar: 'Pasang paginasi sejak awal dengan batas atas per halaman dan meta total.'
+    }
+  ],
+
+  analogi: `Bayangkan **bagian arsip sebuah kantor** yang cuma melayani lewat formulir tertulis. Petugasnya tidak bisa diajak bicara, dan kamu tidak bisa melihat ke dalam.
+
+**Benda dan tindakan.** Setiap map punya nomor laci — itu URL. Formulirnya cuma empat jenis: LIHAT, TAMBAH, GANTI ISI, BUANG — itu metode. Tidak ada formulir "lihat-dan-buang-map-nomor-1"; kamu memilih jenis formulir, lalu menulis nomor lacinya.
+
+**Cap balasan.** Formulir yang kamu kirim kembali dengan satu cap:
+
+- *"tulisan tidak terbaca"* — kamu mengisi formulirnya dengan cara yang salah
+- *"isian salah: kolom ISBN harus 13 angka, kolom judul kosong"* — perbaiki dan kirim lagi
+- *"map dengan ISBN ini sudah ada"* — mengirim ulang tidak akan pernah berhasil
+- *"laci itu tidak ada"*
+- *"laci itu tidak menerima formulir jenis ini"*
+
+Kalau semua penolakan cuma dicap *"DITOLAK"*, kamu tidak tahu apakah harus memperbaiki isian, mencari laci lain, atau menyerah.
+
+**Pos yang lambat.** Kamu mengirim formulir GANTI ISI: *"stok di map nomor 2 menjadi 5"*. Balasannya tidak datang. Kamu tidak tahu apakah formulirnya hilang atau balasannya yang hilang, jadi kamu mengirim lagi. Dan lagi.
+
+Petugas menerima tiga formulir yang sama, dan menjalankan ketiganya. Stoknya 5. Tidak ada masalah.
+
+Sekarang formulirnya berbunyi *"tambahkan satu ke stok map nomor 2"*. Tiga formulir sampai, tiga kali ditambah. Stoknya 8 — padahal kamu cuma menerima satu buku.
+
+Karena itu arsip yang cermat meminta setiap formulir penambahan diberi **nomor tanda terima** buatanmu sendiri. Formulir kedua dengan nomor yang sama dikenali sebagai ulangan dan tidak dijalankan lagi.
+
+**Seluruh isi lemari.** Kamu meminta "LIHAT semua map". Petugas yang ceroboh memfotokopi seluruh lemari. Petugas yang cermat mengirim dua puluh lembar pertama, dengan catatan di atasnya: *"halaman 1 dari 5, total 97 map"* — kamu tahu berapa kali lagi harus meminta.`,
+
+  latihan: [
+    'Ubah daftar jalur \`/tambahBuku\`, \`/hapusBuku?id=1\`, \`/ubahStok\`, dan \`/semuaBuku\` menjadi jalur REST dengan metode yang tepat.',
+    'Tentukan kode status yang tepat untuk lima keadaan: badan bukan JSON, ISBN 12 angka, ISBN sudah ada, buku nomor 500 tidak ada, dan PATCH ke jalur yang cuma menerima PUT.',
+    'Jelaskan kenapa 409 dan 422 harus dibedakan, dari sudut pandang aplikasi ponsel yang menerima jawabannya.',
+    'Buat \`index.php\` yang membaca metode, jalur, dan badan dari permintaan HTTP, memanggil fungsi penangan dari topik ini, lalu mengirim status dan JSON-nya.',
+    'Uji API-mu dengan curl memakai opsi \`-i\`, lalu tunjukkan baris status untuk 201, 404, dan 422.',
+    'Tambahkan header \`Location\` pada jawaban 201 dan header \`Allow\` pada jawaban 405.',
+    'Hapus batasan \`UNIQUE\` dari kolom ISBN, kirim POST yang sama tiga kali, lalu hitung jumlah bukunya.',
+    'Jelaskan kenapa pemeriksaan data kembar dengan SELECT lalu INSERT tidak cukup, dengan menggambarkan urutan kejadian dua permintaan yang tiba bersamaan.',
+    'Rancang jalur dan badan permintaan untuk mencatat penerimaan buku dengan kunci idempotensi, lalu jelaskan apa yang disimpan peladen.',
+    'Tambahkan paginasi ke GET koleksi dengan batas atas 100 per halaman, dan tentukan apa yang terjadi kalau pemanggil meminta per_halaman=5000.'
+  ]
+});
+
+
+TOPICS.push({
+  id: 'pemweb2-kueri',
+  judul: 'Kueri di Aplikasi Web: N+1, Paginasi & Transaksi',
+  kategori: 'pemweb2',
+  tag: ['N+1', 'JOIN', 'WHERE IN', 'paginasi', 'OFFSET', 'keyset', 'transaksi', 'PDO'],
+  ringkas: 'Tiga kebiasaan kueri yang tidak terasa saat datanya sedikit, dan membuat aplikasi lambat atau salah saat datanya banyak.',
+
+  fungsi: `**Menulis kueri dari kode PHP yang tetap cepat dan tetap benar saat datanya ribuan kali lebih banyak dari data uji.**
+
+Terpakai di:
+
+- **Halaman daftar** — artikel, produk, pesanan — yang menampilkan data dari beberapa tabel sekaligus
+- **API dengan paginasi** dan gulir tanpa akhir di aplikasi ponsel
+- **Operasi yang mengubah beberapa baris** yang harus berhasil bersama atau gagal bersama: pemindahan saldo, pemesanan dengan pengurangan stok, pendaftaran dengan beberapa tabel
+- **Memakai kerangka kerja dengan ORM** — ketiga masalah di topik ini muncul paling sering justru di sana, karena kuerinya tidak terlihat
+
+Yang paling sering diabaikan: **jumlah kueri, bukan kecepatan satu kueri.** Lima puluh kueri yang masing-masing cepat bisa jauh lebih lambat dari satu kueri yang sedikit lebih rumit, karena setiap kueri harus menempuh perjalanan ke peladen basis data.
+
+Dan yang paling berbahaya: **beberapa perubahan tanpa transaksi.** Kalau langkah kedua gagal setelah langkah pertama tersimpan, data berada di keadaan yang tidak pernah dimaksudkan siapa pun — dan kesalahannya tidak terlihat sampai ada yang menghitung ulang.`,
+
+  praktik: {
+    tujuan: 'Kamu bisa menghitung jumlah kueri yang dijalankan sebuah halaman, mengganti pola N+1 dengan JOIN atau WHERE IN, memakai paginasi keyset untuk data yang besar dan terus bertambah, dan membungkus perubahan beberapa baris dalam transaksi.',
+    alat: ['PHP 8 dengan PDO', 'SQLite atau MySQL/MariaDB dengan tabel InnoDB', 'Data uji yang cukup besar — minimal puluhan ribu baris'],
+    langkah: [
+      { judul: 'Hitung kuerinya lebih dulu',
+        isi: `Turunkan kelas \`PDO\` dan tambahkan penghitung di \`prepare()\` dan \`query()\`, seperti di program topik ini. Nol-kan penghitungnya sebelum satu halaman dibuat, lalu cetak jumlahnya sesudahnya.
+
+Kalau memakai kerangka kerja, pakai fitur pencatatan kuerinya. Yang dicari: jumlah kueri yang naik mengikuti jumlah baris yang ditampilkan.` },
+      { judul: 'Isi data uji yang realistis',
+        isi: `Masalah di topik ini tidak terlihat dengan sepuluh baris. Isi tabel dengan puluhan ribu baris lewat perulangan di dalam satu transaksi — tanpa transaksi, SQLite menyimpan ke diska setiap baris dan pengisiannya jauh lebih lama.
+
+Program topik ini mengisi 20.000 artikel dan 40 penulis.` },
+      { judul: 'Ganti N+1 dengan JOIN',
+        isi: `Kalau data induknya ada di basis data yang sama, satu \`JOIN\` mengambil semuanya sekaligus.
+
+Pastikan kolom yang dipakai untuk menyambung punya indeks — biasanya kunci primer di satu sisi dan kunci asing di sisi lain.` },
+      { judul: 'Atau ganti dengan WHERE IN',
+        isi: `Ambil daftar utamanya, kumpulkan id induk yang unik, lalu ambil semua induk dengan satu \`WHERE id IN (...)\`.
+
+Buat tanda \`?\` sebanyak jumlah id, dan jangan jalankan kuerinya kalau daftarnya kosong — \`IN ()\` adalah galat sintaks.` },
+      { judul: 'Ukur OFFSET di halaman yang jauh',
+        isi: `Ukur waktu kueri \`LIMIT 20 OFFSET k\` untuk halaman 1, 10, 100, dan 900, masing-masing diulang ratusan kali lalu dirata-rata.
+
+Angkanya berbeda di setiap mesin, tetapi polanya sama: naik mengikuti nomor halaman.` },
+      { judul: 'Ganti dengan keyset untuk daftar yang besar',
+        isi: `Simpan nilai kolom urut dari baris terakhir halaman sebelumnya, lalu minta \`WHERE id > ? ORDER BY id LIMIT 20\`.
+
+Kalau urutannya bukan kolom unik — misalnya tanggal — tambahkan id sebagai pemecah seri: \`WHERE dibuat < ? OR (dibuat = ? AND id < ?)\` dengan \`ORDER BY dibuat DESC, id DESC\`, dan buat indeks untuk kedua kolom itu.` },
+      { judul: 'Bungkus perubahan beberapa baris dalam transaksi',
+        isi: `Pola dasarnya: \`beginTransaction()\`, jalankan semua perubahan di dalam \`try\`, \`commit()\` di akhir, dan \`rollBack()\` di \`catch\` sebelum melempar ulang galatnya.
+
+Kalau memakai MySQL, pastikan tabelnya InnoDB. Tabel MyISAM menerima perintah transaksi tanpa galat, tetapi tidak bisa membatalkan apa pun.` },
+      { judul: 'Pasang penjaga terakhir di tabel',
+        isi: `Tambahkan batasan seperti \`CHECK (saldo >= 0)\`. Uji dengan sengaja mencoba melanggarnya dari PHP.
+
+MySQL baru menegakkan \`CHECK\` sejak versi 8.0.16 — versi sebelumnya menerima sintaksnya lalu mengabaikannya diam-diam. MariaDB menegakkannya sejak 10.2. Pastikan versimu dengan mencobanya, bukan dengan membaca skemanya.` }
+    ],
+    cek: [
+      'Halaman daftarmu menjalankan jumlah kueri yang tetap, tidak naik mengikuti jumlah baris yang ditampilkan',
+      'Kamu bisa menunjukkan dengan angka ukuran bahwa OFFSET melambat di halaman jauh sementara keyset tidak',
+      'Setiap operasi yang mengubah lebih dari satu baris terbungkus dalam transaksi dengan rollBack di jalur galat',
+      'Aturan yang tidak boleh dilanggar dijaga oleh batasan tabel, bukan cuma oleh validasi PHP'
+    ]
+  },
+
+  judulLogicSyntax: 'Bedah Kode — mengumpulkan kueri yang tercecer, dan membuat dua perubahan menjadi satu',
+
+  konsep: `Topik OOP & PDO sudah membahas cara **menulis** kueri dengan aman: prepared statement, kelas model, kunci asing. Topik ini tentang hal yang baru terasa setelah aplikasinya dipakai sungguhan: **berapa banyak** kueri yang dijalankan, **seberapa jauh** basis data harus membaca, dan **apa yang terjadi** kalau kueri kedua dari dua kueri yang saling terkait gagal.
+
+Ketiganya punya ciri yang sama: tidak terlihat dengan data uji sepuluh baris, dan baru muncul saat datanya besar atau saat sesuatu gagal di tengah jalan.
+
+**N+1: jumlah kueri yang tumbuh diam-diam**
+
+Halaman menampilkan 50 artikel beserta nama penulisnya. Tiga cara, hasil yang identik:
+
+| Cara | Jumlah kueri |
+|---|---|
+| satu kueri per artikel (N+1) | **51** |
+| JOIN | 1 |
+| ambil artikel, lalu WHERE id IN | 2 |
+
+Cara pertama menjalankan 1 kueri untuk daftar artikel, lalu 1 kueri **lagi** untuk setiap artikel. Itulah asal nama N+1.
+
+Di basis data dalam memori, selisihnya kecil. Di peladen sungguhan, basis data biasanya ada di mesin lain, dan setiap kueri menempuh perjalanan jaringan pulang-pergi. Waktu tempuh itulah yang mahal:
+
+| Jeda jaringan per kueri | N+1 (51 kueri) | JOIN (1 kueri) |
+|---|---|---|
+| 0,5 ms | 25,5 ms | 0,5 ms |
+| 2 ms | 102,0 ms | 2,0 ms |
+| 10 ms | 510,0 ms | 10,0 ms |
+
+Angka di tabel ini **dihitung** — jumlah kueri dikali jeda — bukan diukur, karena program berjalan tanpa jaringan. Jeda sebenarnya bergantung pada jarak ke peladen basis data: di mesin yang sama hampir nol, di pusat data yang sama biasanya di bawah satu milidetik, antarkota jauh lebih besar.
+
+Dan N+1 hampir tidak pernah ditulis dengan sengaja. Ia bersembunyi di balik pemanggilan yang tampak polos seperti \`$artikel->penulis\` di dalam perulangan tampilan — ORM menjalankan satu kueri untuk setiap artikel yang relasinya dibaca. Laravel menyediakan \`Artikel::with('penulis')\` untuk mengambil semua penulis sekaligus, dan yang dijalankannya adalah cara ketiga di tabel: satu kueri dengan \`WHERE id IN\`.
+
+**Paginasi: OFFSET makin mahal di halaman jauh**
+
+Tabel berisi 20.000 artikel, 20 per halaman. Dua cara mengambil halaman yang sama:
+
+- **OFFSET**: \`SELECT id FROM artikel ORDER BY id LIMIT 20 OFFSET k\`
+- **Keyset**: \`SELECT id FROM artikel WHERE id > ? ORDER BY id LIMIT 20\`, dengan \`?\` berisi id terakhir halaman sebelumnya
+
+Keduanya memberi baris yang **sama persis** di setiap halaman — program memeriksanya. Waktunya:
+
+| Halaman | Harus dilewati | OFFSET (µs) | Keyset (µs) |
+|---|---|---|---|
+| 1 | 0 | 7,2 | 7,7 |
+| 10 | 180 | 9,0 | 7,8 |
+| 100 | 1.980 | 27,0 | 7,9 |
+| 900 | 17.980 | **185,7** | 8,1 |
+
+Kolom waktu **diukur** di satu mesin, rata-rata 300 kali; di mesinmu angkanya akan berbeda, tetapi polanya sama. Di halaman 900, OFFSET sekitar **23 kali** lebih lambat, sementara di halaman 1 keduanya setara.
+
+Penyebabnya ada di arti OFFSET itu sendiri. \`OFFSET 17980\` berarti basis data membaca 17.980 baris, membuangnya, lalu mengambil 20 yang diminta. Makin jauh halamannya, makin banyak yang dibaca untuk dibuang.
+
+Keyset tidak menghitung posisi. \`WHERE id > 17980\` memakai indeks kunci primer untuk langsung melompat ke tempatnya, sehingga halaman 900 sama murahnya dengan halaman 1.
+
+Harganya: keyset tidak bisa melompat ke "halaman 537" secara langsung. Ia cuma tahu "berikutnya", karena harus tahu id terakhir halaman sebelumnya. Cocok untuk gulir tanpa akhir dan API; OFFSET tetap wajar untuk tabel kecil yang nomor halamannya dipilih manusia.
+
+**OFFSET dan data yang bertambah saat dibaca**
+
+Ada masalah kedua yang lebih mengganggu dari kecepatan. Daftar kabar diurutkan dari yang terbaru, 5 per halaman:
+
+| | Baris yang tampil |
+|---|---|
+| halaman 1 dibaca | 10, 9, 8, 7, 6 |
+| (dua kabar baru masuk: 11 dan 12) | |
+| halaman 2 dengan OFFSET | **7, 6**, 5, 4, 3 |
+| halaman 2 dengan keyset | 5, 4, 3, 2, 1 |
+
+Dua kabar baru mendorong seluruh daftar turun dua posisi. \`OFFSET 5\` sekarang menunjuk dua baris yang sudah dilihat di halaman 1, sehingga kabar 7 dan 6 tampil **dua kali**.
+
+Keyset tidak terpengaruh: ia meminta "yang lebih lama dari kabar 6", dan jawabannya tidak berubah meskipun ada kabar baru di depan. Untuk linimasa atau daftar yang terus bertambah, ini alasan yang lebih kuat untuk memakai keyset daripada soal kecepatan.
+
+**Transaksi: semua atau tidak sama sekali**
+
+Dompet 1 berisi 100.000 dan dompet 2 berisi 50.000 — total 150.000. Diminta memindahkan 150.000 dari dompet 1, yang saldonya tidak cukup. Pemindahan terdiri dari dua langkah: tambah ke dompet 2, lalu kurangi dari dompet 1. Langkah kedua ditolak oleh batasan \`CHECK (saldo >= 0)\`.
+
+| | Total uang setelahnya |
+|---|---|
+| tanpa transaksi | **300.000** |
+| dengan transaksi | 150.000 |
+
+Tanpa transaksi, langkah pertama sudah tersimpan saat langkah kedua gagal. Dompet 2 bertambah 150.000, dompet 1 tidak berkurang — uang **muncul dari udara**.
+
+Dengan transaksi, kegagalan langkah kedua membatalkan langkah pertama juga. Keadaannya kembali persis seperti sebelum dimulai.
+
+Mengubah urutan langkahnya tidak menyelesaikan masalah. Kalau pengurangan dijalankan lebih dulu lalu peladen mati sebelum penambahan, uangnya **hilang**. Satu-satunya cara membuat dua perubahan menjadi satu adalah transaksi.
+
+Perhatikan juga penjaganya: \`CHECK (saldo >= 0)\` di tabel. Validasi di PHP bisa terlewat — lupa dipanggil di satu jalur kode, atau dua permintaan yang memeriksa saldo bersamaan. Batasan di tabel tidak bisa dilewati kode mana pun.`,
+
+  logicSyntax: [
+    {
+      bahasa: 'php',
+      kode: String.raw`// N+1: satu kueri untuk SETIAP artikel
+foreach ($artikel as &$a) {
+    $q = $db->prepare("SELECT nama FROM penulis WHERE id = ?");
+    $q->execute([$a['penulis_id']]);
+    $a['penulis'] = $q->fetchColumn();
+}
+unset($a);
+
+// WHERE IN: satu kueri untuk SEMUA penulis
+$ids = array_values(array_unique(array_column($artikel, 'penulis_id')));
+$tanda = implode(',', array_fill(0, count($ids), '?'));   // "?,?,?,..."
+$q = $db->prepare("SELECT id, nama FROM penulis WHERE id IN ($tanda)");
+$q->execute($ids);
+$peta = $q->fetchAll(PDO::FETCH_KEY_PAIR);                // id => nama
+foreach ($artikel as &$a) {
+    $a['penulis'] = $peta[$a['penulis_id']];
+}
+unset($a);`,
+      penjelasan: `Dua potongan kode dengan hasil yang identik. Yang pertama menjalankan 50 kueri di dalam perulangan; yang kedua menjalankan satu kueri **sebelum** perulangan, lalu perulangannya cuma mencari di larik PHP.
+
+**Gagasan intinya: pindahkan kueri keluar dari perulangan.**
+
+Setiap kali ada kueri di dalam \`foreach\`, jumlah kuerinya ikut jumlah baris. Itu tidak selalu salah — tetapi hampir selalu bisa diganti dengan mengumpulkan semua yang dibutuhkan lebih dulu, mengambilnya sekaligus, lalu memasangkannya di PHP.
+
+**Baris demi baris cara kedua.**
+
+\`array_column\` mengambil kolom \`penulis_id\` dari setiap artikel. \`array_unique\` membuang yang kembar — 50 artikel dari 40 penulis pasti punya penulis yang berulang, dan tidak perlu diminta dua kali. \`array_values\` merapikan indeksnya kembali mulai dari 0, karena \`execute()\` dengan tanda \`?\` membutuhkan larik berindeks urut.
+
+\`array_fill\` dan \`implode\` membuat deretan \`?,?,?\` sebanyak jumlah id. Kenapa tidak langsung menyatukan id-nya ke dalam teks kueri? Id itu memang berasal dari basis data, bukan dari pengguna — tetapi kebiasaan selalu memakai tanda \`?\` untuk nilai berarti kamu tidak perlu memutuskan ulang setiap kali apakah sebuah nilai "cukup aman" untuk disatukan.
+
+\`PDO::FETCH_KEY_PAIR\` mengubah hasil dua kolom langsung menjadi larik \`[id => nama]\`. Pencarian di larik itu seketika, jadi perulangan terakhir tidak menyentuh basis data sama sekali.
+
+**Satu jebakan yang harus dijaga: daftar kosong.**
+
+Kalau tidak ada artikel, \`$ids\` kosong, dan kuerinya menjadi \`WHERE id IN ()\` — galat sintaks. Di kode sungguhan, bungkus bagian ini dengan \`if ($ids)\`.
+
+**Dan jebakan khas PHP: \`&$a\` dan \`unset($a)\`.**
+
+\`foreach ($artikel as &$a)\` membuat \`$a\` menjadi **rujukan** ke elemen larik, sehingga mengubah \`$a\` mengubah lariknya langsung.
+
+Setelah perulangan selesai, \`$a\` masih merujuk ke elemen **terakhir**. Kalau sesudahnya ada \`foreach ($artikel as $a)\` biasa — tanpa \`&\` — setiap putarannya menulis ke elemen terakhir itu, dan isi elemen terakhir berubah menjadi salinan elemen sebelumnya. Galat ini tidak memunculkan pesan apa pun; datanya cuma diam-diam salah.
+
+\`unset($a)\` memutus rujukannya. Biasakan menulisnya tepat setelah setiap perulangan dengan \`&\`.
+
+**Kapan WHERE IN lebih cocok dari JOIN?**
+
+JOIN mengambil semuanya dalam satu kueri, dan biasanya pilihan pertama. WHERE IN lebih cocok saat:
+
+- data induknya **banyak kolom** dan dipakai berulang — JOIN mengulang kolom penulis di setiap baris artikel
+- relasinya **banyak-ke-banyak** — JOIN melipatgandakan baris dan harus dipilah lagi di PHP
+- data induknya ada di **tempat lain** — tembolok, atau layanan lain — sehingga memang tidak bisa di-JOIN
+
+Itu juga alasan ORM seperti Laravel memakai WHERE IN untuk pemuatan relasinya: satu cara yang bekerja untuk semua jenis relasi.`
+    },
+    {
+      bahasa: 'php',
+      kode: String.raw`function pindah_dengan_transaksi($db, $dari, $ke, $n) {
+    $db->beginTransaction();
+    try {
+        $db->prepare("UPDATE dompet SET saldo = saldo + ? WHERE id = ?")
+           ->execute([$n, $ke]);
+        $db->prepare("UPDATE dompet SET saldo = saldo - ? WHERE id = ?")
+           ->execute([$n, $dari]);
+        $db->commit();
+    } catch (PDOException $e) {
+        $db->rollBack();
+        throw $e;
+    }
+}
+// tabel: saldo INTEGER CHECK (saldo >= 0)
+// tanpa transaksi : total 150.000 -> 300.000
+// dengan transaksi: total 150.000 -> 150.000`,
+      penjelasan: `Dua pernyataan UPDATE yang sama persis dengan versi tanpa transaksi. Yang berbeda cuma empat baris di sekelilingnya — dan empat baris itu yang membedakan 150.000 dari 300.000.
+
+**Apa yang dilakukan \`beginTransaction()\`.**
+
+Setelah baris itu, setiap perubahan disimpan sementara, belum menjadi keadaan tetap. Pengguna lain belum melihatnya, dan perubahan itu bisa dibatalkan sepenuhnya.
+
+\`commit()\` membuat semua perubahan sejak \`beginTransaction()\` menjadi tetap **sekaligus**. \`rollBack()\` membuang semuanya **sekaligus**. Tidak ada keadaan di mana sebagian tersimpan dan sebagian tidak.
+
+**Kenapa \`try\` dan \`catch\` harus ada.**
+
+Langkah kedua melanggar \`CHECK (saldo >= 0)\`. PDO melempar \`PDOException\` — karena mode galatnya \`ERRMODE_EXCEPTION\`, yang menjadi bawaan sejak PHP 8 dan tetap disetel eksplisit di program ini.
+
+Tanpa \`catch\`, pengecualian itu langsung keluar dari fungsi. \`commit()\` tidak pernah dijalankan, tetapi \`rollBack()\` juga tidak. Transaksinya menggantung terbuka, dan nasibnya bergantung pada apa yang terjadi berikutnya — biasanya dibatalkan saat sambungan ditutup, tetapi kode yang benar tidak bergantung pada kebetulan itu.
+
+Dengan \`catch\`, \`rollBack()\` dijalankan dengan sengaja, dan langkah pertama ikut dibatalkan.
+
+**Kenapa \`throw $e\` setelah \`rollBack()\`.**
+
+Fungsi ini tidak tahu apa yang harus ditampilkan ke pengguna — itu urusan pemanggilnya. Tugasnya cuma memastikan basis data kembali bersih, lalu memberi tahu pemanggil bahwa pemindahan gagal.
+
+Menelan galatnya — \`rollBack()\` tanpa melempar ulang — membuat pemanggil mengira pemindahan berhasil. Pengguna melihat "berhasil", padahal saldonya tidak berubah.
+
+**Dan dua hal yang tidak dilakukan transaksi.**
+
+Pertama, transaksi tidak **memeriksa** apa pun. Yang menolak saldo negatif adalah \`CHECK\` di tabel. Tanpa batasan itu, langkah kedua berhasil, \`commit()\` berjalan, dan dompet 1 bersaldo minus 50.000 — di dalam transaksi yang "sukses".
+
+Kedua, transaksi tidak otomatis mencegah dua pemindahan yang berjalan bersamaan saling mengganggu. Kalau kode membaca saldo dengan \`SELECT\`, memeriksanya di PHP, lalu menulis hasilnya, dua permintaan bersamaan bisa membaca saldo yang sama sebelum salah satunya menulis. Pernyataan \`saldo = saldo - ?\` di program ini menghindarinya karena membaca dan menulis dalam satu pernyataan, dan batasan \`CHECK\` menjaga sisanya. Untuk pola baca-periksa-tulis yang lebih rumit, MySQL dan PostgreSQL menyediakan \`SELECT ... FOR UPDATE\` yang mengunci baris yang dibaca sampai transaksi selesai.`
+    }
+  ],
+
+  kode: { php: String.raw`<?php
+// ============================================
+// Kueri di sisi aplikasi: N+1, paginasi, transaksi
+// ============================================
+
+// PDO yang menghitung setiap kueri yang dijalankan
+class DB extends PDO {
+    public $jumlah = 0;
+    public function prepare($sql, $opsi = []): PDOStatement|false {
+        $this->jumlah++;
+        return parent::prepare($sql, $opsi);
+    }
+    public function query($sql, $mode = null, ...$arg): PDOStatement|false {
+        $this->jumlah++;
+        return parent::query($sql);
+    }
+}
+
+$db = new DB('sqlite::memory:');
+$db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+$db->exec("CREATE TABLE penulis (id INTEGER PRIMARY KEY, nama TEXT)");
+$db->exec("CREATE TABLE artikel (id INTEGER PRIMARY KEY,
+           penulis_id INTEGER, judul TEXT, dibuat INTEGER)");
+
+mt_srand(7);
+$db->beginTransaction();
+$q = $db->prepare("INSERT INTO penulis (id, nama) VALUES (?, ?)");
+for ($i = 1; $i <= 40; $i++) {
+    $q->execute([$i, "Penulis $i"]);
+}
+$q = $db->prepare("INSERT INTO artikel (id, penulis_id, judul, dibuat)
+                   VALUES (?, ?, ?, ?)");
+for ($i = 1; $i <= 20000; $i++) {
+    $q->execute([$i, mt_rand(1, 40), "Artikel $i", 1700000000 + $i * 60]);
+}
+$db->commit();
+
+// --------------------------------------------
+// 1. Masalah N+1
+// --------------------------------------------
+echo "--- menampilkan 50 artikel beserta nama penulisnya ---\n";
+
+$db->jumlah = 0;
+$artikel = $db->query("SELECT * FROM artikel ORDER BY id LIMIT 50")
+              ->fetchAll(PDO::FETCH_ASSOC);
+foreach ($artikel as &$a) {
+    $q = $db->prepare("SELECT nama FROM penulis WHERE id = ?");
+    $q->execute([$a['penulis_id']]);
+    $a['penulis'] = $q->fetchColumn();
+}
+unset($a);
+$naif_kueri = $db->jumlah;
+
+$db->jumlah = 0;
+$artikel2 = $db->query("SELECT artikel.*, penulis.nama AS penulis
+                        FROM artikel JOIN penulis
+                        ON penulis.id = artikel.penulis_id
+                        ORDER BY artikel.id LIMIT 50")
+               ->fetchAll(PDO::FETCH_ASSOC);
+$join_kueri = $db->jumlah;
+
+$db->jumlah = 0;
+$artikel3 = $db->query("SELECT * FROM artikel ORDER BY id LIMIT 50")
+               ->fetchAll(PDO::FETCH_ASSOC);
+$ids = array_values(array_unique(array_column($artikel3, 'penulis_id')));
+$tanda = implode(',', array_fill(0, count($ids), '?'));
+$q = $db->prepare("SELECT id, nama FROM penulis WHERE id IN ($tanda)");
+$q->execute($ids);
+$peta = $q->fetchAll(PDO::FETCH_KEY_PAIR);
+foreach ($artikel3 as &$a) {
+    $a['penulis'] = $peta[$a['penulis_id']];
+}
+unset($a);
+$in_kueri = $db->jumlah;
+
+$sama = ($artikel == $artikel2) && ($artikel == $artikel3);
+printf("  %-34s %6s\n", "cara", "kueri");
+printf("  %-34s %6d\n", "satu kueri per artikel (N+1)", $naif_kueri);
+printf("  %-34s %6d\n", "JOIN", $join_kueri);
+printf("  %-34s %6d\n", "ambil artikel, lalu WHERE id IN", $in_kueri);
+echo "\n  hasil ketiganya identik: " . ($sama ? "YA" : "TIDAK") . "\n";
+echo "\n";
+echo "  Cara pertama menjalankan 1 kueri untuk daftar artikel,\n";
+echo "  lalu 1 kueri LAGI untuk setiap artikel -- 50 artikel\n";
+echo "  berarti 51 kueri. Itulah nama N+1.\n";
+echo "\n";
+echo "  Di basis data dalam memori ini selisihnya kecil. Di\n";
+echo "  peladen sungguhan, setiap kueri menempuh perjalanan\n";
+echo "  jaringan ke basis data, dan waktu tempuh itu yang mahal\n";
+echo "  (dihitung: jumlah kueri x jeda per kueri):\n";
+echo "\n";
+printf("  %-22s %14s %14s\n", "jeda jaringan/kueri", "N+1 (51)", "JOIN (1)");
+foreach ([0.5, 2, 10] as $ms) {
+    printf("  %-22s %11.1f ms %11.1f ms\n", "$ms ms",
+           $naif_kueri * $ms, $join_kueri * $ms);
+}
+echo "\n";
+echo "  Dan N+1 biasanya tidak terlihat di kode. Ia bersembunyi\n";
+echo "  di balik pemanggilan yang tampak polos seperti\n";
+echo "  \$artikel->penulis() di dalam perulangan tampilan.\n";
+
+// --------------------------------------------
+// 2. Paginasi OFFSET makin lambat di halaman jauh
+// --------------------------------------------
+echo "\n--- paginasi: OFFSET vs keyset ---\n";
+function langkah_scan($db, $sql, $param) {
+    // ambil hasilnya untuk memastikan kedua cara memberi
+    // baris yang sama persis di setiap halaman
+    $q = $db->prepare($sql);
+    $q->execute($param);
+    return $q->fetchAll(PDO::FETCH_COLUMN);
+}
+$per = 20;
+function ukur($db, $sql, $param, $ulang = 300) {
+    $q = $db->prepare($sql);
+    $t = hrtime(true);
+    for ($i = 0; $i < $ulang; $i++) {
+        $q->execute($param);
+        $q->fetchAll(PDO::FETCH_COLUMN);
+    }
+    return (hrtime(true) - $t) / $ulang / 1000;     // mikrodetik
+}
+echo "  (kolom 'harus dilewati' = definisi OFFSET; kolom waktu\n";
+echo "   DIUKUR di mesin ini, rata-rata 300 kali, dan akan sedikit\n";
+echo "   berbeda di mesin lain)\n\n";
+printf("  %-8s %15s %13s %13s\n", "halaman", "harus dilewati",
+       "OFFSET (us)", "keyset (us)");
+$waktu = [];
+foreach ([1, 10, 100, 900] as $hal) {
+    $offset = ($hal - 1) * $per;
+    $ids_off = langkah_scan($db,
+        "SELECT id FROM artikel ORDER BY id LIMIT ? OFFSET ?",
+        [$per, $offset]);
+    $akhir_sebelum = $offset;             // id terakhir halaman sebelumnya
+    $ids_key = langkah_scan($db,
+        "SELECT id FROM artikel WHERE id > ? ORDER BY id LIMIT ?",
+        [$akhir_sebelum, $per]);
+    if ($ids_off !== $ids_key) {
+        echo "  HASIL BERBEDA di halaman $hal\n";
+    }
+    $w_off = ukur($db, "SELECT id FROM artikel ORDER BY id LIMIT ? OFFSET ?",
+                  [$per, $offset]);
+    $w_key = ukur($db, "SELECT id FROM artikel WHERE id > ? ORDER BY id LIMIT ?",
+                  [$akhir_sebelum, $per]);
+    $waktu[$hal] = [$w_off, $w_key];
+    printf("  %-8d %15s %13.1f %13.1f\n", $hal,
+           number_format($offset, 0, ',', '.'), $w_off, $w_key);
+}
+$rasio = $waktu[900][0] / $waktu[900][1];
+echo "\n  Di halaman 900, OFFSET " . round($rasio) . " kali lebih lambat daripada\n";
+echo "  keyset -- sementara di halaman 1 keduanya setara.\n";
+echo "\n";
+echo "  Kedua cara memberi baris yang SAMA di setiap halaman.\n";
+echo "\n";
+echo "  OFFSET 17.980 berarti mesin basis data membaca 17.980\n";
+echo "  baris lalu membuangnya, sebelum mengambil 20 yang\n";
+echo "  diminta. Makin jauh halamannya, makin banyak yang\n";
+echo "  dibuang -- biayanya tumbuh lurus dengan nomor halaman.\n";
+echo "\n";
+echo "  Keyset ('WHERE id > id_terakhir') langsung melompat ke\n";
+echo "  tempatnya lewat indeks. Halaman 900 sama murahnya dengan\n";
+echo "  halaman 1.\n";
+echo "\n";
+echo "  Harganya: keyset tidak bisa melompat ke 'halaman 537'\n";
+echo "  secara langsung -- ia cuma tahu 'berikutnya'. Cocok\n";
+echo "  untuk gulir tanpa akhir dan API; OFFSET tetap wajar\n";
+echo "  untuk tabel kecil yang halamannya dipilih manusia.\n";
+
+// --------------------------------------------
+// 3. Paginasi OFFSET melewatkan data yang baru masuk
+// --------------------------------------------
+echo "\n--- OFFSET dan data yang berubah saat dibaca ---\n";
+$db->exec("CREATE TABLE kabar (id INTEGER PRIMARY KEY, judul TEXT)");
+for ($i = 1; $i <= 10; $i++) {
+    $db->exec("INSERT INTO kabar (id, judul) VALUES ($i, 'kabar $i')");
+}
+// urutan terbaru dulu; pengguna membaca halaman 1 (5 per halaman)
+$h1 = $db->query("SELECT id FROM kabar ORDER BY id DESC LIMIT 5 OFFSET 0")
+         ->fetchAll(PDO::FETCH_COLUMN);
+// sementara itu dua kabar baru masuk
+$db->exec("INSERT INTO kabar (id, judul) VALUES (11, 'kabar 11')");
+$db->exec("INSERT INTO kabar (id, judul) VALUES (12, 'kabar 12')");
+$h2_off = $db->query("SELECT id FROM kabar ORDER BY id DESC LIMIT 5 OFFSET 5")
+             ->fetchAll(PDO::FETCH_COLUMN);
+$q = $db->prepare("SELECT id FROM kabar WHERE id < ? ORDER BY id DESC LIMIT 5");
+$q->execute([end($h1)]);
+$h2_key = $q->fetchAll(PDO::FETCH_COLUMN);
+echo "  halaman 1 dibaca           : " . implode(', ', $h1) . "\n";
+echo "  (dua kabar baru masuk: 11 dan 12)\n";
+echo "  halaman 2 dengan OFFSET    : " . implode(', ', $h2_off) . "\n";
+echo "  halaman 2 dengan keyset    : " . implode(', ', $h2_key) . "\n";
+$dobel = array_intersect($h1, $h2_off);
+echo "\n  tampil DUA KALI dengan OFFSET: " . implode(', ', $dobel) . "\n";
+echo "\n";
+echo "  Dua kabar baru mendorong seluruh daftar turun dua baris,\n";
+echo "  sehingga OFFSET 5 sekarang menunjuk dua baris yang sudah\n";
+echo "  dilihat di halaman 1. Pengguna membaca kabar yang sama\n";
+echo "  dua kali.\n";
+echo "\n";
+echo "  Keyset tidak terpengaruh, karena ia tidak menghitung\n";
+echo "  posisi -- ia melanjutkan dari id terakhir yang dilihat.\n";
+
+// --------------------------------------------
+// 4. Transaksi: semua atau tidak sama sekali
+// --------------------------------------------
+echo "\n--- transaksi: memindahkan saldo ---\n";
+$db->exec("CREATE TABLE dompet (id INTEGER PRIMARY KEY, saldo INTEGER
+           CHECK (saldo >= 0))");
+$db->exec("INSERT INTO dompet VALUES (1, 100000), (2, 50000)");
+
+function total($db) {
+    return (int)$db->query("SELECT SUM(saldo) FROM dompet")->fetchColumn();
+}
+
+function pindah_tanpa_transaksi($db, $dari, $ke, $n) {
+    $db->prepare("UPDATE dompet SET saldo = saldo + ? WHERE id = ?")
+       ->execute([$n, $ke]);
+    $db->prepare("UPDATE dompet SET saldo = saldo - ? WHERE id = ?")
+       ->execute([$n, $dari]);
+}
+
+function pindah_dengan_transaksi($db, $dari, $ke, $n) {
+    $db->beginTransaction();
+    try {
+        $db->prepare("UPDATE dompet SET saldo = saldo + ? WHERE id = ?")
+           ->execute([$n, $ke]);
+        $db->prepare("UPDATE dompet SET saldo = saldo - ? WHERE id = ?")
+           ->execute([$n, $dari]);
+        $db->commit();
+    } catch (PDOException $e) {
+        $db->rollBack();
+        throw $e;
+    }
+}
+
+echo "  saldo awal: dompet 1 = 100.000, dompet 2 = 50.000\n";
+echo "  total uang di sistem: " . number_format(total($db), 0, ',', '.') . "\n\n";
+
+echo "  Pindahkan 150.000 dari dompet 1 (saldonya cuma 100.000)\n\n";
+try {
+    pindah_tanpa_transaksi($db, 1, 2, 150000);
+} catch (PDOException $e) {
+    echo "  TANPA transaksi  : langkah kedua gagal (saldo negatif)\n";
+}
+echo "    total uang sekarang : " . number_format(total($db), 0, ',', '.') . "\n";
+
+$db->exec("UPDATE dompet SET saldo = CASE id WHEN 1 THEN 100000 ELSE 50000 END");
+try {
+    pindah_dengan_transaksi($db, 1, 2, 150000);
+} catch (PDOException $e) {
+    echo "  DENGAN transaksi : langkah kedua gagal, SEMUA dibatalkan\n";
+}
+echo "    total uang sekarang : " . number_format(total($db), 0, ',', '.') . "\n";
+echo "\n";
+echo "  Tanpa transaksi, langkah pertama (menambah ke dompet 2)\n";
+echo "  sudah tersimpan saat langkah kedua gagal. Uang 150.000\n";
+echo "  MUNCUL DARI UDARA -- total sistem berubah.\n";
+echo "\n";
+echo "  Dengan transaksi, kegagalan langkah kedua membatalkan\n";
+echo "  langkah pertama juga. Keadaannya kembali persis seperti\n";
+echo "  sebelum dimulai.\n";
+echo "\n";
+echo "  Perhatikan juga penjaga terakhirnya: CHECK (saldo >= 0)\n";
+echo "  di basis data. Validasi di PHP bisa terlewat; batasan\n";
+echo "  di tabel tidak bisa dilewati kode mana pun.\n";` },
+  output: `--- menampilkan 50 artikel beserta nama penulisnya ---
+  cara                                kueri
+  satu kueri per artikel (N+1)           51
+  JOIN                                    1
+  ambil artikel, lalu WHERE id IN         2
+
+  hasil ketiganya identik: YA
+
+  Cara pertama menjalankan 1 kueri untuk daftar artikel,
+  lalu 1 kueri LAGI untuk setiap artikel -- 50 artikel
+  berarti 51 kueri. Itulah nama N+1.
+
+  Di basis data dalam memori ini selisihnya kecil. Di
+  peladen sungguhan, setiap kueri menempuh perjalanan
+  jaringan ke basis data, dan waktu tempuh itu yang mahal
+  (dihitung: jumlah kueri x jeda per kueri):
+
+  jeda jaringan/kueri          N+1 (51)       JOIN (1)
+  0.5 ms                        25.5 ms         0.5 ms
+  2 ms                         102.0 ms         2.0 ms
+  10 ms                        510.0 ms        10.0 ms
+
+  Dan N+1 biasanya tidak terlihat di kode. Ia bersembunyi
+  di balik pemanggilan yang tampak polos seperti
+  $artikel->penulis() di dalam perulangan tampilan.
+
+--- paginasi: OFFSET vs keyset ---
+  (kolom 'harus dilewati' = definisi OFFSET; kolom waktu
+   DIUKUR di mesin ini, rata-rata 300 kali, dan akan sedikit
+   berbeda di mesin lain)
+
+  halaman   harus dilewati   OFFSET (us)   keyset (us)
+  1                      0           7.2           7.7
+  10                   180           9.0           7.8
+  100                1.980          27.0           7.9
+  900               17.980         185.7           8.1
+
+  Di halaman 900, OFFSET 23 kali lebih lambat daripada
+  keyset -- sementara di halaman 1 keduanya setara.
+
+  Kedua cara memberi baris yang SAMA di setiap halaman.
+
+  OFFSET 17.980 berarti mesin basis data membaca 17.980
+  baris lalu membuangnya, sebelum mengambil 20 yang
+  diminta. Makin jauh halamannya, makin banyak yang
+  dibuang -- biayanya tumbuh lurus dengan nomor halaman.
+
+  Keyset ('WHERE id > id_terakhir') langsung melompat ke
+  tempatnya lewat indeks. Halaman 900 sama murahnya dengan
+  halaman 1.
+
+  Harganya: keyset tidak bisa melompat ke 'halaman 537'
+  secara langsung -- ia cuma tahu 'berikutnya'. Cocok
+  untuk gulir tanpa akhir dan API; OFFSET tetap wajar
+  untuk tabel kecil yang halamannya dipilih manusia.
+
+--- OFFSET dan data yang berubah saat dibaca ---
+  halaman 1 dibaca           : 10, 9, 8, 7, 6
+  (dua kabar baru masuk: 11 dan 12)
+  halaman 2 dengan OFFSET    : 7, 6, 5, 4, 3
+  halaman 2 dengan keyset    : 5, 4, 3, 2, 1
+
+  tampil DUA KALI dengan OFFSET: 7, 6
+
+  Dua kabar baru mendorong seluruh daftar turun dua baris,
+  sehingga OFFSET 5 sekarang menunjuk dua baris yang sudah
+  dilihat di halaman 1. Pengguna membaca kabar yang sama
+  dua kali.
+
+  Keyset tidak terpengaruh, karena ia tidak menghitung
+  posisi -- ia melanjutkan dari id terakhir yang dilihat.
+
+--- transaksi: memindahkan saldo ---
+  saldo awal: dompet 1 = 100.000, dompet 2 = 50.000
+  total uang di sistem: 150.000
+
+  Pindahkan 150.000 dari dompet 1 (saldonya cuma 100.000)
+
+  TANPA transaksi  : langkah kedua gagal (saldo negatif)
+    total uang sekarang : 300.000
+  DENGAN transaksi : langkah kedua gagal, SEMUA dibatalkan
+    total uang sekarang : 150.000
+
+  Tanpa transaksi, langkah pertama (menambah ke dompet 2)
+  sudah tersimpan saat langkah kedua gagal. Uang 150.000
+  MUNCUL DARI UDARA -- total sistem berubah.
+
+  Dengan transaksi, kegagalan langkah kedua membatalkan
+  langkah pertama juga. Keadaannya kembali persis seperti
+  sebelum dimulai.
+
+  Perhatikan juga penjaga terakhirnya: CHECK (saldo >= 0)
+  di basis data. Validasi di PHP bisa terlewat; batasan
+  di tabel tidak bisa dilewati kode mana pun.`,
+
+  kompleksitas: {
+    tabel: [
+      { operasi: 'Daftar n baris dengan N+1', waktu: 'n + 1 kueri', memori: 'n + 1 perjalanan jaringan' },
+      { operasi: 'Daftar n baris dengan JOIN', waktu: '1 kueri', memori: 'kolom induk diulang di setiap baris' },
+      { operasi: 'Daftar n baris dengan WHERE IN', waktu: '2 kueri', memori: 'larik peta id => induk di PHP' },
+      { operasi: 'Halaman ke-h dengan OFFSET', waktu: 'O(h × p)', memori: 'p = baris per halaman; semua baris sebelumnya dibaca' },
+      { operasi: 'Halaman berikutnya dengan keyset', waktu: 'O(log n + p)', memori: 'lompat lewat indeks, lalu baca p baris' },
+      { operasi: 'Transaksi dengan k perubahan', waktu: 'O(k) + satu commit', memori: 'perubahan ditahan sampai commit atau rollBack' }
+    ],
+    intuisi: `Kolom waktu untuk N+1, JOIN, dan WHERE IN sengaja ditulis dalam **jumlah kueri**, bukan notasi O besar. Kerja basis data untuk ketiganya hampir sama — mencari penulis lewat kunci primer, puluhan kali. Yang berbeda adalah berapa kali aplikasi harus menunggu jawaban lewat jaringan, dan untuk aplikasi web, **itulah** biaya yang dominan.
+
+OFFSET tumbuh lurus dengan nomor halaman karena setiap baris sebelumnya tetap dibaca. Keyset tumbuh logaritmik dengan ukuran tabel karena lompatannya lewat indeks — di tabel 20.000 baris, itu berarti hampir konstan, seperti yang terlihat di ukuran: 7,7 µs di halaman 1 dan 8,1 µs di halaman 900.
+
+Transaksi hampir tidak menambah biaya — perubahan ditulis dengan cara yang sama, cuma ditahan sampai \`commit()\`. Justru sebaliknya: mengisi 20.000 baris di dalam satu transaksi jauh lebih cepat daripada tanpa transaksi, karena basis data cukup memastikan data tersimpan aman ke diska satu kali di akhir, bukan 20.000 kali.`
+  },
+
+  kesalahanUmum: [
+    {
+      salah: 'Menjalankan kueri di dalam perulangan yang menampilkan daftar.',
+      kenapa: 'Jumlah kuerinya naik mengikuti jumlah baris, dan setiap kueri menunggu perjalanan jaringan ke peladen basis data. Dengan data uji sepuluh baris tidak terasa; dengan halaman lima puluh baris di peladen sungguhan, waktunya bisa ratusan milidetik.',
+      benar: 'Kumpulkan id yang dibutuhkan, ambil semuanya dengan JOIN atau satu WHERE IN, lalu pasangkan di PHP.'
+    },
+    {
+      salah: 'Membiarkan ORM memuat relasi satu per satu di dalam tampilan.',
+      kenapa: 'Pemanggilan relasi di tampilan terlihat seperti membaca properti biasa, padahal setiap pemanggilan menjalankan kueri baru. N+1 jenis ini tidak terlihat sama sekali dari membaca kodenya.',
+      benar: 'Muat relasinya di awal dengan fitur pemuatan relasi ORM, misalnya with() di Laravel, dan periksa jumlah kueri lewat pencatat kuerinya.'
+    },
+    {
+      salah: 'Memakai OFFSET untuk linimasa atau daftar yang terus bertambah.',
+      kenapa: 'Baris baru di depan menggeser posisi semua baris lama, sehingga halaman berikutnya menampilkan ulang baris yang sudah dilihat atau melewatkan baris lain. OFFSET juga makin lambat di halaman yang jauh.',
+      benar: 'Pakai keyset: minta baris yang lebih lama dari baris terakhir yang sudah dilihat, dengan id sebagai pemecah seri kalau kolom urutnya tidak unik.'
+    },
+    {
+      salah: 'Menjalankan beberapa perubahan yang saling terkait tanpa transaksi.',
+      kenapa: 'Kalau langkah kedua gagal, langkah pertama sudah tersimpan dan data berada di keadaan yang tidak dimaksudkan siapa pun, misalnya uang yang bertambah tanpa berkurang di tempat lain. Mengubah urutan langkah cuma mengubah jenis kerusakannya.',
+      benar: 'Bungkus dengan beginTransaction dan commit, dan jalankan rollBack di jalur galat.'
+    },
+    {
+      salah: 'Menelan galat di catch setelah rollBack tanpa melempar ulang atau melapor.',
+      kenapa: 'Pemanggil mengira operasinya berhasil dan menampilkan pesan berhasil kepada pengguna, padahal tidak ada yang berubah.',
+      benar: 'Lempar ulang galatnya setelah rollBack, atau kembalikan nilai yang jelas menyatakan gagal.'
+    },
+    {
+      salah: 'Memakai tabel MyISAM di MySQL lalu mengandalkan transaksi.',
+      kenapa: 'MyISAM tidak mendukung transaksi. Perintah beginTransaction dan rollBack tidak menimbulkan galat, tetapi perubahan tetap tersimpan satu per satu dan tidak ada yang dibatalkan.',
+      benar: 'Pakai InnoDB, yang menjadi mesin bawaan sejak MySQL 5.5, dan periksa mesin tabel lama dengan SHOW TABLE STATUS.'
+    },
+    {
+      salah: 'Menjaga aturan penting seperti saldo tidak boleh negatif hanya di kode PHP.',
+      kenapa: 'Validasi PHP bisa terlewat di satu jalur kode yang lupa memanggilnya, atau kalah oleh dua permintaan bersamaan yang sama-sama membaca saldo lama. Selain itu, MySQL sebelum 8.0.16 mengabaikan CHECK tanpa pemberitahuan.',
+      benar: 'Pasang batasan di tabel, pastikan versi basis datamu benar-benar menegakkannya, dan tetap validasi di PHP untuk pesan yang ramah.'
+    }
+  ],
+
+  analogi: `Bayangkan **pelayan warung** yang mencatat pesanan satu meja berisi lima puluh orang.
+
+**N+1.** Pelayan pertama mencatat pesanan orang pertama, berjalan ke dapur, kembali, mencatat orang kedua, berjalan ke dapur lagi — lima puluh kali. Juru masaknya secepat apa pun, sebagian besar waktu habis di jalan antara meja dan dapur.
+
+Pelayan kedua mencatat kelima puluh pesanan, lalu ke dapur **sekali**. Itu JOIN atau WHERE IN. Juru masaknya bekerja sama banyak; yang hilang cuma perjalanan bolak-balik.
+
+Dan makin jauh dapurnya — di lantai lain, di gedung sebelah — makin besar selisih kedua pelayan itu. Jarak ke dapur itulah jeda jaringan ke peladen basis data.
+
+**OFFSET.** Kamu antre di loket dan bertanya "tolong layani orang ke-17.981". Petugas yang memakai OFFSET menghitung dari orang pertama: satu, dua, tiga... sampai 17.980, lalu melayani berikutnya. Setiap kali kamu bertanya, ia menghitung ulang dari awal.
+
+Petugas yang memakai keyset bertanya "nomor antrean terakhir yang sudah dilayani berapa?" — lalu langsung memanggil nomor sesudahnya. Nomor 17.981 sama cepatnya dengan nomor 2.
+
+**Data yang bertambah.** Kamu membaca papan pengumuman yang diurutkan dari yang terbaru, lima lembar per baris. Selesai membaca baris pertama, kamu menoleh sebentar — dan petugas menempelkan dua pengumuman baru di paling depan. Kamu lanjut ke "baris kedua", dan dua lembar pertamanya adalah pengumuman yang baru saja kamu baca. Itu OFFSET.
+
+Kalau kamu mengingat "terakhir kubaca pengumuman nomor 6" lalu mencari yang lebih lama dari nomor 6, pengumuman baru di depan tidak mengganggumu sama sekali. Itu keyset.
+
+**Transaksi.** Bendahara memindahkan uang kas dari amplop A ke amplop B. Ia memasukkan uang ke amplop B lebih dulu — lalu ternyata amplop A tidak berisi uang sebanyak itu.
+
+Tanpa aturan apa pun, amplop B sekarang lebih tebal dan amplop A tetap sama. Total kas bertambah dari udara.
+
+Bendahara yang cermat mencatat pemindahan di **selembar kertas kerja** lebih dulu, dan baru memindahkan uang sungguhan setelah kedua langkah dipastikan bisa dilakukan. Kalau salah satu tidak bisa, kertas kerjanya disobek, dan tidak ada amplop yang tersentuh. Kertas kerja itulah transaksi: semua langkah jadi, atau tidak ada yang jadi.`,
+
+  latihan: [
+    'Tambahkan penghitung kueri ke kelas PDO-mu, lalu hitung berapa kueri yang dijalankan satu halaman daftar di proyekmu sendiri.',
+    'Tulis ulang perulangan N+1 di proyekmu menjadi JOIN, lalu menjadi WHERE IN, dan pastikan ketiga hasilnya identik.',
+    'Hitung waktu tunggu jaringan untuk halaman 100 baris dengan pola N+1 kalau jeda per kueri 3 ms, lalu bandingkan dengan JOIN.',
+    'Jelaskan kenapa \`WHERE id IN ()\` dengan daftar kosong harus dicegah, dan tulis penjaganya.',
+    'Tunjukkan dengan contoh kecil apa yang terjadi kalau \`unset($a)\` dihapus setelah perulangan dengan \`&$a\`, lalu diikuti perulangan biasa.',
+    'Ukur waktu OFFSET dan keyset di tabelmu sendiri untuk halaman 1, 100, dan 1.000.',
+    'Tulis kueri keyset untuk daftar yang diurutkan berdasarkan tanggal dibuat dari yang terbaru, dengan id sebagai pemecah seri.',
+    'Ulangi percobaan kabar baru dengan tiga kabar yang masuk di antara halaman 1 dan 2, lalu tentukan kabar mana yang tampil dua kali dengan OFFSET.',
+    'Tulis fungsi pemesanan yang mengurangi stok dan membuat baris pesanan dalam satu transaksi, lalu uji dengan stok yang tidak cukup.',
+    'Hapus batasan \`CHECK\` dari tabel dompet, jalankan ulang pemindahan dengan transaksi, lalu jelaskan kenapa transaksinya sekarang berhasil dan apa akibatnya.'
+  ]
+});
+
+
+TOPICS.push({
+  id: 'pemweb2-token',
+  judul: 'Autentikasi: Sesi, Token Bertanda Tangan & Cookie',
+  kategori: 'pemweb2',
+  tag: ['autentikasi', 'sesi', 'token', 'HMAC', 'JWT', 'cookie', 'HttpOnly', 'SameSite'],
+  ringkas: 'Sesi: peladen yang mengingat. Token: peladen yang tidak perlu mengingat — dan karena itu tidak bisa lupa.',
+
+  fungsi: `**Mengenali siapa yang mengirim setiap permintaan, setelah ia membuktikan dirinya sekali saat masuk.**
+
+HTTP tidak punya ingatan: setiap permintaan berdiri sendiri. Setelah kata sandi diperiksa, harus ada sesuatu yang dibawa setiap permintaan berikutnya untuk menyatakan "ini aku yang tadi". Ada dua cara besar:
+
+- **Sesi** — peladen menyimpan catatan siapa yang masuk, klien cuma membawa nomor acaknya
+- **Token bertanda tangan** — klien membawa seluruh keterangannya sendiri, dan peladen cuma memeriksa tanda tangannya
+
+Terpakai di:
+
+- **Halaman masuk** di setiap aplikasi web yang kamu buat
+- **API untuk aplikasi ponsel** — sering memakai token
+- **Layanan yang saling memanggil** tanpa satu pusat penyimpanan sesi
+- **Membaca dan memakai JWT** — bentuk token bertanda tangan yang paling umum
+
+Yang paling sering disalahpahami: **isi token bisa dibaca siapa pun.** Tanda tangan membuktikan isinya tidak diubah; ia tidak menyembunyikan apa pun.
+
+Dan yang paling sering terlambat disadari: **token tidak bisa ditarik kembali.** Tombol keluar di aplikasi cuma menghapus salinan token di perangkat itu. Salinan lain tetap sah sampai kedaluwarsa.`,
+
+  praktik: {
+    tujuan: 'Kamu bisa membuat sesi PHP yang aman untuk halaman masuk, membuat dan memeriksa token HMAC dengan waktu kedaluwarsa, menjelaskan kapan masing-masing cocok, dan memasang atribut cookie yang benar.',
+    alat: ['PHP 8', 'Peramban dengan alat pengembang (tab Application/Storage untuk melihat cookie)', 'Peladen bawaan PHP atau XAMPP'],
+    langkah: [
+      { judul: 'Atur cookie sesi sebelum session_start',
+        isi: `Panggil \`session_set_cookie_params()\` dengan larik berisi \`'httponly' => true\`, \`'secure' => true\`, \`'samesite' => 'Lax'\`, dan \`'path' => '/'\` — **sebelum** \`session_start()\`.
+
+Setel juga \`session.use_strict_mode\` ke 1 supaya PHP menolak id sesi yang tidak pernah ia buat sendiri.` },
+      { judul: 'Ganti id sesi setelah masuk',
+        isi: `Tepat setelah kata sandi terbukti benar, panggil \`session_regenerate_id(true)\`, baru simpan data pengguna ke \`$_SESSION\`.
+
+Tanpa langkah ini, penyerang yang berhasil menanamkan id sesi tertentu ke peramban korban sebelum korban masuk bisa ikut memakai sesi itu setelah korban masuk — serangan yang disebut *session fixation*.` },
+      { judul: 'Keluar dengan benar',
+        isi: `Kosongkan \`$_SESSION = []\`, lalu \`session_destroy()\` untuk menghapus catatannya di peladen.
+
+Karena catatannya di peladen yang dihapus, cookie yang sama sudah tidak berarti apa-apa lagi — meskipun ada salinannya di tempat lain.` },
+      { judul: 'Periksa cookie di peramban',
+        isi: `Buka alat pengembang, lihat cookie sesi aplikasimu, dan pastikan kolom HttpOnly, Secure, dan SameSite terisi.
+
+Lalu coba baca \`document.cookie\` dari konsol: cookie sesi seharusnya **tidak** muncul di sana.
+
+Kalau kamu mengembangkan lewat \`http://\` tanpa HTTPS dan masuk tiba-tiba tidak berfungsi, periksa atribut Secure lebih dulu: peramban tidak mengirim cookie Secure lewat koneksi yang dianggapnya tidak aman. Selesaikan dengan memakai HTTPS di mesin pengembangan, bukan dengan mematikan Secure di peladen sungguhan.` },
+      { judul: 'Buat token HMAC',
+        isi: `Isi token adalah JSON berisi pengguna, peran, dan waktu kedaluwarsa, dikodekan base64url. Tanda tangannya \`hash_hmac('sha256', $bagian, $rahasia, true)\`, juga dikodekan base64url. Token = isi + titik + tanda tangan.
+
+Rahasianya harus panjang dan acak — misalnya dari \`bin2hex(random_bytes(32))\` — dan disimpan di berkas konfigurasi atau variabel lingkungan yang **tidak** ikut masuk repo.` },
+      { judul: 'Periksa token dengan urutan yang benar',
+        isi: `Hitung ulang tanda tangan dari bagian isi, bandingkan dengan \`hash_equals()\`, dan baru setelah cocok baca isinya dan periksa waktu kedaluwarsa.
+
+Membaca isi sebelum tanda tangannya terbukti berarti memercayai data yang bisa ditulis siapa pun.` },
+      { judul: 'Coba ubah isi token',
+        isi: `Dekode bagian isinya, ganti perannya menjadi admin, kodekan lagi, dan pasang tanda tangan lama.
+
+Pemeriksaan harus menolaknya. Kalau tidak, ada yang salah di urutan pemeriksaanmu.` },
+      { judul: 'Tentukan umur token dan cara mencabutnya',
+        isi: `Buat token akses berumur pendek — misalnya 15 menit. Kalau pengguna harus tetap masuk lebih lama, tambahkan token penyegar berumur panjang yang **disimpan di peladen** dan bisa dihapus saat pengguna keluar atau kata sandinya diganti.` }
+    ],
+    cek: [
+      'Cookie sesimu ber-HttpOnly, Secure, dan SameSite, dan tidak terbaca dari document.cookie',
+      'Id sesi berganti tepat setelah masuk',
+      'Token yang isinya diubah ditolak, dan token yang lewat waktunya ditolak',
+      'Kamu bisa menjelaskan kenapa tombol keluar tidak membatalkan token, dan apa yang dilakukan aplikasimu untuk itu'
+    ]
+  },
+
+  judulLogicSyntax: 'Bedah Kode — tanda tangan yang tidak bisa dipalsukan, dan token yang tidak bisa dilupakan',
+
+  konsep: `Topik Keamanan Aplikasi Web sudah membahas cara menyimpan kata sandi dengan bcrypt dan cara memeriksanya saat masuk. Topik ini tentang yang terjadi **sesudahnya**: setelah kata sandi terbukti benar sekali, bagaimana peladen mengenali pengguna yang sama di ratusan permintaan berikutnya tanpa meminta kata sandinya lagi.
+
+**Sesi: peladen yang mengingat**
+
+Saat masuk berhasil, peladen membuat id acak dan menyimpan catatan: id ini milik siapa, sejak kapan, dengan hak apa. Id itu dikirim ke peramban sebagai cookie.
+
+| | |
+|---|---|
+| panjang id sesi | 128 bit acak |
+| permintaan dengan cookie itu | dikenali sebagai andi |
+| setelah keluar | tidak dikenal |
+
+Cookie-nya cuma nomor antrean. Semua keterangan penting ada di **peladen**, dan keluar cukup dengan menghapus satu catatan. 128 bit acak berarti ada 2^128 kemungkinan id — menebak id sesi orang lain secara acak tidak mungkin dalam waktu yang masuk akal.
+
+Di PHP, semua ini dikerjakan \`session_start()\` dan larik \`$_SESSION\`. Yang harus kamu tambahkan sendiri: atribut cookie yang benar, dan \`session_regenerate_id(true)\` tepat setelah masuk.
+
+**Token bertanda tangan: peladen yang tidak perlu mengingat**
+
+Cara kedua membalik semuanya. Peladen tidak menyimpan apa-apa. Seluruh keterangan — siapa, perannya apa, berlaku sampai kapan — dimasukkan ke token itu sendiri, lalu ditandatangani dengan rahasia yang cuma diketahui peladen.
+
+Token di program ini terdiri dari dua bagian yang dipisah titik: isi dalam base64url, dan tanda tangan HMAC-SHA256 dari isi itu. Bagian isinya, kalau didekode:
+
+\`{"pengguna":"andi","peran":"mahasiswa","kedaluwarsa":1900}\`
+
+Itu terbaca **tanpa rahasia apa pun**. Base64 bukan enkripsi — cuma cara menulis data biner dengan huruf yang aman dikirim lewat URL dan header. Jadi jangan pernah menaruh apa pun yang rahasia di dalam token.
+
+JWT, bentuk token yang paling sering kamu temui, memakai gagasan yang sama dengan satu bagian tambahan di depan: kepala yang menyebut algoritme tanda tangannya. Susunannya kepala.isi.tanda-tangan.
+
+**Mengubah isi: ketahuan**
+
+Pemegang token mengganti \`"peran":"mahasiswa"\` menjadi \`"admin"\`, lalu memasang tanda tangan lama. Hasil pemeriksaan: **TANDA TANGAN TIDAK COCOK**.
+
+Tanda tangan dihitung dari isi **dan** rahasia peladen. Isi yang berubah memberi tanda tangan yang berbeda, dan membuat tanda tangan baru yang cocok butuh rahasia yang tidak dimiliki pemegang token.
+
+**Kedaluwarsa**
+
+| Waktu sejak dibuat | Hasil |
+|---|---|
+| 60 detik | sah |
+| 899 detik | sah |
+| 901 detik | token sudah kedaluwarsa |
+
+Waktu kedaluwarsa ada **di dalam** isi token dan ikut ditandatangani, jadi pemegangnya tidak bisa memperpanjang sendiri.
+
+**Kelemahan terbesar token: tidak bisa ditarik kembali**
+
+Andi menekan tombol keluar, dan aplikasinya menghapus token dari perangkat itu. Lima menit kemudian, salinan token yang sama — misalnya yang tersimpan di perangkat lain, atau yang tercuri — dikirim lagi. Hasil pemeriksaan: **sah**.
+
+Peladen tidak mengingat apa pun, jadi ia tidak punya cara tahu bahwa pemiliknya sudah keluar. Token berlaku sampai kedaluwarsa.
+
+Penyelesaiannya adalah **daftar cabut**: hash token yang sudah dicabut disimpan, dan setiap pemeriksaan melihat daftar itu dulu. Dengan daftar cabut, hasil pemeriksaannya menjadi **token sudah dicabut**.
+
+Tetapi perhatikan harganya. Daftar cabut adalah keadaan yang harus disimpan dan diperiksa di **setiap** permintaan — keunggulan utama token, peladen yang tidak perlu mengingat, sebagian hilang.
+
+Jalan tengah yang lazim: **token akses berumur pendek** (beberapa menit) yang tidak diperiksa ke daftar mana pun, ditambah **token penyegar berumur panjang** yang disimpan di peladen dan bisa dicabut. Kerugian terburuk saat token akses tercuri dibatasi oleh umurnya yang pendek.
+
+**Sesi atau token?**
+
+| | Sesi | Token |
+|---|---|---|
+| Keterangan disimpan di | peladen | pemegang token |
+| Keluar seketika | ya, hapus catatan | tidak, tunggu habis |
+| Banyak peladen | perlu simpanan bersama | cukup rahasia yang sama |
+| Klien bisa membaca isinya | tidak | ya (tidak dienkripsi) |
+| Cocok untuk | aplikasi web biasa | API antarlayanan |
+
+Untuk aplikasi web biasa dengan satu peladen — hampir semua proyek kuliah — sesi hampir selalu pilihan yang lebih sederhana dan lebih aman. Token masuk akal ketika banyak layanan harus memeriksa identitas tanpa bertanya ke satu pusat.
+
+**Atribut cookie yang wajib**
+
+Sesi maupun token yang disimpan di cookie harus diberi atribut ini:
+
+| Atribut | Artinya |
+|---|---|
+| HttpOnly | JavaScript halaman tidak bisa membacanya |
+| Secure | hanya dikirim lewat HTTPS |
+| SameSite=Lax | tidak ikut di sebagian besar permintaan lintas situs |
+| Max-Age / Expires | berakhir sendiri, tidak selamanya |
+
+**HttpOnly** yang paling sering terlupa, dan paling besar artinya. Kalau ada satu celah XSS di aplikasimu, skrip penyerang bisa membaca \`document.cookie\` dan mengirim isinya keluar. Dengan HttpOnly, cookie sesi tidak muncul di sana sama sekali.
+
+**SameSite=Lax** berarti cookie tetap dikirim saat pengguna mengeklik tautan dari situs lain ke aplikasimu — supaya ia tetap dalam keadaan masuk — tetapi **tidak** dikirim pada formulir POST dari situs lain, gambar, bingkai, atau \`fetch()\` lintas situs. Itu menutup sebagian besar jalan CSRF, meskipun token CSRF dari topik Keamanan Aplikasi Web tetap perlu untuk lapisan kedua.
+
+**Satu catatan tentang program ini.** Rahasia penandatanganan ditulis langsung di kode supaya programnya bisa dijalankan sendiri. Di aplikasi sungguhan, rahasia itu disimpan di luar kode — dan terutama di luar repo, apalagi repo publik. Siapa pun yang tahu rahasianya bisa membuat token untuk pengguna mana pun, dengan peran apa pun.`,
+
+  logicSyntax: [
+    {
+      bahasa: 'php',
+      kode: String.raw`function b64u($s) {
+    return rtrim(strtr(base64_encode($s), '+/', '-_'), '=');
+}
+function buat_token($isi, $rahasia) {
+    $bagian = b64u(json_encode($isi));
+    $tanda = b64u(hash_hmac('sha256', $bagian, $rahasia, true));
+    return $bagian . '.' . $tanda;
+}
+function periksa_token($token, $rahasia, $sekarang) {
+    $pisah = explode('.', $token);
+    if (count($pisah) !== 2) {
+        return [null, 'bentuk token salah'];
+    }
+    [$bagian, $tanda] = $pisah;
+    $seharusnya = b64u(hash_hmac('sha256', $bagian, $rahasia, true));
+    if (!hash_equals($seharusnya, $tanda)) {
+        return [null, 'TANDA TANGAN TIDAK COCOK'];
+    }
+    $isi = json_decode(base64_decode(strtr($bagian, '-_', '+/')), true);
+    if ($isi['kedaluwarsa'] < $sekarang) {
+        return [null, 'token sudah kedaluwarsa'];
+    }
+    return [$isi, 'sah'];
+}`,
+      penjelasan: `Sekitar dua puluh lima baris, dan hampir setiap barisnya menjawab satu cara token bisa dipalsukan.
+
+**\`b64u\`: base64 yang aman di URL.**
+
+Base64 biasa memakai huruf \`+\` dan \`/\`, yang punya arti khusus di URL, dan diakhiri \`=\` sebagai pengisi. \`strtr\` menukar kedua huruf itu dengan \`-\` dan \`_\`, dan \`rtrim\` membuang pengisinya. Hasilnya bisa ditaruh di URL, header, atau cookie tanpa perlu dikodekan lagi. Itu format yang sama yang dipakai JWT.
+
+Pemeriksaan membalik penukarannya dengan \`strtr($bagian, '-_', '+/')\` sebelum \`base64_decode\` — yang tetap bisa membaca teks tanpa pengisi di ujungnya.
+
+**\`hash_hmac\`, bukan \`hash\`.**
+
+Kenapa tidak cukup \`hash('sha256', $rahasia . $bagian)\`? Karena menyatukan rahasia dan pesan lalu meng-hash-nya punya kelemahan yang sudah dikenal pada SHA-256: penyerang yang tahu hash suatu pesan bisa menghitung hash yang sah untuk pesan itu **ditambah** data lain di ujungnya, tanpa tahu rahasianya. Serangan ini disebut *length extension*.
+
+HMAC dirancang khusus untuk menutup kelemahan itu: rahasia dicampur dua kali, di dalam dan di luar. Aturannya sederhana — untuk tanda tangan dengan rahasia, pakai fungsi HMAC, jangan merakit sendiri.
+
+Argumen keempat \`true\` meminta hasil biner mentah 32 byte, bukan 64 huruf heksadesimal. Hasil biner itu yang lalu dikodekan base64url — lebih pendek.
+
+**Urutan pemeriksaan: tanda tangan dulu, isi kemudian.**
+
+Perhatikan bahwa \`json_decode\` baru dipanggil **setelah** tanda tangannya terbukti cocok. Sebelum itu, isinya adalah data yang bisa ditulis siapa pun, dan tidak boleh dipakai untuk keputusan apa pun — termasuk untuk memilih cara memeriksanya.
+
+Kalimat terakhir itu bukan teori. Beberapa pustaka JWT generasi awal membaca algoritme dari kepala token **sebelum** memeriksa tanda tangannya, lalu memakai algoritme itu. Penyerang cukup menulis \`"alg":"none"\` di kepala, dan sebagian pustaka menerima token tanpa tanda tangan sama sekali. Pelajarannya: algoritme ditentukan peladen, bukan dibaca dari token.
+
+**\`hash_equals\`, bukan \`===\`.**
+
+Perbandingan teks biasa berhenti di huruf pertama yang berbeda. Tanda tangan yang salah di huruf pertama ditolak sedikit lebih cepat daripada yang salah di huruf kedua puluh.
+
+Selisihnya cuma nanodetik, tetapi dengan cukup banyak percobaan dan pengukuran, penyerang bisa menebak tanda tangan yang benar huruf demi huruf. \`hash_equals\` selalu membandingkan seluruh teks, sehingga waktunya tidak bergantung pada letak perbedaannya.
+
+**Kedaluwarsa diperiksa terakhir, tetapi ditandatangani sejak awal.**
+
+Waktu kedaluwarsa adalah bagian dari isi, jadi ikut dilindungi tanda tangan. Pemegang token yang mengubah 1900 menjadi 99999 mengubah isinya — dan tanda tangannya tidak cocok lagi, persis seperti mengubah peran menjadi admin.`
+    },
+    {
+      bahasa: 'php',
+      kode: String.raw`$DAFTAR_CABUT[hash('sha256', $token)] = true;     // saat keluar
+
+function periksa_dengan_cabut($token, $rahasia, $sekarang, $cabut) {
+    if (isset($cabut[hash('sha256', $token)])) {
+        return [null, 'token sudah dicabut'];
+    }
+    return periksa_token($token, $rahasia, $sekarang);
+}
+// 5 menit setelah keluar, salinan token yang sama dikirim:
+//   periksa_token         -> sah
+//   periksa_dengan_cabut  -> token sudah dicabut`,
+      penjelasan: `Tujuh baris yang menyelesaikan masalah terbesar token — dengan harga yang membuat sebagian orang mempertanyakan kenapa memakai token sejak awal.
+
+**Masalahnya.**
+
+Token dirancang supaya peladen tidak perlu mengingat apa pun. Semua keterangan ada di token, dan tanda tangannya cukup untuk memercayainya.
+
+Tetapi "tidak mengingat apa pun" juga berarti "tidak bisa lupa". Setelah token dibuat, peladen tidak punya cara menyatakannya tidak berlaku lagi — tidak saat pengguna keluar, tidak saat kata sandinya diganti, tidak saat tokennya diketahui tercuri. Token itu sah sampai waktu kedaluwarsanya tiba.
+
+**Daftar cabut membalikkan itu.**
+
+Saat pengguna keluar, hash tokennya dimasukkan ke daftar. Setiap pemeriksaan melihat daftar itu **sebelum** memeriksa tanda tangan. Token yang ada di daftar ditolak, secantik apa pun tanda tangannya.
+
+Kenapa hash tokennya, bukan tokennya sendiri? Karena daftar ini disimpan — di basis data, di Redis, di mana pun — dan kalau daftar itu bocor, token di dalamnya belum kedaluwarsa. Menyimpan hash-nya berarti daftar yang bocor tidak bisa dipakai untuk masuk.
+
+**Dan harganya.**
+
+Daftar cabut adalah **keadaan** yang harus disimpan dan diperiksa di **setiap** permintaan. Kalau ada lima layanan yang memeriksa token, kelimanya harus bisa membaca daftar yang sama.
+
+Itu persis kebutuhan sesi — simpanan bersama yang dibaca setiap permintaan. Keunggulan utama token, peladen yang tidak perlu mengingat, sebagian besar hilang.
+
+**Jalan tengahnya: dua jenis token.**
+
+Token **akses** berumur pendek — beberapa menit — dan **tidak** diperiksa ke daftar mana pun. Kalau tercuri, kerugiannya dibatasi oleh umurnya.
+
+Token **penyegar** berumur panjang, dipakai cuma untuk meminta token akses baru, dan **disimpan di peladen**. Saat pengguna keluar, token penyegarnya dihapus. Paling lama beberapa menit kemudian, token aksesnya kedaluwarsa, dan tidak bisa diperbarui lagi.
+
+Daftar yang diperiksa sekarang cuma disentuh setiap beberapa menit sekali per pengguna, bukan di setiap permintaan. Itu kompromi yang dipakai kebanyakan sistem yang memakai token.
+
+**Pelajaran yang lebih besar.**
+
+Setiap cara autentikasi harus menjawab pertanyaan "bagaimana kalau aksesnya harus dihentikan **sekarang**?" — karena pengguna keluar, karena perangkatnya hilang, karena akunnya diblokir. Sesi menjawabnya dengan satu baris \`unset\`. Token menjawabnya dengan tujuh baris ini ditambah simpanan bersama. Kalau jawaban itu belum ada di rancanganmu, rancangannya belum selesai.`
+    }
+  ],
+
+  kode: { php: String.raw`<?php
+// ============================================
+// Autentikasi: sesi di peladen vs token bertanda tangan
+// ============================================
+
+// --------------------------------------------
+// 1. Sesi: peladen yang mengingat
+// --------------------------------------------
+echo "--- sesi: peladen menyimpan siapa yang masuk ---\n";
+$SESI = [];                                  // penyimpanan di peladen
+
+function masuk_sesi(&$SESI, $pengguna) {
+    $id = bin2hex(random_bytes(16));         // 128 bit acak
+    $SESI[$id] = ['pengguna' => $pengguna, 'mulai' => 1000];
+    return $id;                              // dikirim sebagai cookie
+}
+function siapa_sesi($SESI, $id) {
+    return $SESI[$id]['pengguna'] ?? null;
+}
+
+$cookie = masuk_sesi($SESI, 'andi');
+echo "  cookie yang diterima peramban : " . substr($cookie, 0, 16) . "...\n";
+echo "  panjang id sesi               : " . strlen($cookie) * 4 . " bit\n";
+echo "  permintaan dengan cookie itu  : " . siapa_sesi($SESI, $cookie) . "\n";
+unset($SESI[$cookie]);                       // keluar
+echo "  setelah keluar                : "
+     . (siapa_sesi($SESI, $cookie) ?? '(tidak dikenal)') . "\n";
+echo "\n";
+echo "  Cookie-nya cuma nomor antrean acak. Siapa pemiliknya,\n";
+echo "  apa haknya, kapan ia masuk -- semuanya disimpan di\n";
+echo "  PELADEN. Keluar cukup dengan menghapus satu baris.\n";
+
+// --------------------------------------------
+// 2. Token bertanda tangan: peladen yang tidak perlu mengingat
+// --------------------------------------------
+echo "\n--- token bertanda tangan (HMAC) ---\n";
+$RAHASIA = 'kunci-rahasia-peladen-jangan-dibagikan';
+
+function b64u($s) {
+    return rtrim(strtr(base64_encode($s), '+/', '-_'), '=');
+}
+function buat_token($isi, $rahasia) {
+    $bagian = b64u(json_encode($isi));
+    $tanda = b64u(hash_hmac('sha256', $bagian, $rahasia, true));
+    return $bagian . '.' . $tanda;
+}
+function periksa_token($token, $rahasia, $sekarang) {
+    $pisah = explode('.', $token);
+    if (count($pisah) !== 2) {
+        return [null, 'bentuk token salah'];
+    }
+    [$bagian, $tanda] = $pisah;
+    $seharusnya = b64u(hash_hmac('sha256', $bagian, $rahasia, true));
+    if (!hash_equals($seharusnya, $tanda)) {
+        return [null, 'TANDA TANGAN TIDAK COCOK'];
+    }
+    $isi = json_decode(base64_decode(strtr($bagian, '-_', '+/')), true);
+    if ($isi['kedaluwarsa'] < $sekarang) {
+        return [null, 'token sudah kedaluwarsa'];
+    }
+    return [$isi, 'sah'];
+}
+
+$SEKARANG = 1000;
+$token = buat_token(['pengguna' => 'andi', 'peran' => 'mahasiswa',
+                     'kedaluwarsa' => $SEKARANG + 900], $RAHASIA);
+[$bagian, $tanda] = explode('.', $token);
+echo "  isi (base64url)  : " . substr($bagian, 0, 40) . "...\n";
+echo "  isi terbaca      :\n    " . base64_decode(strtr($bagian, '-_', '+/')) . "\n";
+echo "  tanda tangan     : " . substr($tanda, 0, 24) . "...\n";
+[$isi, $status] = periksa_token($token, $RAHASIA, $SEKARANG);
+echo "  hasil periksa    : $status, pengguna = " . $isi['pengguna'] . "\n";
+echo "\n";
+echo "  Perhatikan baris kedua: isi token BISA DIBACA siapa pun.\n";
+echo "  Base64 bukan enkripsi. Tanda tangan tidak menyembunyikan\n";
+echo "  apa pun -- ia cuma membuktikan isinya tidak diubah.\n";
+echo "  Jadi jangan pernah menaruh rahasia di dalam token.\n";
+
+// --------------------------------------------
+// 3. Mengubah isi token: ketahuan
+// --------------------------------------------
+echo "\n--- isi token diubah pemegangnya ---\n";
+$isi_ubah = ['pengguna' => 'andi', 'peran' => 'admin',
+             'kedaluwarsa' => $SEKARANG + 900];
+$token_ubah = b64u(json_encode($isi_ubah)) . '.' . $tanda;   // tanda lama
+[$x, $status] = periksa_token($token_ubah, $RAHASIA, $SEKARANG);
+echo "  'peran' diganti dari mahasiswa ke admin\n";
+echo "  tanda tangan lama dipakai ulang\n";
+echo "  hasil periksa    : $status\n";
+echo "\n";
+echo "  Tanda tangan dihitung dari isi DAN rahasia peladen.\n";
+echo "  Mengubah satu huruf isi membuat tanda tangannya tidak\n";
+echo "  cocok lagi, dan membuat tanda tangan baru butuh rahasia\n";
+echo "  yang cuma ada di peladen.\n";
+
+// --------------------------------------------
+// 4. Kedaluwarsa
+// --------------------------------------------
+echo "\n--- kedaluwarsa ---\n";
+foreach ([$SEKARANG + 60, $SEKARANG + 899, $SEKARANG + 901] as $t) {
+    [$x, $status] = periksa_token($token, $RAHASIA, $t);
+    printf("  %4d detik kemudian : %s\n", $t - $SEKARANG, $status);
+}
+echo "\n";
+echo "  Waktu kedaluwarsa ada DI DALAM token dan ikut\n";
+echo "  ditandatangani, jadi pemegang token tidak bisa\n";
+echo "  memperpanjangnya sendiri.\n";
+
+// --------------------------------------------
+// 5. Kelemahan token: tidak bisa ditarik kembali
+// --------------------------------------------
+echo "\n--- 'keluar' dengan token ---\n";
+echo "  Andi menekan tombol keluar. Aplikasi menghapus token\n";
+echo "  dari perambannya. Tetapi salinan token yang sama --\n";
+echo "  misalnya yang tersimpan di perangkat lain -- dikirim\n";
+echo "  lagi 5 menit kemudian:\n\n";
+[$x, $status] = periksa_token($token, $RAHASIA, $SEKARANG + 300);
+echo "  hasil periksa    : $status\n";
+echo "\n";
+echo "  Token itu MASIH SAH. Peladen tidak mengingat apa pun,\n";
+echo "  jadi ia tidak punya cara tahu bahwa pemiliknya sudah\n";
+echo "  keluar. Token berlaku sampai kedaluwarsa.\n";
+
+$DAFTAR_CABUT = [];
+$DAFTAR_CABUT[hash('sha256', $token)] = true;
+function periksa_dengan_cabut($token, $rahasia, $sekarang, $cabut) {
+    if (isset($cabut[hash('sha256', $token)])) {
+        return [null, 'token sudah dicabut'];
+    }
+    return periksa_token($token, $rahasia, $sekarang);
+}
+[$x, $status] = periksa_dengan_cabut($token, $RAHASIA, $SEKARANG + 300,
+                                     $DAFTAR_CABUT);
+echo "\n  dengan daftar cabut : $status\n";
+echo "\n";
+echo "  Daftar cabut menyelesaikannya -- tetapi daftar itu\n";
+echo "  adalah KEADAAN yang harus disimpan dan diperiksa di\n";
+echo "  setiap permintaan. Artinya keunggulan utama token,\n";
+echo "  peladen yang tidak perlu mengingat, sebagian hilang.\n";
+echo "\n";
+echo "  Jalan tengah yang lazim: token akses berumur pendek\n";
+echo "  (beberapa menit), ditambah token penyegar berumur\n";
+echo "  panjang yang disimpan dan bisa dicabut di peladen.\n";
+
+// --------------------------------------------
+// 6. Perbandingan
+// --------------------------------------------
+echo "\n--- sesi vs token ---\n";
+$BANDING = [
+    ["Disimpan di", "peladen", "pemegang token"],
+    ["Keluar seketika", "YA, hapus baris", "tidak, tunggu habis"],
+    ["Banyak peladen", "perlu simpanan bersama", "cukup rahasia sama"],
+    ["Klien bisa baca isi", "tidak", "YA (tak dienkripsi)"],
+    ["Cocok untuk", "aplikasi web biasa", "API antarlayanan"],
+];
+printf("  %-20s %-24s %s\n", "", "sesi", "token");
+foreach ($BANDING as [$a, $b, $c]) {
+    printf("  %-20s %-24s %s\n", $a, $b, $c);
+}
+echo "\n";
+echo "  Untuk aplikasi web biasa dengan satu peladen, sesi\n";
+echo "  hampir selalu pilihan yang lebih sederhana dan lebih\n";
+echo "  aman. Token masuk akal ketika banyak layanan harus\n";
+echo "  memeriksa identitas tanpa bertanya ke satu pusat.\n";
+
+// --------------------------------------------
+// 7. Cookie yang membawa sesi atau token
+// --------------------------------------------
+echo "\n--- atribut cookie yang wajib ---\n";
+$ATRIBUT = [
+    ["HttpOnly", "JavaScript halaman tidak bisa membacanya"],
+    ["Secure", "cuma dikirim lewat HTTPS"],
+    ["SameSite=Lax", "tak ikut di sebagian besar akses lintas situs"],
+    ["Max-Age / Expires", "berakhir sendiri, tidak selamanya"],
+];
+foreach ($ATRIBUT as [$a, $b]) {
+    printf("  %-19s %s\n", $a, $b);
+}
+echo "\n";
+echo "  Contoh di PHP:\n";
+echo "  setcookie('sesi', \$id, ['httponly' => true,\n";
+echo "      'secure' => true, 'samesite' => 'Lax',\n";
+echo "      'expires' => time() + 3600, 'path' => '/']);\n";
+echo "\n";
+echo "  HttpOnly yang paling sering terlupa, dan paling besar\n";
+echo "  artinya: kalau ada satu celah XSS di aplikasi, cookie\n";
+echo "  tanpa HttpOnly bisa dibaca skrip dan dibawa keluar.\n";` },
+  output: `--- sesi: peladen menyimpan siapa yang masuk ---
+  cookie yang diterima peramban : 2bb0a26564a2a90c...
+  panjang id sesi               : 128 bit
+  permintaan dengan cookie itu  : andi
+  setelah keluar                : (tidak dikenal)
+
+  Cookie-nya cuma nomor antrean acak. Siapa pemiliknya,
+  apa haknya, kapan ia masuk -- semuanya disimpan di
+  PELADEN. Keluar cukup dengan menghapus satu baris.
+
+--- token bertanda tangan (HMAC) ---
+  isi (base64url)  : eyJwZW5nZ3VuYSI6ImFuZGkiLCJwZXJhbiI6Im1h...
+  isi terbaca      :
+    {"pengguna":"andi","peran":"mahasiswa","kedaluwarsa":1900}
+  tanda tangan     : 5tn_ZoUdfV1FNVvLaEoJbaZj...
+  hasil periksa    : sah, pengguna = andi
+
+  Perhatikan baris kedua: isi token BISA DIBACA siapa pun.
+  Base64 bukan enkripsi. Tanda tangan tidak menyembunyikan
+  apa pun -- ia cuma membuktikan isinya tidak diubah.
+  Jadi jangan pernah menaruh rahasia di dalam token.
+
+--- isi token diubah pemegangnya ---
+  'peran' diganti dari mahasiswa ke admin
+  tanda tangan lama dipakai ulang
+  hasil periksa    : TANDA TANGAN TIDAK COCOK
+
+  Tanda tangan dihitung dari isi DAN rahasia peladen.
+  Mengubah satu huruf isi membuat tanda tangannya tidak
+  cocok lagi, dan membuat tanda tangan baru butuh rahasia
+  yang cuma ada di peladen.
+
+--- kedaluwarsa ---
+    60 detik kemudian : sah
+   899 detik kemudian : sah
+   901 detik kemudian : token sudah kedaluwarsa
+
+  Waktu kedaluwarsa ada DI DALAM token dan ikut
+  ditandatangani, jadi pemegang token tidak bisa
+  memperpanjangnya sendiri.
+
+--- 'keluar' dengan token ---
+  Andi menekan tombol keluar. Aplikasi menghapus token
+  dari perambannya. Tetapi salinan token yang sama --
+  misalnya yang tersimpan di perangkat lain -- dikirim
+  lagi 5 menit kemudian:
+
+  hasil periksa    : sah
+
+  Token itu MASIH SAH. Peladen tidak mengingat apa pun,
+  jadi ia tidak punya cara tahu bahwa pemiliknya sudah
+  keluar. Token berlaku sampai kedaluwarsa.
+
+  dengan daftar cabut : token sudah dicabut
+
+  Daftar cabut menyelesaikannya -- tetapi daftar itu
+  adalah KEADAAN yang harus disimpan dan diperiksa di
+  setiap permintaan. Artinya keunggulan utama token,
+  peladen yang tidak perlu mengingat, sebagian hilang.
+
+  Jalan tengah yang lazim: token akses berumur pendek
+  (beberapa menit), ditambah token penyegar berumur
+  panjang yang disimpan dan bisa dicabut di peladen.
+
+--- sesi vs token ---
+                       sesi                     token
+  Disimpan di          peladen                  pemegang token
+  Keluar seketika      YA, hapus baris          tidak, tunggu habis
+  Banyak peladen       perlu simpanan bersama   cukup rahasia sama
+  Klien bisa baca isi  tidak                    YA (tak dienkripsi)
+  Cocok untuk          aplikasi web biasa       API antarlayanan
+
+  Untuk aplikasi web biasa dengan satu peladen, sesi
+  hampir selalu pilihan yang lebih sederhana dan lebih
+  aman. Token masuk akal ketika banyak layanan harus
+  memeriksa identitas tanpa bertanya ke satu pusat.
+
+--- atribut cookie yang wajib ---
+  HttpOnly            JavaScript halaman tidak bisa membacanya
+  Secure              cuma dikirim lewat HTTPS
+  SameSite=Lax        tak ikut di sebagian besar akses lintas situs
+  Max-Age / Expires   berakhir sendiri, tidak selamanya
+
+  Contoh di PHP:
+  setcookie('sesi', $id, ['httponly' => true,
+      'secure' => true, 'samesite' => 'Lax',
+      'expires' => time() + 3600, 'path' => '/']);
+
+  HttpOnly yang paling sering terlupa, dan paling besar
+  artinya: kalau ada satu celah XSS di aplikasi, cookie
+  tanpa HttpOnly bisa dibaca skrip dan dibawa keluar.`,
+
+  kompleksitas: {
+    tabel: [
+      { operasi: 'Periksa sesi', waktu: 'O(1)', memori: 'satu pencarian di simpanan sesi per permintaan' },
+      { operasi: 'Keluar dengan sesi', waktu: 'O(1)', memori: 'hapus satu catatan' },
+      { operasi: 'Buat atau periksa token HMAC', waktu: 'O(m)', memori: 'm = panjang isi token; tanpa simpanan di peladen' },
+      { operasi: 'Periksa token dengan daftar cabut', waktu: 'O(m) + O(1)', memori: 'simpanan daftar cabut dibaca setiap permintaan' },
+      { operasi: 'Simpanan sesi untuk u pengguna aktif', waktu: '—', memori: 'O(u) di peladen' }
+    ],
+    intuisi: `Secara komputasi, kedua cara sama-sama murah. Satu HMAC-SHA256 atas beberapa puluh byte berlangsung dalam hitungan mikrodetik, dan satu pencarian sesi juga.
+
+Perbedaannya bukan di waktu hitung, melainkan di **di mana keadaannya disimpan**. Sesi menyimpan O(u) catatan di peladen — kecil untuk proyek kuliah, dan untuk satu peladen cukup disimpan di berkas atau memori. Tantangannya muncul saat ada banyak peladen: semuanya harus membaca simpanan sesi yang sama, biasanya basis data atau Redis, dan setiap permintaan menempuh perjalanan ke sana.
+
+Token menghapus perjalanan itu — sampai kamu butuh mencabut token, dan daftar cabut mengembalikannya. Karena itu pilihannya jarang soal kecepatan. Pilihannya soal arsitektur: berapa peladen yang harus mengenali pengguna, dan seberapa cepat akses harus bisa dihentikan.`
+  },
+
+  kesalahanUmum: [
+    {
+      salah: 'Menaruh data rahasia di dalam token karena tokennya ditandatangani.',
+      kenapa: 'Tanda tangan hanya membuktikan isi tidak diubah. Isi token cuma dikodekan base64, dan bisa dibaca siapa pun yang memegangnya tanpa rahasia apa pun.',
+      benar: 'Isi token hanya dengan keterangan yang boleh dilihat pemegangnya, seperti id pengguna, peran, dan waktu kedaluwarsa.'
+    },
+    {
+      salah: 'Membaca isi token lebih dulu, lalu memeriksa tanda tangan belakangan atau memakai algoritme yang tertulis di token.',
+      kenapa: 'Sebelum tanda tangannya terbukti, isi token adalah data yang bisa ditulis siapa pun. Beberapa pustaka JWT generasi awal menerima token dengan algoritme none di kepalanya karena memercayai kepala itu.',
+      benar: 'Tentukan algoritme di peladen, periksa tanda tangan lebih dulu, dan baru pakai isinya setelah cocok.'
+    },
+    {
+      salah: 'Membuat tanda tangan dengan hash dari rahasia yang disatukan dengan pesan.',
+      kenapa: 'Pada SHA-256, susunan seperti itu rentan terhadap serangan length extension yang memungkinkan penyerang membuat tanda tangan sah untuk pesan yang diperpanjang tanpa tahu rahasianya.',
+      benar: 'Pakai hash_hmac, yang dirancang untuk tanda tangan dengan rahasia.'
+    },
+    {
+      salah: 'Membandingkan tanda tangan dengan == atau ===.',
+      kenapa: 'Perbandingan biasa berhenti di huruf pertama yang berbeda, sehingga waktunya membocorkan berapa huruf awal yang sudah benar. Dengan cukup banyak pengukuran, tanda tangan bisa ditebak huruf demi huruf.',
+      benar: 'Pakai hash_equals, yang waktunya tidak bergantung pada letak perbedaan.'
+    },
+    {
+      salah: 'Menganggap tombol keluar sudah membatalkan token.',
+      kenapa: 'Keluar di aplikasi cuma menghapus salinan token di perangkat itu. Salinan lain, termasuk yang tercuri, tetap sah sampai kedaluwarsa karena peladen tidak mengingat token yang pernah dibuatnya.',
+      benar: 'Pakai token akses berumur pendek, token penyegar yang disimpan dan bisa dicabut di peladen, atau daftar cabut bila akses harus berhenti seketika.'
+    },
+    {
+      salah: 'Tidak mengganti id sesi setelah pengguna berhasil masuk.',
+      kenapa: 'Penyerang yang berhasil menanamkan id sesi tertentu ke peramban korban sebelum korban masuk bisa ikut memakai sesi itu setelah korban masuk.',
+      benar: 'Panggil session_regenerate_id(true) tepat setelah kata sandi terbukti benar, dan aktifkan session.use_strict_mode.'
+    },
+    {
+      salah: 'Membiarkan cookie sesi tanpa HttpOnly, Secure, dan SameSite.',
+      kenapa: 'Tanpa HttpOnly, satu celah XSS cukup untuk membaca cookie sesi dan membawanya keluar. Tanpa Secure, cookie bisa terkirim lewat HTTP biasa. Tanpa SameSite, cookie ikut di permintaan dari situs lain dan membuka jalan CSRF.',
+      benar: 'Setel ketiganya lewat session_set_cookie_params sebelum session_start, lalu periksa hasilnya di alat pengembang peramban.'
+    },
+    {
+      salah: 'Menulis rahasia penandatanganan langsung di kode yang ikut masuk repo.',
+      kenapa: 'Siapa pun yang membaca repo bisa membuat token sah untuk pengguna mana pun dengan peran apa pun. Menghapusnya belakangan tidak cukup, karena rahasianya tetap ada di riwayat git.',
+      benar: 'Simpan rahasia di variabel lingkungan atau berkas konfigurasi yang dikecualikan dari repo, dan ganti rahasianya bila pernah ter-commit.'
+    }
+  ],
+
+  analogi: `Bayangkan dua cara masuk ke **gedung kampus** setelah satpam memeriksa kartu mahasiswamu sekali di pagi hari.
+
+**Cara pertama: nomor loker.** Satpam mencatat di bukunya *"nomor 4172 — Andi, mahasiswa, masuk jam 07.15"*, lalu memberimu kartu kecil bertuliskan **4172** saja. Setiap kali kamu melewati pintu mana pun, satpam di pintu itu melihat nomormu dan mencocokkannya ke buku.
+
+Kartunya sendiri tidak berarti apa-apa. Orang yang menemukannya tidak tahu siapa kamu. Dan kalau kamu pulang, satpam cukup mencoret baris 4172 — kartu itu langsung tidak berlaku, di pintu mana pun.
+
+Masalahnya: kalau gedungnya punya dua puluh pintu dengan dua puluh satpam, mereka semua harus membaca **buku yang sama**.
+
+**Cara kedua: surat jalan bercap.** Satpam menulis surat: *"Andi, mahasiswa, berlaku sampai 07.30"*, lalu membubuhkan **cap** yang cuma dimiliki kantor satpam. Satpam di pintu mana pun cukup memeriksa capnya — tidak perlu buku, tidak perlu bertanya ke pos pusat.
+
+Siapa pun yang memegang surat itu bisa membaca isinya. Cap tidak menyembunyikan apa-apa; ia cuma membuktikan tulisannya asli.
+
+Kalau kamu mencoret "mahasiswa" dan menulis "dosen", capnya tidak cocok lagi dengan tulisannya — dan kamu tidak punya cap kantor satpam untuk membuat yang baru. Kalau kamu mengubah "07.30" menjadi "23.00", hal yang sama terjadi.
+
+**Tetapi surat jalan punya satu kelemahan.** Kamu pulang jam 07.20 dan membuang suratnya. Seseorang memungutnya dari tempat sampah. Sampai jam 07.30, surat itu **sah** — satpam di pintu tidak punya cara tahu bahwa kamu sudah pulang.
+
+Kantor satpam bisa mengedarkan daftar "surat yang sudah dibatalkan" ke semua pintu. Tetapi sekarang setiap satpam harus memeriksa daftar itu setiap kali ada yang lewat — dan itu hampir sama dengan kembali ke buku bersama.
+
+Jalan tengahnya: surat jalan yang berlaku cuma **lima belas menit**, dan kalau habis, kamu ke pos pusat untuk minta yang baru. Pos pusat punya buku, dan kalau namamu sudah dicoret di sana, kamu tidak mendapat surat baru. Kerugian terburuk dari surat yang terbuang cuma lima belas menit.`,
+
+  latihan: [
+    'Jelaskan kenapa HTTP membutuhkan sesi atau token, padahal kata sandi sudah diperiksa saat masuk.',
+    'Buat halaman masuk dengan sesi PHP yang memakai session_set_cookie_params, session_regenerate_id(true), dan session_destroy saat keluar.',
+    'Periksa cookie sesi aplikasimu di alat pengembang peramban, lalu buktikan bahwa document.cookie tidak menampilkannya.',
+    'Buat token HMAC untuk seorang pengguna, lalu dekode bagian isinya tanpa rahasia dan tunjukkan bahwa isinya terbaca.',
+    'Ubah peran di dalam token menjadi admin dengan tanda tangan lama, lalu tunjukkan bahwa pemeriksaan menolaknya.',
+    'Ubah waktu kedaluwarsa di dalam token menjadi jauh di masa depan, lalu jelaskan kenapa pemeriksaan tetap menolaknya.',
+    'Jelaskan kenapa tanda tangan harus dibandingkan dengan hash_equals, bukan ===.',
+    'Tunjukkan bahwa token masih sah setelah pengguna keluar, lalu tambahkan daftar cabut dan jelaskan apa yang hilang dari keunggulan token.',
+    'Rancang pasangan token akses dan token penyegar: umur masing-masing, di mana disimpan, dan apa yang terjadi saat pengguna keluar.',
+    'Untuk proyek web kelompokmu, tentukan apakah sesi atau token yang lebih cocok, dan jelaskan alasannya dengan tabel perbandingan di topik ini.'
   ]
 });
