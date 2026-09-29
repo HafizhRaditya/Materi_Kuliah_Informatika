@@ -15,6 +15,10 @@
    CATATAN: dua keterangan di slide ternyata keliru dan
    diluruskan di bagian Kesalahan Umum topik kedua, dengan
    menyebut apa yang benar beserta alasannya.
+
+   Tiga topik tambahan (model warna & gamma, audio digital,
+   streaming video adaptif) disusun dari REFERENSI LUAR --
+   keterangan lengkapnya ada di kepala bagian tambahan di bawah.
    ============================================================ */
 
 TOPICS.push({
@@ -1810,5 +1814,1191 @@ Setelah tiga putaran, yang tersisa bukan lagi bukunya. Dan **tidak ada cara meng
     'Buat dua contoh galat berbeda yang menghasilkan MSE sama tetapi terlihat sangat berbeda, lalu jelaskan keterbatasan PSNR.',
     'Jelaskan perbedaan I-frame, P-frame, dan B-frame, lalu jelaskan kenapa mencari-cari posisi di video terasa tersendat.',
     'Untuk tiap berkas berikut tentukan lossless atau lossy beserta alasannya: rontgen paru, foto liburan, kode program, dan rekaman rapat.'
+  ]
+});
+
+
+/* ------------------------------------------------------------
+   TAMBAHAN dari referensi luar (tiga topik di bawah).
+
+   Tiga topik di atas disusun dari slide dan berkas kuliah
+   sendiri, dan berpusat pada kompresi. Tiga topik berikutnya
+   mengisi pokok bahasan yang ada di RPS Teknologi Multimedia
+   kampus lain tetapi belum dibahas di sini: model warna (RGB,
+   HSV, YCbCr, CMYK) dan gamma sRGB, audio digital (desibel,
+   SNR kuantisasi, clipping), serta streaming video dengan
+   bitrate adaptif.
+
+   Sampling, Nyquist, DCT, chroma subsampling, dan PSNR yang
+   sudah dibahas di topik-topik di atas sengaja tidak diulang,
+   cuma dirujuk. Warna contoh, sinyal audio, dan jaringan pada
+   simulasi streaming adalah TIRUAN; semua angka di prosa
+   diambil dari keluaran program yang benar-benar dijalankan.
+   ------------------------------------------------------------ */
+TOPICS.push({
+  id: 'multimedia-warna',
+  judul: 'Model Warna & Gamma',
+  kategori: 'multimedia',
+  tag: ['RGB', 'HSV', 'YCbCr', 'CMYK', 'luminans', 'gamma', 'sRGB', 'chroma subsampling'],
+  ringkas: 'Satu warna bisa ditulis dengan banyak cara, masing-masing untuk keperluan berbeda — dan angka piksel 128 ternyata bukan setengah terang.',
+
+  fungsi: `**Memahami cara warna ditulis sebagai angka, kenapa ada beberapa cara, dan kesalahan yang muncul kalau angka warna diperlakukan sebagai besaran cahaya.**
+
+Topik media menjadi angka membahas piksel sebagai tiga angka merah, hijau, biru. Topik ini membahas cara-cara lain menulis warna yang sama — dan kenapa JPEG, video, percetakan, dan pemilih warna masing-masing memakai cara yang berbeda.
+
+Terpakai di:
+
+- **Desain antarmuka** — pemilih warna memakai HSV karena lebih cocok dengan cara manusia memikirkan warna
+- **Aksesibilitas** — mengubah ke abu-abu dan memeriksa kontras harus memakai luminans, bukan rata-rata RGB
+- **Kompresi citra dan video** — JPEG dan semua kodek video modern bekerja di YCbCr
+- **Pengolahan citra** — memperkecil, mengaburkan, dan mencampur warna dengan benar butuh pemahaman gamma
+- **Mencetak** — CMYK, dan kenapa warna di layar tidak pernah persis sama di kertas
+
+Yang paling mengejutkan: **nilai piksel 128 bukan setengah terang.** Angka di berkas gambar tidak sebanding dengan cahaya yang dipancarkan layar — nilai 128 cuma sekitar 22 persen cahaya. Mencampur warna dengan merata-ratakan angka menghasilkan warna yang terlalu gelap.`,
+
+  praktik: {
+    tujuan: 'Kamu bisa mengubah warna antara RGB, HSV, YCbCr, dan CMYK, menghitung luminans, menjelaskan hemat data chroma subsampling, dan mencampur warna dengan benar lewat ruang cahaya linear.',
+    alat: ['Python 3 dengan modul colorsys', 'Pemilih warna di peramban atau editor gambar'],
+    langkah: [
+      { judul: 'Ubah RGB ke HSV',
+        isi: `Pakai \`colorsys.rgb_to_hsv\` dengan nilai 0–1. Hue dalam derajat (0 merah, 120 hijau, 240 biru), saturasi dan value dalam persen.
+
+Buka pemilih warna di peramban: slider-nya hampir selalu hue, lalu kotak saturasi-value. Itu HSV.` },
+      { judul: 'Hitung luminans',
+        isi: `Y = 0,299 R + 0,587 G + 0,114 B. Bandingkan dengan rata-rata (R + G + B)/3 untuk merah, hijau, dan biru murni.
+
+Mata jauh lebih peka pada hijau daripada biru, dan bobot luminans menirunya.` },
+      { judul: 'Ubah ke abu-abu dengan benar',
+        isi: `Pakai Y, bukan rata-rata. Uji dengan warna kuning di atas putih: rata-rata menunjukkan selisih besar, luminans menunjukkan keduanya hampir sama terang — dan memang teks kuning di atas putih sulit dibaca.` },
+      { judul: 'Ubah ke YCbCr',
+        isi: `Y adalah terang; Cb dan Cr adalah seberapa jauh warna condong ke biru dan ke merah. Pakai rumus BT.601 rentang penuh seperti di JPEG, dan jepit hasilnya ke 0–255.` },
+      { judul: 'Hitung hemat chroma subsampling',
+        isi: `4:4:4 menyimpan Y, Cb, Cr untuk setiap piksel: 24 bit. 4:2:2 menyimpan Cb dan Cr untuk setiap 2 piksel: 16 bit. 4:2:0 untuk setiap 4 piksel: 12 bit. Hitung ukuran satu frame 1080p untuk masing-masing.` },
+      { judul: 'Campur warna di ruang linear',
+        isi: `Ubah setiap nilai sRGB ke cahaya linear dengan fungsi transfer sRGB, rata-ratakan, lalu ubah kembali. Bandingkan dengan merata-ratakan angka langsung: hitam dan putih memberi 188, bukan 128.` }
+    ],
+    cek: [
+      'Kamu bisa menulis warna aksen situs ini, (30, 64, 175), dalam HSV, YCbCr, dan CMYK',
+      'Kamu memakai luminans, bukan rata-rata RGB, untuk mengubah ke abu-abu',
+      'Kamu bisa menjelaskan kenapa 4:2:0 hampir tidak terlihat bedanya padahal membuang separuh data',
+      'Kamu bisa menjelaskan kenapa rata-rata hitam dan putih yang benar adalah 188, bukan 128'
+    ]
+  },
+
+  judulLogicSyntax: 'Bedah Konsep — kenapa angka piksel bukan jumlah cahaya',
+
+  konsep: `Topik media menjadi angka menyimpan setiap piksel sebagai tiga angka: merah, hijau, biru. Itu cara yang paling dekat dengan cara layar bekerja — tiga lampu kecil berwarna di setiap titik. Tetapi bukan satu-satunya cara, dan untuk banyak keperluan bukan yang terbaik.
+
+**Satu warna, empat model**
+
+| Warna | RGB | HSV (°, %, %) |
+|---|---|---|
+| merah | 255, 0, 0 | 0, 100, 100 |
+| hijau | 0, 255, 0 | 120, 100, 100 |
+| biru | 0, 0, 255 | 240, 100, 100 |
+| kuning | 255, 255, 0 | 60, 100, 100 |
+| biru situs | 30, 64, 175 | 226, 83, 69 |
+| abu-abu | 128, 128, 128 | 0, 0, 50 |
+
+| Warna | YCbCr | CMYK (%) |
+|---|---|---|
+| merah | 76, 85, 255 | 0, 100, 100, 0 |
+| hijau | 150, 44, 21 | 100, 0, 100, 0 |
+| biru | 29, 255, 107 | 100, 100, 0, 0 |
+| kuning | 226, 0, 149 | 0, 0, 100, 0 |
+| biru situs | 66, 189, 102 | 83, 63, 0, 31 |
+| abu-abu | 128, 128, 128 | 0, 0, 0, 50 |
+
+"Biru situs" adalah warna aksen situs catatan ini sendiri, #1e40af.
+
+- **RGB**: cara layar menyalakan lampunya. Tepat untuk menampilkan, sulit untuk dipikirkan — "sedikit lebih gelap" mengubah ketiga angkanya sekaligus.
+- **HSV**: hue (rona, dalam derajat lingkaran warna), saturation (kepekatan), value (kecerahan). Cocok dengan cara manusia memikirkan warna, dan itu sebabnya pemilih warna memakainya. "Sedikit lebih gelap" cuma menurunkan V.
+- **YCbCr**: Y adalah terang; Cb dan Cr adalah seberapa jauh warnanya condong ke biru dan ke merah dari abu-abu. Abu-abu murni selalu Cb = Cr = 128.
+- **CMYK**: tinta cyan, magenta, kuning, dan hitam yang **mengurangi** cahaya dari kertas putih. Rumus di program ini adalah rumus sederhana; percetakan sungguhan memakai profil warna yang disesuaikan dengan tinta dan kertasnya.
+
+**Terang yang dirasakan mata**
+
+| Warna | Rata-rata RGB | Luminans Y |
+|---|---|---|
+| merah | 85 | 76 |
+| hijau | 85 | **150** |
+| biru | 85 | **29** |
+
+Ketiganya punya satu kanal bernilai 255 dan dua bernilai 0. Rata-rata menganggap ketiganya sama terang. Mata tidak: hijau murni jauh lebih terang dari biru murni. Bobot Y = 0,299 R + 0,587 G + 0,114 B meniru kepekaan mata terhadap setiap warna.
+
+Akibat praktisnya: teks kuning di atas putih. Dengan rata-rata, selisih terangnya 85 — tampak cukup. Dengan luminans, selisihnya cuma **29** — dan memang teks kuning di atas putih hampir tak terbaca. Rasio kontras WCAG yang dihitung di topik User-Centered Design (IMK) juga berdasar luminans, dengan dua perbedaan: bobotnya versi BT.709 (0,2126, 0,7152, 0,0722), dan dihitung dari cahaya linear, bukan angka sRGB — lihat bagian gamma di bawah. Hasilnya untuk kuning di atas putih sekitar 1,07 : 1, jauh di bawah syarat minimum 4,5 : 1 untuk teks biasa.
+
+**YCbCr: kenapa JPEG dan video memakainya**
+
+Mata jauh lebih peka pada detail **terang** daripada detail **warna**. YCbCr memisahkan keduanya, sehingga warna bisa disimpan lebih kasar tanpa terlihat:
+
+| Format | Bit per piksel | Satu frame 1080p |
+|---|---|---|
+| RGB 8 bit per kanal | 24 | 6,22 MB |
+| YCbCr 4:2:2 | 16 | 4,15 MB |
+| YCbCr 4:2:0 | 12 | 3,11 MB |
+
+4:2:0 menyimpan Y untuk setiap piksel, tetapi Cb dan Cr cuma satu untuk setiap kotak 2 × 2 piksel. Separuh data hilang — hampir tanpa terlihat — **sebelum** kompresi lossy seperti DCT di topik kompresi lossy dimulai. Itulah chroma subsampling, dan hampir semua video yang kamu tonton memakainya.
+
+**Gamma: angka 128 bukan setengah terang**
+
+Nilai piksel di berkas sRGB tidak sebanding dengan cahaya yang dipancarkan layar:
+
+| Nilai | Cahaya |
+|---|---|
+| 0 | 0% |
+| 64 | 5,1% |
+| 128 | **21,6%** |
+| 188 | 50,3% |
+| 255 | 100% |
+
+Kurva ini disengaja. Mata lebih peka pada perbedaan di bagian gelap, jadi sRGB memberi lebih banyak angka untuk nada gelap dan lebih sedikit untuk nada terang — memakai 256 tingkat dengan lebih efisien.
+
+Masalahnya muncul saat angka-angka itu **dicampur**. Memperkecil gambar hitam-putih bergaris berarti merata-ratakan piksel hitam dan putih:
+
+| Cara | Hasil | Cahaya |
+|---|---|---|
+| rata-rata angka sRGB | 128 | 21,6% |
+| rata-rata cahaya, lalu diubah kembali | 188 | 50,0% |
+
+Merata-ratakan angka menghasilkan abu-abu yang terlalu gelap. Yang benar: ubah ke cahaya linear, rata-ratakan, lalu ubah kembali. Banyak program pengolah gambar dan sebagian besar kode buatan sendiri melakukan cara yang pertama — dan gambar yang diperkecil menjadi lebih gelap dari aslinya.`,
+
+  logicSyntax: [
+    {
+      bahasa: 'python',
+      kode: "def ycbcr(r, g, b):\n    # ITU-R BT.601 rentang penuh, seperti di JPEG\n    y  = 0.299 * r + 0.587 * g + 0.114 * b\n    cb = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b\n    cr = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b\n    jepit = lambda v: max(0, min(255, round(v)))\n    return jepit(y), jepit(cb), jepit(cr)\n\nycbcr(255, 0, 0)     # (76, 85, 255)   Cr sebelum dijepit: 255.5\nycbcr(128, 128, 128) # (128, 128, 128) abu-abu: tanpa warna",
+      penjelasan: `Tiga baris perkalian yang memisahkan terang dari warna — dan satu baris yang ditambahkan setelah programnya pertama kali salah.
+
+**Y: jumlah berbobot.**
+
+Bobot 0,299, 0,587, dan 0,114 berjumlah tepat 1. Akibatnya putih (255, 255, 255) memberi Y = 255, hitam memberi 0, dan abu-abu apa pun memberi Y yang sama dengan angkanya. Y adalah versi abu-abu gambar yang "benar" untuk mata.
+
+**Cb dan Cr: selisih dari abu-abu.**
+
+Cb pada dasarnya adalah biru dikurangi terang, diskalakan; Cr adalah merah dikurangi terang. Untuk warna tanpa rona — abu-abu — B, R, dan Y sama, sehingga selisihnya nol, dan Cb = Cr = 128, titik tengah rentang 0–255.
+
+Karena itu 128 berarti "tidak condong ke mana pun". Merah murni punya Cr jauh di atas 128 dan Cb di bawahnya; biru murni kebalikannya.
+
+**Kenapa ada baris \`jepit\`.**
+
+Versi pertama program ini tidak menjepit nilainya, dan tabelnya menampilkan Cr = 256 untuk merah murni. Rentang delapan bit cuma 0–255. Penyebabnya: 128 + 0,5 × 255 = 255,5, dan dibulatkan menjadi 256.
+
+Secara matematis rumusnya benar; secara penyimpanan, 256 tidak muat di satu byte. JPEG menjepit nilai di luar rentang ke batas terdekat, dan program ini sekarang melakukan hal yang sama. Kesalahan seperti ini — satu lebih dari batas — tidak terlihat di rumus, cuma terlihat saat angkanya benar-benar dihitung.
+
+**Kenapa rumus ini, bukan yang lain.**
+
+Ada beberapa versi YCbCr. BT.601 dipakai JPEG dan video definisi standar. BT.709 dipakai video HD, dengan bobot yang sedikit berbeda (Y = 0,2126 R + 0,7152 G + 0,0722 B), karena layar HD punya warna dasar yang sedikit berbeda. Video juga sering memakai "rentang terbatas" — Y dari 16 sampai 235, bukan 0 sampai 255.
+
+Memakai rumus yang salah untuk video yang salah membuat warna sedikit melenceng dan hitam menjadi abu-abu tua — masalah yang sangat umum di aplikasi pemutar video buatan sendiri.`
+    },
+    {
+      bahasa: 'python',
+      kode: "def ke_linear(v):          # sRGB 0-255 -> cahaya linear 0-1\n    c = v / 255\n    return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4\n\ndef ke_srgb(l):            # cahaya linear 0-1 -> sRGB 0-255\n    c = 12.92 * l if l <= 0.0031308 else 1.055 * l ** (1 / 2.4) - 0.055\n    return round(255 * c)\n\nround((0 + 255) / 2)                          # 128 -> cahaya 21.6%\nke_srgb((ke_linear(0) + ke_linear(255)) / 2)  # 188 -> cahaya 50%",
+      penjelasan: `Dua fungsi yang menerjemahkan antara angka di berkas dan cahaya dari layar — dan kenapa hampir setiap operasi yang mencampur warna harus melewati keduanya.
+
+**Kenapa ada kurva sama sekali.**
+
+Mata tidak menilai terang secara lurus. Perbedaan antara 1% dan 2% cahaya terasa besar; perbedaan antara 90% dan 91% hampir tidak terasa. Kalau 256 tingkat dibagi rata menurut cahaya, sebagian besar tingkat terbuang di nada terang yang tidak bisa dibedakan mata, dan nada gelap tampak bergaris-garis kasar.
+
+sRGB memakai kurva yang memberi lebih banyak tingkat untuk nada gelap. Nilai 128 — separuh rentang angka — cuma sekitar 22% cahaya. Setengah cahaya berada di nilai 188.
+
+**Dua bagian kurva.**
+
+Di dekat hitam, kurvanya lurus (\`c / 12.92\`); di atasnya, berbentuk pangkat 2,4. Bagian lurus itu mencegah kemiringan tak hingga di titik nol, yang akan membuat perhitungan tidak stabil untuk nilai yang sangat gelap. Kurva keseluruhannya sering diringkas sebagai "gamma 2,2", meskipun rumus tepatnya seperti ini.
+
+**Kenapa mencampur harus di ruang linear.**
+
+Cahaya bersifat menjumlah: dua lampu yang dinyalakan bersama memberi cahaya yang merupakan jumlah keduanya. Jadi rata-rata dua warna yang benar — misalnya saat memperkecil gambar, mengaburkan, atau memadukan dua lapisan dengan transparansi — adalah rata-rata **cahayanya**.
+
+Merata-ratakan angka sRGB langsung sama dengan merata-ratakan sesuatu yang bukan cahaya. Hasilnya selalu terlalu gelap di antara warna yang kontras: pinggiran teks yang dihaluskan terlihat lebih tebal, dan gradasi terlihat berlumpur di tengahnya.
+
+**Di mana ini penting di informatika.**
+
+Hampir setiap kode yang memproses gambar: pengubah ukuran di aplikasi web, filter di aplikasi foto, pencampuran lapisan di mesin permainan. Mesin grafis modern bekerja di ruang linear secara internal dan baru mengubah ke sRGB saat menampilkan, karena alasan ini. Kode buatan sendiri yang merata-ratakan angka piksel langsung — yang sangat umum — menghasilkan gambar yang sedikit terlalu gelap setiap kali.`
+    }
+  ],
+
+  kode: { python: String.raw`# ============================================
+# Model warna: RGB, HSV, YCbCr, CMYK, dan gamma
+# ============================================
+import colorsys
+
+def ycbcr(r, g, b):
+    """ITU-R BT.601 rentang penuh, seperti di JPEG."""
+    y = 0.299 * r + 0.587 * g + 0.114 * b
+    cb = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b
+    cr = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b
+    jepit = lambda v: max(0, min(255, round(v)))    # 128 + 127.5 -> 256 -> 255
+    return jepit(y), jepit(cb), jepit(cr)
+
+def hsv(r, g, b):
+    h, s, v = colorsys.rgb_to_hsv(r / 255, g / 255, b / 255)
+    return round(h * 360), round(s * 100), round(v * 100)
+
+def cmyk(r, g, b):
+    """Rumus sederhana; percetakan sungguhan memakai profil warna."""
+    if (r, g, b) == (0, 0, 0):
+        return 0, 0, 0, 100
+    c, m, y = 1 - r / 255, 1 - g / 255, 1 - b / 255
+    k = min(c, m, y)
+    return tuple(round(100 * (x - k) / (1 - k)) for x in (c, m, y)) + (round(100 * k),)
+
+# --------------------------------------------
+# 1. Satu warna, empat cara menulisnya
+# --------------------------------------------
+WARNA = [
+    ("merah", (255, 0, 0)), ("hijau", (0, 255, 0)), ("biru", (0, 0, 255)),
+    ("kuning", (255, 255, 0)), ("biru situs", (30, 64, 175)), ("abu-abu", (128, 128, 128)),
+]
+print("--- satu warna, empat model ---")
+print("  warna        RGB               HSV (derajat, %, %)")
+for nama, rgb in WARNA:
+    print("  " + format(nama, "<12") + " " + format(str(rgb), "<18") + str(hsv(*rgb)))
+print()
+print("  warna        YCbCr             CMYK (%)")
+for nama, rgb in WARNA:
+    print("  " + format(nama, "<12") + " " + format(str(ycbcr(*rgb)), "<18") + str(cmyk(*rgb)))
+
+# --------------------------------------------
+# 2. Kecerahan yang dirasakan mata
+# --------------------------------------------
+print("\n--- merah, hijau, biru murni: sama terangnya? ---")
+for nama, rgb in WARNA[:3]:
+    y = ycbcr(*rgb)[0]
+    rata = round(sum(rgb) / 3)
+    print("  " + format(nama, "<7") + "rata-rata RGB " + format(rata, ">3")
+          + "   luminans Y " + format(y, ">3") + "  " + "#" * (y // 10))
+print("  Rata-rata RGB menganggap ketiganya sama terang (85). Mata tidak:")
+print("  hijau jauh lebih terang dari biru. Bobot 0.299/0.587/0.114")
+print("  meniru kepekaan mata terhadap setiap warna.")
+
+print("\n--- mengubah ke abu-abu: teks kuning di atas latar putih ---")
+kuning, putih = (255, 255, 0), (255, 255, 255)
+for cara, f in [("rata-rata", lambda c: round(sum(c) / 3)), ("luminans Y", lambda c: ycbcr(*c)[0])]:
+    print("  " + format(cara, "<11") + "kuning -> " + format(f(kuning), ">3")
+          + ", putih -> " + format(f(putih), ">3") + ", selisih " + format(f(putih) - f(kuning), ">3"))
+print("  Dengan luminans, kuning hampir seterang putih: teks kuning di")
+print("  atas putih memang hampir tak terbaca, dan cetakan hitam-putih")
+print("  yang memakai rata-rata menyembunyikan masalah itu.")
+
+# --------------------------------------------
+# 3. YCbCr: memisahkan terang dari warna
+# --------------------------------------------
+print("\n--- kenapa JPEG dan video memakai YCbCr ---")
+piksel = 1920 * 1080
+for nama, bit in [("RGB 8 bit per kanal", 24), ("YCbCr 4:2:2", 16), ("YCbCr 4:2:0", 12)]:
+    mb = piksel * bit / 8 / 1_000_000
+    print("  " + format(nama, "<20") + format(bit, ">3") + " bit/piksel  " + format(mb, ">5.2f")
+          + " MB per frame 1080p")
+print("  Y (terang) disimpan penuh; Cb dan Cr (warna) disimpan untuk")
+print("  setiap 2 atau 4 piksel. Mata jauh lebih peka pada detail terang")
+print("  daripada detail warna, jadi separuh data hilang hampir tanpa")
+print("  terlihat -- sebelum kompresi lossy apa pun dimulai.")
+
+# --------------------------------------------
+# 4. Gamma: angka 128 bukan setengah terang
+# --------------------------------------------
+def ke_linear(v):          # sRGB 0-255 -> cahaya linear 0-1
+    c = v / 255
+    return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+def ke_srgb(l):            # cahaya linear 0-1 -> sRGB 0-255
+    c = 12.92 * l if l <= 0.0031308 else 1.055 * l ** (1 / 2.4) - 0.055
+    return round(255 * c)
+
+print("\n--- gamma sRGB ---")
+for v in [0, 64, 128, 188, 255]:
+    print("  nilai " + format(v, ">3") + " -> cahaya " + format(ke_linear(v), "6.1%"))
+print("\n  mencampur piksel hitam (0) dan putih (255), misalnya saat")
+print("  gambar diperkecil:")
+print("  rata-rata angka sRGB    : " + str(round((0 + 255) / 2)) + "  -> cahaya "
+      + format(ke_linear(128), ".1%"))
+print("  rata-rata cahaya, lalu  : " + str(ke_srgb((ke_linear(0) + ke_linear(255)) / 2))
+      + "  -> cahaya 50.0%")
+print("  Angka piksel TIDAK sebanding dengan cahaya. Merata-ratakan angka")
+print("  menghasilkan warna yang terlalu gelap; yang benar merata-ratakan")
+print("  cahayanya, lalu mengubahnya kembali.")` },
+  output: `--- satu warna, empat model ---
+  warna        RGB               HSV (derajat, %, %)
+  merah        (255, 0, 0)       (0, 100, 100)
+  hijau        (0, 255, 0)       (120, 100, 100)
+  biru         (0, 0, 255)       (240, 100, 100)
+  kuning       (255, 255, 0)     (60, 100, 100)
+  biru situs   (30, 64, 175)     (226, 83, 69)
+  abu-abu      (128, 128, 128)   (0, 0, 50)
+
+  warna        YCbCr             CMYK (%)
+  merah        (76, 85, 255)     (0, 100, 100, 0)
+  hijau        (150, 44, 21)     (100, 0, 100, 0)
+  biru         (29, 255, 107)    (100, 100, 0, 0)
+  kuning       (226, 0, 149)     (0, 0, 100, 0)
+  biru situs   (66, 189, 102)    (83, 63, 0, 31)
+  abu-abu      (128, 128, 128)   (0, 0, 0, 50)
+
+--- merah, hijau, biru murni: sama terangnya? ---
+  merah  rata-rata RGB  85   luminans Y  76  #######
+  hijau  rata-rata RGB  85   luminans Y 150  ###############
+  biru   rata-rata RGB  85   luminans Y  29  ##
+  Rata-rata RGB menganggap ketiganya sama terang (85). Mata tidak:
+  hijau jauh lebih terang dari biru. Bobot 0.299/0.587/0.114
+  meniru kepekaan mata terhadap setiap warna.
+
+--- mengubah ke abu-abu: teks kuning di atas latar putih ---
+  rata-rata  kuning -> 170, putih -> 255, selisih  85
+  luminans Y kuning -> 226, putih -> 255, selisih  29
+  Dengan luminans, kuning hampir seterang putih: teks kuning di
+  atas putih memang hampir tak terbaca, dan cetakan hitam-putih
+  yang memakai rata-rata menyembunyikan masalah itu.
+
+--- kenapa JPEG dan video memakai YCbCr ---
+  RGB 8 bit per kanal  24 bit/piksel   6.22 MB per frame 1080p
+  YCbCr 4:2:2          16 bit/piksel   4.15 MB per frame 1080p
+  YCbCr 4:2:0          12 bit/piksel   3.11 MB per frame 1080p
+  Y (terang) disimpan penuh; Cb dan Cr (warna) disimpan untuk
+  setiap 2 atau 4 piksel. Mata jauh lebih peka pada detail terang
+  daripada detail warna, jadi separuh data hilang hampir tanpa
+  terlihat -- sebelum kompresi lossy apa pun dimulai.
+
+--- gamma sRGB ---
+  nilai   0 -> cahaya   0.0%
+  nilai  64 -> cahaya   5.1%
+  nilai 128 -> cahaya  21.6%
+  nilai 188 -> cahaya  50.3%
+  nilai 255 -> cahaya 100.0%
+
+  mencampur piksel hitam (0) dan putih (255), misalnya saat
+  gambar diperkecil:
+  rata-rata angka sRGB    : 128  -> cahaya 21.6%
+  rata-rata cahaya, lalu  : 188  -> cahaya 50.0%
+  Angka piksel TIDAK sebanding dengan cahaya. Merata-ratakan angka
+  menghasilkan warna yang terlalu gelap; yang benar merata-ratakan
+  cahayanya, lalu mengubahnya kembali.`,
+
+  kompleksitas: {
+    tabel: [
+      { operasi: 'Mengubah satu piksel antar-model', waktu: 'O(1)', memori: 'O(1)' },
+      { operasi: 'Mengubah citra n piksel', waktu: 'O(n)', memori: 'O(n) untuk citra hasil' },
+      { operasi: 'Chroma subsampling 4:2:0', waktu: 'O(n)', memori: '12 bit per piksel, dari 24' },
+      { operasi: 'Mencampur di ruang linear', waktu: 'O(n) dengan dua konversi per piksel', memori: 'biasanya dengan tabel 256 isi' }
+    ],
+    intuisi: `Semua konversi di topik ini adalah operasi per piksel dengan biaya tetap, jadi seluruh citra O(n). Yang menentukan adalah konstantanya: konversi ke linear memakai pangkat 2,4 yang mahal kalau dihitung untuk jutaan piksel.
+
+Karena nilai sRGB cuma punya 256 kemungkinan, konversi ke linear bisa dihitung sekali untuk semuanya dan disimpan di tabel. Setiap piksel lalu cuma butuh satu pencarian tabel. Konversi kembali dari linear ke sRGB lebih sulit ditabelkan karena masukannya bilangan pecahan, dan biasanya didekati atau dihitung dengan ketelitian yang cukup.`
+  },
+
+  kesalahanUmum: [
+    {
+      salah: 'Mengubah citra ke abu-abu dengan merata-ratakan R, G, dan B.',
+      kenapa: 'Rata-rata menganggap hijau dan biru sama terang, padahal mata jauh lebih peka pada hijau. Teks kuning di atas putih tampak cukup kontras padahal hampir tak terbaca.',
+      benar: 'Pakai luminans Y = 0,299 R + 0,587 G + 0,114 B.'
+    },
+    {
+      salah: 'Menyimpan hasil konversi warna tanpa menjepitnya ke 0–255.',
+      kenapa: 'Pembulatan bisa menghasilkan nilai di luar rentang, seperti Cr = 256 untuk merah murni, yang tidak muat di satu byte; di larik 8 bit tanpa pengecekan, nilai itu membungkus menjadi 0.',
+      benar: 'Jepit setiap hasil ke rentang yang sah sebelum disimpan.'
+    },
+    {
+      salah: 'Mencampur, mengaburkan, atau memperkecil gambar dengan merata-ratakan angka sRGB.',
+      kenapa: 'Angka sRGB tidak sebanding dengan cahaya. Rata-rata hitam dan putih menjadi 128, yang cuma sekitar 22 persen cahaya, sehingga hasilnya terlalu gelap.',
+      benar: 'Ubah ke cahaya linear, rata-ratakan, lalu ubah kembali ke sRGB.'
+    },
+    {
+      salah: 'Menganggap nilai piksel 128 adalah setengah terang.',
+      kenapa: 'Kurva sRGB memberi lebih banyak tingkat untuk nada gelap. Setengah cahaya berada di nilai sekitar 188.',
+      benar: 'Pakai fungsi transfer sRGB setiap kali perhitungan menyangkut jumlah cahaya.'
+    },
+    {
+      salah: 'Mengharapkan warna CMYK hasil rumus sederhana sama persis dengan warna layar.',
+      kenapa: 'Layar memancarkan cahaya, tinta menyerap cahaya, dan hasilnya bergantung pada tinta dan kertas. Rentang warna keduanya pun berbeda.',
+      benar: 'Pakai profil warna dari percetakan, dan cetak contoh sebelum mencetak banyak.'
+    },
+    {
+      salah: 'Memakai rumus YCbCr BT.601 untuk video HD.',
+      kenapa: 'Video HD memakai BT.709 dengan bobot berbeda, dan sering memakai rentang terbatas 16–235, sehingga rumus yang salah membuat warna melenceng dan hitam menjadi abu-abu tua.',
+      benar: 'Periksa standar warna dan rentang yang tercantum di metadata video, dan pakai rumus yang sesuai.'
+    }
+  ],
+
+  analogi: `Bayangkan kamu mendeskripsikan **warna cat dinding** kepada tiga orang yang berbeda.
+
+**Kepada tukang listrik lampu panggung**, kamu bilang: "nyalakan lampu merah 30, hijau 64, biru 175." Ia bisa langsung menyetel lampunya. Itu RGB — tepat untuk alat, tetapi kalau kamu minta "sedikit lebih kalem", ia bingung lampu mana yang diturunkan.
+
+**Kepada temanmu**, kamu bilang: "biru, agak tua, tidak terlalu pekat." Rona biru, kecerahan agak rendah, kepekatan sedang. Itu HSV — cara manusia berpikir tentang warna. "Sedikit lebih kalem" artinya jelas: turunkan kepekatannya.
+
+**Kepada penjual cat**, kamu menyerahkan kode campuran tinta: sekian bagian biru, sekian magenta, sekian hitam. Itu CMYK — tinta yang **menyerap** cahaya dari dinding putih. Dan hasilnya tidak pernah persis sama dengan yang di layar ponselmu, karena ponsel memancarkan cahaya sedangkan cat menyerapnya.
+
+**YCbCr** mirip foto hitam-putih yang diberi sapuan warna di atasnya. Detail — garis, tekstur, tulisan — ada di foto hitam-putihnya. Warnanya boleh disapukan kasar dengan kuas besar; mata tidak memperhatikan bahwa warnanya sedikit meluber keluar garis, selama garisnya tajam.
+
+**Gamma.** Kamu punya dimmer lampu dengan angka 0 sampai 10. Di angka 5, ruangan tidak separuh terang — terasa lebih gelap dari itu, karena dimmer-nya dirancang memberi lebih banyak langkah di bagian redup, tempat mata lebih peka. Kalau kamu ingin cahaya separuh dari penuh, kamu harus memutarnya ke sekitar 7. Mencampur dua warna dengan merata-ratakan angka dimmer-nya sama dengan mengira angka 5 adalah separuh cahaya.`,
+
+  latihan: [
+    'Ubah warna favoritmu ke HSV, YCbCr, dan CMYK dengan fungsi di program ini, lalu periksa HSV-nya dengan pemilih warna di peramban.',
+    'Buat versi HSV yang lebih gelap dan kurang pekat dari warna aksen situs ini, lalu ubah kembali ke RGB.',
+    'Hitung luminans dan rata-rata RGB untuk cyan, magenta, dan kuning murni, lalu urutkan dari yang paling terang menurut mata.',
+    'Tulis fungsi yang mengubah gambar kecil (larik piksel) ke abu-abu dengan rata-rata dan dengan luminans, lalu bandingkan hasilnya pada gambar berwarna.',
+    'Hitung ukuran satu frame 4K (3840 × 2160) untuk RGB 24 bit, YCbCr 4:2:2, dan 4:2:0.',
+    'Hitung Cb dan Cr untuk biru murni tanpa penjepitan, lalu jelaskan kenapa penjepitan dibutuhkan.',
+    'Hitung nilai sRGB yang memancarkan 25 persen dan 75 persen cahaya dengan fungsi ke_srgb.',
+    'Perkecil gambar papan catur hitam-putih 2 × 2 menjadi 1 piksel dengan kedua cara, lalu jelaskan kenapa hasilnya berbeda.',
+    'Buat tabel ke_linear untuk 256 nilai sRGB, lalu pakai tabel itu untuk mengaburkan satu baris piksel.',
+    'Periksa rasio kontras teks kuning di atas putih dengan pemeriksa kontras WCAG, lalu jelaskan hasilnya dengan luminans.'
+  ]
+});
+
+
+TOPICS.push({
+  id: 'multimedia-audio',
+  judul: 'Audio Digital: Desibel, Bit, & Clipping',
+  kategori: 'multimedia',
+  tag: ['audio', 'desibel', 'dB', 'bit depth', 'SNR', 'kuantisasi', 'clipping', 'headroom', 'bitrate'],
+  ringkas: 'Kenapa setiap bit bernilai 6 dB, kenapa rekaman yang terlalu pelan membuang bit, dan kenapa mencampur dua suara bisa merusak keduanya.',
+
+  fungsi: `**Memahami ukuran-ukuran audio digital — desibel, kedalaman bit, dan batas maksimum sinyal — cukup untuk merekam, mencampur, dan menyimpan suara tanpa merusaknya.**
+
+Topik media menjadi angka membahas sampling, kuantisasi, dan Nyquist. Topik ini melanjutkan dari sana: berapa kualitas yang sebenarnya diberikan setiap bit, dan kesalahan-kesalahan yang merusak audio **setelah** didigitalkan.
+
+Terpakai di:
+
+- **Aplikasi rekaman dan panggilan** — mengatur level mikrofon agar tidak terlalu pelan atau pecah
+- **Mencampur suara** — permainan, aplikasi musik, dan video yang memadukan beberapa sumber sekaligus
+- **Memilih format** — kapan 16 bit cukup, kapan butuh 24 bit, dan berapa bitrate yang wajar
+- **Membaca spesifikasi** — dB, dBFS, SNR, dan kbps di lembar data perangkat dan aplikasi
+
+Yang paling sering salah dipahami: **sinyal digital punya batas keras.** Analog yang terlalu keras menjadi sedikit cacat; digital yang melewati batas dipotong rata dan terdengar pecah. Dan rekaman yang terlalu pelan tidak bisa diselamatkan dengan menaikkan volume belakangan — deraunya ikut naik.`,
+
+  praktik: {
+    tujuan: 'Kamu bisa mengubah perbandingan amplitudo ke desibel, memperkirakan SNR dari kedalaman bit, menunjukkan akibat rekaman yang terlalu pelan, mencegah clipping saat mencampur, dan menghitung ukuran berkas audio.',
+    alat: ['Python 3 (cukup modul math)', 'Opsional: Audacity untuk melihat gelombang dan level sungguhan'],
+    langkah: [
+      { judul: 'Hitung desibel dari perbandingan amplitudo',
+        isi: `dB = 20 × log₁₀(rasio). Coba dua kali lipat, separuh, sepuluh kali, dan 1/32768 — langkah terkecil audio 16 bit.` },
+      { judul: 'Kuantisasi sinyal dan ukur SNR',
+        isi: `Buat sinus penuh, bulatkan ke bilangan bulat N bit, kembalikan ke rentang -1..1, lalu hitung perbandingan daya sinyal dengan daya selisihnya. Bandingkan dengan rumus 6,02N + 1,76.` },
+      { judul: 'Ulangi dengan rekaman pelan',
+        isi: `Pakai amplitudo 0,01 (1 persen, atau -40 dB) dan ukur SNR-nya untuk 8 dan 16 bit. Hitung berapa bit yang "hilang".` },
+      { judul: 'Campur dua sumber',
+        isi: `Jumlahkan dua sinus beramplitudo 0,8. Hitung puncaknya dan berapa sampel yang melewati 1.
+
+Lalu turunkan setiap sumber 6 dB (kalikan 0,5) sebelum dijumlahkan dan hitung ulang.` },
+      { judul: 'Hitung ukuran berkas',
+        isi: `Bitrate PCM = sampling rate × bit × jumlah kanal. Ukuran = bitrate × durasi / 8. Bandingkan dengan 320, 128, dan 64 kbps untuk lagu 3 menit.` },
+      { judul: 'Periksa di Audacity',
+        isi: `Rekam suaramu sekali pelan dan sekali terlalu keras. Perhatikan bentuk gelombangnya: rekaman keras punya puncak yang terpotong rata, dan menaikkan volume rekaman pelan ikut menaikkan desisnya.` }
+    ],
+    cek: [
+      'Kamu bisa mengatakan tanpa kalkulator bahwa separuh amplitudo sama dengan -6 dB',
+      'Hasil SNR terukurmu mendekati 6,02N + 1,76 untuk sinyal penuh',
+      'Kamu bisa menjelaskan kenapa rekaman 1 persen di 16 bit hanya seperti 9 bit',
+      'Campuranmu tidak punya satu pun sampel yang terpotong'
+    ]
+  },
+
+  judulLogicSyntax: 'Bedah Konsep — enam desibel per bit',
+
+  konsep: `**Desibel: skala untuk perbandingan**
+
+Desibel bukan satuan seperti meter atau gram. Ia menyatakan **perbandingan** dua besaran dalam skala logaritma:
+
+| Perbandingan amplitudo | Desibel |
+|---|---|
+| × 2 | +6,0 dB |
+| × 1/2 | -6,0 dB |
+| × 10 | +20,0 dB |
+| × 1/10 | -20,0 dB |
+| × 1000 | +60,0 dB |
+| × 1/32768 | -90,3 dB |
+
+Kenapa logaritma? Telinga menilai keras-lemah secara logaritmik: suara dua kali lipat amplitudonya tidak terdengar dua kali lebih keras. Skala dB juga mengubah perkalian menjadi penjumlahan — penguat +20 dB diikuti peredam -6 dB sama dengan +14 dB.
+
+Rumus amplitudo memakai 20 × log₁₀, sedangkan rumus daya memakai 10 × log₁₀. Keduanya memberi hasil yang sama karena daya sebanding dengan kuadrat amplitudo. PSNR di topik kompresi lossy memakai versi daya: MSE sudah berupa kuadrat.
+
+Di audio digital, acuannya biasanya nilai **maksimum** yang bisa disimpan, dan satuannya ditulis **dBFS** (*decibels relative to full scale*). 0 dBFS adalah batas atas; semua sinyal bernilai negatif.
+
+**Enam desibel per bit**
+
+Kuantisasi membulatkan setiap sampel ke tingkat terdekat. Selisih pembulatan itu adalah **derau kuantisasi**. Hasil mengkuantisasi sinus penuh:
+
+| Bit | SNR terukur | Rumus 6,02N + 1,76 |
+|---|---|---|
+| 4 | 25,09 dB | 25,84 dB |
+| 8 | 49,94 dB | 49,92 dB |
+| 12 | 73,99 dB | 74,00 dB |
+| 16 | 98,22 dB | 98,08 dB |
+
+Setiap bit tambahan menggandakan jumlah tingkat, sehingga langkah pembulatannya separuh, sehingga deraunya separuh — dan separuh amplitudo sama dengan 6 dB. Tambahan 1,76 berasal dari bentuk gelombang sinus.
+
+Pada 4 bit, hasil terukur lebih jauh dari rumus karena rumusnya mengandaikan galat pembulatan tersebar acak dan merata. Dengan hanya 16 tingkat, galatnya mengikuti pola gelombang dan tidak lagi acak.
+
+**Rekaman yang terlalu pelan membuang bit**
+
+Rumus 6 dB per bit berlaku untuk sinyal yang memenuhi rentang. Rekaman pada amplitudo 1 persen (-40 dB):
+
+| Bit | SNR pada amplitudo penuh | SNR pada amplitudo 1% |
+|---|---|---|
+| 8 | 49,94 dB | 11,11 dB |
+| 16 | 98,22 dB | 58,00 dB |
+
+SNR 16 bit turun 40,2 dB — setara membuang hampir 7 bit. Sinyalnya cuma memakai sebagian kecil tingkat yang tersedia; sisa bit itu menunggu suara yang tidak pernah datang.
+
+Menaikkan volume belakangan tidak menolong: sinyal dan deraunya naik bersama. Level rekaman yang pas sama berharganya dengan bit tambahan. Itu sebabnya perekam profesional memakai 24 bit — bukan karena telinga butuh 146 dB, melainkan agar ada ruang aman untuk merekam agak pelan tanpa kehilangan kualitas.
+
+**Clipping: batas keras digital**
+
+Mencampur suara berarti menjumlahkan sampelnya. Dua sumber beramplitudo 0,8:
+
+| | Puncak | Sampel terpotong |
+|---|---|---|
+| dijumlahkan langsung | 1,52 | 4720 dari 22050 (21,4%) |
+| setiap sumber -6 dB dulu | 0,76 | 0 |
+
+Nilai di atas 1 tidak bisa disimpan. Nilai itu **dipotong rata** di batasnya, dan gelombang yang puncaknya rata terdengar pecah dan kasar. Lebih dari seperlima sampel rusak — dan kerusakannya permanen: menurunkan volume hasil campuran setelahnya tidak mengembalikan puncak yang sudah terpotong.
+
+Aturannya: **turunkan level setiap sumber sebelum dicampur**, dan sisakan ruang di bawah 0 dBFS — disebut *headroom*.
+
+**Ukuran berkas**
+
+| Format lagu 3 menit | Bitrate | Ukuran |
+|---|---|---|
+| PCM 44,1 kHz, 16 bit, stereo | 1411,2 kbps | 31,8 MB |
+| terkompresi 320 kbps | 320 kbps | 7,2 MB (4x lebih kecil) |
+| terkompresi 128 kbps | 128 kbps | 2,9 MB (11x) |
+| terkompresi 64 kbps | 64 kbps | 1,4 MB (22x) |
+
+Penghematan sebesar itu datang dari kompresi lossy dengan model pendengaran — batas frekuensi dan *masking* — yang dibahas di topik kompresi lossy.`,
+
+  logicSyntax: [
+    {
+      bahasa: 'python',
+      kode: "def kuantisasi(sinyal, bit):\n    maks = 2 ** (bit - 1) - 1          # 16 bit: 32767\n    return [max(-maks - 1, min(maks, round(x * maks))) / maks\n            for x in sinyal]\n\ndef snr_db(asli, hasil):\n    daya_s = sum(x * x for x in asli)\n    daya_n = sum((a - b) ** 2 for a, b in zip(asli, hasil))\n    return 10 * math.log10(daya_s / daya_n)",
+      penjelasan: `Dua fungsi yang meniru apa yang terjadi di dalam kartu suara saat merekam — dan cara mengukur seberapa besar kerusakan yang ditimbulkannya.
+
+**Kenapa \`2 ** (bit - 1) - 1\`.**
+
+Audio disimpan sebagai bilangan bulat **bertanda**: separuh rentang untuk nilai positif, separuh untuk negatif. 16 bit memberi -32768 sampai 32767. Batas positifnya satu lebih kecil karena nol ikut memakai satu tempat di sisi positif.
+
+Mengalikan sampel (-1 sampai 1) dengan 32767 lalu membulatkannya sama persis dengan yang dilakukan pengubah analog-ke-digital: memilih tingkat terdekat.
+
+**Kenapa ada \`max\` dan \`min\`.**
+
+Kalau ada sampel yang melewati 1, hasil perkaliannya melewati 32767 dan tidak muat di 16 bit. Dua baris itu menjepitnya ke batas — dan itulah **clipping**. Penjepitannya bukan tambahan program; kartu suara sungguhan melakukannya karena tidak punya pilihan lain.
+
+**Kenapa dibagi kembali dengan \`maks\`.**
+
+Agar hasilnya bisa dibandingkan langsung dengan sinyal asli dalam rentang yang sama. Selisih antara keduanya adalah derau kuantisasi, murni galat pembulatan.
+
+**Kenapa SNR memakai 10, bukan 20.**
+
+\`daya_s\` dan \`daya_n\` adalah jumlah **kuadrat** — sudah berupa daya. Untuk daya, desibel dihitung dengan 10 × log₁₀. Kalau yang dibandingkan amplitudo, pakai 20 × log₁₀. Memakai faktor yang salah menghasilkan angka dua kali atau setengah dari seharusnya — kesalahan yang sangat umum.
+
+**Apa yang tidak ditiru program ini.**
+
+Pengubah sungguhan biasanya menambahkan *dither* — derau acak yang sangat lemah — sebelum membulatkan. Kedengarannya aneh menambah derau untuk mengurangi kerusakan, tetapi dither mengubah galat yang berpola, yang terdengar seperti distorsi, menjadi desis rata yang lebih tidak mengganggu. Itu terutama berguna pada bit rendah, persis tempat hasil 4 bit di tabel menyimpang dari rumus.`
+    },
+    {
+      bahasa: 'python',
+      kode: "a = sinus(440, 0.8)\nb = sinus(660, 0.8)\n\ncampur = [x + y for x, y in zip(a, b)]            # puncak 1.52\naman   = [(x + y) * 0.5 for x, y in zip(a, b)]    # -6 dB tiap sumber\n\n# keliru: campur dulu, jepit, baru kecilkan -> puncak rata di 0.5\nrusak = [max(-1, min(1, x + y)) * 0.5 for x, y in zip(a, b)]",
+      penjelasan: `Tiga cara menjumlahkan dua suara — dan kenapa urutan operasinya menentukan apakah hasilnya rusak.
+
+**Kenapa campuran bisa melewati batas.**
+
+Mencampur suara di digital hanyalah menjumlahkan sampel yang bersesuaian. Dua sumber masing-masing di bawah batas bisa berjumlah di atasnya ketika puncaknya bertemu. Sinus 440 Hz dan 660 Hz beramplitudo 0,8 mencapai puncak gabungan 1,52 — lebih dari satu setengah kali batasnya.
+
+**Cara yang benar: \`aman\`.**
+
+Setiap sumber diturunkan 6 dB (dikalikan 0,5) **sebelum** dijumlahkan. Puncak gabungan menjadi 0,76 dan tidak ada satu pun sampel yang terpotong. Dalam praktik, aplikasi pencampur memberi setiap jalur pengatur volume sendiri justru untuk ini.
+
+**Cara yang keliru: \`rusak\`.**
+
+Di dalam sistem yang menyimpan setiap tahap dalam bilangan bulat — misalnya berkas 16 bit hasil ekspor, atau kartu suara yang menjumlahkan dalam 16 bit — hasil campuran dijepit dulu. Baru setelah itu volumenya diturunkan.
+
+Hasilnya tidak lagi menyentuh batas 1, tetapi bentuk gelombangnya sudah rusak: puncaknya mentok rata di 0,5, dan 4720 sampel berbeda dari hasil \`aman\` — sampel-sampel yang sama yang tadinya terpotong. Kerusakan clipping **tidak bisa dibatalkan** dengan menurunkan volume, karena informasi tentang bentuk puncak aslinya sudah hilang.
+
+**Kenapa perangkat lunak modern lebih longgar.**
+
+Banyak aplikasi audio sekarang mencampur dalam bilangan pecahan 32 bit, yang tidak terpotong di 1,0. Campuran boleh melewati batas sementara, asalkan diturunkan sebelum diekspor atau dikirim ke kartu suara. Tetapi di titik terakhir — berkas 16 bit atau pengeras suara — batas kerasnya tetap berlaku. Kebiasaan menyisakan headroom sejak awal tetap yang paling aman.`
+    }
+  ],
+
+  kode: { python: String.raw`# ============================================
+# Audio digital: desibel, kedalaman bit, clipping, ukuran berkas
+# ============================================
+import math
+
+FS = 44100                               # frekuensi sampling (Hz)
+
+def sinus(frek, amplitudo, detik=0.5):
+    n = int(FS * detik)
+    return [amplitudo * math.sin(2 * math.pi * frek * i / FS) for i in range(n)]
+
+def kuantisasi(sinyal, bit):
+    """Ke bilangan bulat bertanda N bit, lalu kembali ke -1..1."""
+    maks = 2 ** (bit - 1) - 1
+    return [max(-maks - 1, min(maks, round(x * maks))) / maks for x in sinyal]
+
+def snr_db(asli, hasil):
+    daya_s = sum(x * x for x in asli)
+    daya_n = sum((a - b) ** 2 for a, b in zip(asli, hasil))
+    return 10 * math.log10(daya_s / daya_n)
+
+def db(rasio_amplitudo):
+    return 20 * math.log10(rasio_amplitudo)
+
+# --------------------------------------------
+# 1. Desibel: skala logaritma
+# --------------------------------------------
+print("--- desibel untuk perbandingan amplitudo ---")
+for label, r in [("2", 2), ("1/2", 0.5), ("10", 10), ("1/10", 0.1),
+                 ("1000", 1000), ("1/32768", 1 / 32768)]:
+    print("  amplitudo x " + format(label, "<8") + " = " + format(db(r), "+7.1f") + " dB")
+print("  Dua kali lipat = +6 dB; sepuluh kali = +20 dB. Telinga menilai")
+print("  keras-lemah secara logaritmik, jadi skala dB lebih cocok dengan")
+print("  pendengaran daripada angka amplitudo mentah.")
+
+# --------------------------------------------
+# 2. Kedalaman bit menentukan derau kuantisasi
+# --------------------------------------------
+print("\n--- sinus 440 Hz penuh, dikuantisasi ---")
+print("  bit   SNR terukur   rumus 6.02N + 1.76")
+asli = sinus(440, 1.0)
+for bit in [4, 8, 12, 16]:
+    terukur = snr_db(asli, kuantisasi(asli, bit))
+    print("  " + format(bit, "<5") + format(terukur, ">9.2f") + " dB" + format(6.02 * bit + 1.76, ">14.2f") + " dB")
+print("  Setiap bit tambahan memberi sekitar 6 dB -- menggandakan jumlah")
+print("  tingkat berarti memotong derau separuh.")
+
+print("\n--- rekaman yang terlalu pelan (amplitudo 1%) ---")
+pelan = sinus(440, 0.01)
+for bit in [8, 16]:
+    print("  " + format(bit, "<3") + "bit: SNR " + format(snr_db(pelan, kuantisasi(pelan, bit)), "6.2f") + " dB")
+penuh16 = snr_db(asli, kuantisasi(asli, 16))
+pelan16 = snr_db(pelan, kuantisasi(pelan, 16))
+print("  Rekaman pelan hanya memakai sebagian kecil tingkat yang ada.")
+print("  Level 1% = " + format(db(0.01), ".0f") + " dB, dan SNR 16 bit turun "
+      + format(penuh16 - pelan16, ".1f") + " dB -- setara")
+print("  membuang hampir " + format((penuh16 - pelan16) / 6.02, ".0f")
+      + " bit. Level rekaman yang pas sama berharganya")
+print("  dengan bit tambahan.")
+
+# --------------------------------------------
+# 3. Mencampur dua suara: clipping
+# --------------------------------------------
+print("\n--- mencampur dua suara, masing-masing amplitudo 0.8 ---")
+a = sinus(440, 0.8)
+b = sinus(660, 0.8)
+campur = [x + y for x, y in zip(a, b)]
+puncak = max(abs(x) for x in campur)
+terpotong = sum(1 for x in campur if abs(x) > 1)
+print("  puncak campuran           : " + format(puncak, ".2f") + " (batas 1.00)")
+print("  sampel yang terpotong     : " + str(terpotong) + " dari " + str(len(campur))
+      + " (" + format(terpotong / len(campur), ".1%") + ")")
+aman = [(x + y) * 0.5 for x, y in zip(a, b)]          # -6 dB tiap sumber
+print("  setelah masing-masing -6 dB: puncak " + format(max(abs(x) for x in aman), ".2f")
+      + ", terpotong " + str(sum(1 for x in aman if abs(x) > 1)))
+print("  Sinyal digital tidak bisa melewati nilai maksimum. Yang lewat")
+print("  dipotong rata -- gelombangnya berubah bentuk dan terdengar pecah.")
+print("  Kurangi level setiap sumber SEBELUM dicampur, bukan sesudahnya.")
+
+# --------------------------------------------
+# 4. Ukuran berkas audio
+# --------------------------------------------
+print("\n--- lagu 3 menit ---")
+detik = 180
+pcm = FS * 16 * 2 * detik / 8                      # 16 bit, stereo
+print("  " + format("PCM 16 bit stereo", "<20") + format(FS * 16 * 2 / 1000, ">7.1f")
+      + " kbps -> " + format(pcm / 1e6, ">4.1f") + " MB")
+for kbps in [320, 128, 64]:
+    ukuran = kbps * 1000 * detik / 8
+    print("  " + format("terkompresi", "<20") + format(kbps, ">7.1f") + " kbps -> "
+          + format(ukuran / 1e6, ">4.1f") + " MB (" + format(pcm / ukuran, ".0f") + "x lebih kecil)")` },
+  output: `--- desibel untuk perbandingan amplitudo ---
+  amplitudo x 2        =    +6.0 dB
+  amplitudo x 1/2      =    -6.0 dB
+  amplitudo x 10       =   +20.0 dB
+  amplitudo x 1/10     =   -20.0 dB
+  amplitudo x 1000     =   +60.0 dB
+  amplitudo x 1/32768  =   -90.3 dB
+  Dua kali lipat = +6 dB; sepuluh kali = +20 dB. Telinga menilai
+  keras-lemah secara logaritmik, jadi skala dB lebih cocok dengan
+  pendengaran daripada angka amplitudo mentah.
+
+--- sinus 440 Hz penuh, dikuantisasi ---
+  bit   SNR terukur   rumus 6.02N + 1.76
+  4        25.09 dB         25.84 dB
+  8        49.94 dB         49.92 dB
+  12       73.99 dB         74.00 dB
+  16       98.22 dB         98.08 dB
+  Setiap bit tambahan memberi sekitar 6 dB -- menggandakan jumlah
+  tingkat berarti memotong derau separuh.
+
+--- rekaman yang terlalu pelan (amplitudo 1%) ---
+  8  bit: SNR  11.11 dB
+  16 bit: SNR  58.00 dB
+  Rekaman pelan hanya memakai sebagian kecil tingkat yang ada.
+  Level 1% = -40 dB, dan SNR 16 bit turun 40.2 dB -- setara
+  membuang hampir 7 bit. Level rekaman yang pas sama berharganya
+  dengan bit tambahan.
+
+--- mencampur dua suara, masing-masing amplitudo 0.8 ---
+  puncak campuran           : 1.52 (batas 1.00)
+  sampel yang terpotong     : 4720 dari 22050 (21.4%)
+  setelah masing-masing -6 dB: puncak 0.76, terpotong 0
+  Sinyal digital tidak bisa melewati nilai maksimum. Yang lewat
+  dipotong rata -- gelombangnya berubah bentuk dan terdengar pecah.
+  Kurangi level setiap sumber SEBELUM dicampur, bukan sesudahnya.
+
+--- lagu 3 menit ---
+  PCM 16 bit stereo    1411.2 kbps -> 31.8 MB
+  terkompresi           320.0 kbps ->  7.2 MB (4x lebih kecil)
+  terkompresi           128.0 kbps ->  2.9 MB (11x lebih kecil)
+  terkompresi            64.0 kbps ->  1.4 MB (22x lebih kecil)`,
+
+  kompleksitas: {
+    tabel: [
+      { operasi: 'Kuantisasi n sampel', waktu: 'O(n)', memori: 'O(n)' },
+      { operasi: 'Menghitung SNR', waktu: 'O(n)', memori: 'O(1) tambahan' },
+      { operasi: 'Mencampur k sumber', waktu: 'O(k × n)', memori: 'O(n) untuk hasil' },
+      { operasi: 'Ukuran PCM', waktu: 'O(1)', memori: 'sampling rate × bit × kanal × detik / 8 byte' }
+    ],
+    intuisi: `Semua operasi di topik ini berjalan sekali lewat setiap sampel, jadi linear dalam jumlah sampel. Yang besar adalah n-nya: satu detik audio CD stereo berisi 88.200 sampel, dan lagu 3 menit hampir 16 juta.
+
+Karena itu pemrosesan audio waktu nyata dikerjakan per potongan kecil — biasanya beberapa ratus sampel sekaligus. Setiap potongan harus selesai diproses sebelum potongan berikutnya dibutuhkan pengeras suara; kalau terlambat, terdengar bunyi klik atau putus. Batas waktunya ketat tetapi pekerjaannya sederhana: O(n) dengan konstanta kecil.`
+  },
+
+  kesalahanUmum: [
+    {
+      salah: 'Memakai 10 × log₁₀ untuk perbandingan amplitudo, atau 20 × log₁₀ untuk perbandingan daya.',
+      kenapa: 'Daya sebanding dengan kuadrat amplitudo, sehingga faktor yang salah menghasilkan angka dB dua kali atau setengah dari seharusnya.',
+      benar: 'Amplitudo: 20 × log₁₀(rasio). Daya atau energi, termasuk MSE: 10 × log₁₀(rasio).'
+    },
+    {
+      salah: 'Merekam dengan level sangat pelan agar pasti tidak pecah, lalu menaikkan volumenya belakangan.',
+      kenapa: 'Rekaman pelan hanya memakai sebagian kecil tingkat yang tersedia. Pada 1 persen amplitudo, 16 bit kehilangan sekitar 40 dB SNR, dan menaikkan volume menaikkan deraunya juga.',
+      benar: 'Atur level agar puncaknya cukup tinggi dengan sedikit ruang aman, atau rekam dalam 24 bit supaya ada ruang lebih.'
+    },
+    {
+      salah: 'Mencampur beberapa sumber lalu baru menurunkan volume hasil campuran.',
+      kenapa: 'Kalau campuran sudah dijepit di batas, puncak yang terpotong ikut diperkecil tetapi bentuknya tidak kembali. Clipping bersifat permanen.',
+      benar: 'Turunkan level setiap sumber sebelum dijumlahkan, atau campur dalam bilangan pecahan dan turunkan sebelum diekspor.'
+    },
+    {
+      salah: 'Mengira 24 bit selalu terdengar lebih baik dari 16 bit untuk mendengarkan musik.',
+      kenapa: 'Rentang 16 bit sudah sekitar 98 dB, lebih lebar dari yang bisa dimanfaatkan kebanyakan ruang dengar dan perangkat. Keuntungan 24 bit terutama ada saat merekam dan mengolah, bukan saat memutar hasil akhir.',
+      benar: 'Rekam dan olah dalam 24 bit atau bilangan pecahan; bagikan hasil akhir dalam 16 bit atau format terkompresi.'
+    },
+    {
+      salah: 'Membandingkan dua nilai dB seolah-olah bilangan biasa, misalnya menganggap 60 dB dua kali 30 dB.',
+      kenapa: 'Desibel adalah skala logaritma. Selisih 30 dB dalam amplitudo berarti sekitar 31,6 kali, bukan dua kali.',
+      benar: 'Ingat patokannya: +6 dB kira-kira dua kali amplitudo, +20 dB sepuluh kali.'
+    },
+    {
+      salah: 'Mengubah MP3 128 kbps ke format lossless atau bitrate lebih tinggi untuk memperbaiki kualitasnya.',
+      kenapa: 'Yang sudah dibuang kompresi lossy tidak bisa dikembalikan. Berkasnya membesar, kualitasnya tetap.',
+      benar: 'Simpan sumber asli dalam format lossless, dan buat versi terkompresi dari sumber itu setiap kali dibutuhkan.'
+    }
+  ],
+
+  analogi: `Bayangkan kamu mencatat **tinggi air sungai** setiap jam dengan penggaris.
+
+**Kedalaman bit** adalah seberapa halus garis-garis di penggarismu. Penggaris dengan garis setiap sentimeter memberi catatan yang kasar; garis setiap milimeter sepuluh kali lebih halus. Setiap kali garisnya dibuat dua kali lebih rapat, galat pencatatanmu separuhnya — itulah enam desibel per bit.
+
+**Rekaman terlalu pelan** seperti memakai penggaris 10 meter untuk mengukur sungai yang tingginya cuma 10 sentimeter. Penggarisnya sangat panjang dan halus, tetapi hampir seluruh garisnya tidak pernah terpakai. Catatanmu cuma memakai beberapa garis terbawah — dan galat pembulatannya terasa besar dibanding tinggi air yang kecil.
+
+**Clipping** terjadi saat air naik melebihi ujung penggaris. Kamu cuma bisa mencatat "setinggi ujung penggaris", berapa pun tinggi sebenarnya. Kalau besok kamu membagi semua catatan dengan dua, catatan yang mentok tetap datar — kamu tidak pernah tahu seberapa tinggi puncak banjirnya.
+
+**Mencampur dua sumber** seperti menuang dua ember ke satu tangki. Masing-masing ember terisi 80 persen, tetapi tangkinya cuma seukuran satu ember — airnya pasti tumpah. Tuang separuh dari setiap ember, dan semuanya muat.`,
+
+  latihan: [
+    'Hitung dalam dB: amplitudo 4 kali lipat, 100 kali lipat, dan 1/256.',
+    'Ubah ke rasio amplitudo: -3 dB, -12 dB, dan -60 dB.',
+    'Perkirakan SNR untuk 10, 20, dan 24 bit dengan rumus, lalu ukur untuk 10 bit dengan program ini.',
+    'Ulangi pengukuran rekaman pelan untuk amplitudo 10 persen, lalu hitung berapa bit yang hilang.',
+    'Campur tiga sumber beramplitudo 0,6, lalu cari penurunan level terkecil yang mencegah clipping.',
+    'Tunjukkan dengan program bahwa campuran yang sudah dijepit lalu diperkecil berbeda dari campuran yang diperkecil dulu.',
+    'Hitung ukuran rekaman podcast 1 jam: mono, 44,1 kHz, 16 bit, lalu bandingkan dengan 96 kbps.',
+    'Tambahkan dither acak kecil sebelum kuantisasi 4 bit dan bandingkan SNR serta pola galatnya.',
+    'Rekam suaramu di Audacity dan baca level puncaknya dalam dBFS, lalu atur agar puncaknya sekitar -6 dBFS.',
+    'Jelaskan kenapa PSNR memakai 10 × log₁₀ padahal rumus dB untuk amplitudo memakai 20 × log₁₀.'
+  ]
+});
+
+
+TOPICS.push({
+  id: 'multimedia-streaming',
+  judul: 'Streaming Video & Bitrate Adaptif',
+  kategori: 'multimedia',
+  tag: ['streaming', 'buffer', 'rebuffering', 'ABR', 'bitrate adaptif', 'HLS', 'DASH', 'segmen', 'QoE'],
+  ringkas: 'Kenapa video bisa macet walau internetmu tidak putus, dan bagaimana pemutar memutuskan kualitas setiap dua detik tanpa tahu kecepatan jaringan berikutnya.',
+
+  fungsi: `**Memahami bagaimana pemutar video menjaga video tetap berjalan di jaringan yang kecepatannya berubah-ubah, dan pertukaran yang selalu terjadi antara gambar tajam dan pemutaran lancar.**
+
+Topik kompresi lossy menjelaskan bagaimana video dimampatkan. Topik ini membahas langkah sesudahnya: mengirim hasil mampatan itu melewati jaringan yang tidak bisa ditebak.
+
+Terpakai di:
+
+- **Layanan video dan siaran langsung** — hampir semuanya memakai streaming bitrate adaptif lewat HLS atau DASH
+- **Kuliah daring dan konferensi video** — kualitas turun sesaat, bukan terputus
+- **Aplikasi yang memutar video buatanmu sendiri** — memilih tangga bitrate, panjang segmen, dan ukuran buffer
+- **Mengukur pengalaman pengguna** — waktu mulai, lama macet, dan seberapa sering kualitas berubah
+
+Intinya: **pemutar tidak tahu kecepatan jaringan beberapa detik lagi.** Ia harus memilih kualitas setiap segmen berdasarkan apa yang sudah terjadi. Memilih terlalu tinggi berarti macet; terlalu rendah berarti buram; terlalu sering berganti berarti gambar naik-turun. Tidak ada pilihan yang menang di ketiganya sekaligus.`,
+
+  praktik: {
+    tujuan: 'Kamu bisa menjelaskan peran buffer dan segmen, menghitung kapan sebuah bitrate akan macet, dan membandingkan strategi adaptif berbasis laju dan berbasis buffer dengan ukuran yang terukur.',
+    alat: ['Python 3', 'Peramban dengan DevTools (tab Network)', 'Opsional: panel statistik di pemutar video daring'],
+    langkah: [
+      { judul: 'Lihat segmen di peramban',
+        isi: `Buka situs video, lalu tab Network di DevTools. Video tidak diunduh sebagai satu berkas besar, tetapi sebagai banyak berkas kecil berurutan — segmen — yang masing-masing berisi beberapa detik video.` },
+      { judul: 'Temukan daftar kualitas',
+        isi: `Cari berkas berakhiran \`.m3u8\` (HLS) atau \`.mpd\` (DASH). Isinya daftar kualitas yang tersedia beserta bitrate masing-masing: tangga bitrate.` },
+      { judul: 'Hitung syarat tidak macet',
+        isi: `Satu segmen 2 detik pada bitrate b membutuhkan b × 2 kilobit. Kalau kecepatan jaringan r, mengunduhnya butuh b × 2 / r detik. Jika itu lebih lama dari 2 detik — artinya b > r — buffer terkuras dan akhirnya macet.` },
+      { judul: 'Simulasikan bitrate tetap',
+        isi: `Jalankan simulasi dengan bitrate tinggi dan rendah pada jaringan yang turun-naik. Catat waktu mulai, total macet, dan rata-rata bitrate.` },
+      { judul: 'Simulasikan strategi adaptif',
+        isi: `Pilih bitrate berdasarkan kecepatan unduh segmen-segmen terakhir, lalu berdasarkan isi buffer. Bandingkan juga berapa kali kualitasnya berganti.` },
+      { judul: 'Amati pemutar sungguhan',
+        isi: `Banyak pemutar punya panel statistik yang menampilkan resolusi, bitrate, dan isi buffer. Batasi kecepatan jaringan di DevTools dan perhatikan kapan pemutar menurunkan kualitas.` }
+    ],
+    cek: [
+      'Kamu bisa menunjukkan segmen dan berkas daftar kualitas di tab Network',
+      'Kamu bisa menghitung berapa detik macet per segmen untuk bitrate yang melebihi kecepatan jaringan',
+      'Kamu bisa menjelaskan kenapa bitrate tetap tinggi macet dan bitrate tetap rendah tidak',
+      'Kamu bisa menyebut satu kelebihan dan satu kelemahan setiap strategi adaptif berdasarkan angka simulasi'
+    ]
+  },
+
+  judulLogicSyntax: 'Bedah Konsep — memilih kualitas tanpa tahu masa depan',
+
+  konsep: `**Segmen dan tangga bitrate**
+
+Layanan video menyiapkan setiap video dalam beberapa kualitas — tangga bitrate — dan memotong setiap kualitas menjadi segmen pendek, biasanya 2 sampai 10 detik. Semua kualitas dipotong di titik yang sama, sehingga pemutar bisa berpindah kualitas di batas segmen mana pun.
+
+Dua format yang paling umum:
+
+- **HLS** (*HTTP Live Streaming*) — dari Apple, dengan daftar putar \`.m3u8\`
+- **MPEG-DASH** — standar terbuka, dengan manifes \`.mpd\`
+
+Keduanya memakai HTTP biasa. Setiap segmen hanyalah berkas yang diunduh seperti gambar atau skrip, sehingga bisa disimpan di CDN dan cache mana pun — alasan utama keduanya menang atas protokol streaming khusus.
+
+**Buffer: tabungan waktu**
+
+Pemutar mengunduh beberapa segmen di depan posisi yang sedang diputar. Isi buffer diukur dalam **detik video**, bukan byte:
+
+- Setiap segmen yang selesai diunduh menambah buffer 2 detik
+- Setiap detik pemutaran mengurangi buffer 1 detik
+- Kalau buffer habis sebelum segmen berikutnya datang, video **macet** (*rebuffering*)
+
+Syarat tidak macet sederhana: rata-rata bitrate yang dipilih harus di bawah kecepatan jaringan. Segmen 3000 kbps di jaringan 1200 kbps butuh 6000 / 1200 = 5 detik untuk diunduh, padahal cuma berisi 2 detik video — setiap segmen menambah 3 detik macet.
+
+**Simulasi: satu jaringan, empat strategi**
+
+Video 2 menit, segmen 2 detik, tangga 400 / 800 / 1500 / 3000 / 6000 kbps, mulai diputar setelah buffer berisi 4 detik. Jaringan tiruan:
+
+| Detik | Kecepatan |
+|---|---|
+| 0–10 | 5000 kbps |
+| 10–50 | 1200 kbps |
+| 50–70 | 4500 kbps |
+| 70–100 | 700 kbps |
+| 100–160 | 3500 kbps |
+
+Hasilnya:
+
+| Strategi | Mulai | Total macet | Kali macet | Rata-rata bitrate | Ganti kualitas |
+|---|---|---|---|---|---|
+| tetap 3000 kbps | 2,4 s | 31,0 s | 11 | 3000 kbps | 0 |
+| tetap 800 kbps | 0,8 s | 0 | 0 | 800 kbps | 0 |
+| adaptif: laju | 1,4 s | 0 | 0 | 1545 kbps | 8 |
+| adaptif: buffer | 0,4 s | 0 | 0 | 1798 kbps | 27 |
+
+- **Tetap 3000 kbps** paling tajam — dan macet 11 kali, total lebih dari setengah menit, di video yang panjangnya cuma dua menit.
+- **Tetap 800 kbps** tidak pernah macet, tetapi buram sepanjang video, padahal jaringannya sering sanggup jauh lebih tinggi.
+- **Kedua strategi adaptif** tidak pernah macet dan rata-ratanya dua kali lipat bitrate rendah.
+
+Waktu mulai juga berbeda jauh. Strategi berbasis buffer memulai dengan kualitas terendah, sehingga dua segmen pertama terunduh sangat cepat dan video mulai dalam 0,4 detik.
+
+**Dua cara memutuskan**
+
+Jejak bitrate setiap segmen (1 = 400 ... 5 = 6000):
+
+- laju: \`144444444432222222222222222222222222234444444444443211111111\`
+- buffer: \`111111223344445433333323323232323344444454545322222222122333\`
+
+**Berbasis laju** mengukur kecepatan unduh segmen-segmen terakhir dan memilih bitrate yang cukup aman di bawahnya. Jejaknya panjang dan rata: 26 segmen berturut-turut di 800 kbps, lalu — setelah satu segmen 1500 kbps — 12 segmen di 3000 kbps. Kelemahannya terlihat di akhir: 8 segmen terakhir di 400 kbps. Segmen-segmen itu diunduh saat jaringan 700 kbps, padahal buffer sudah berisi banyak detik video — ada waktu untuk mengunduh kualitas lebih tinggi pelan-pelan, tetapi strategi ini tidak melihat buffer sama sekali.
+
+**Berbasis buffer** tidak mengukur jaringan; ia hanya melihat berapa detik video yang tersimpan. Buffer tipis, pilih rendah; buffer tebal, pilih tinggi. Rata-ratanya lebih tinggi (1798 lawan 1545), tetapi kualitasnya berganti 27 kali lawan 8. Di tengah video jejaknya bolak-balik antara 1500 dan 800 kbps hampir setiap segmen — gambar yang terus naik-turun juga mengganggu penonton.
+
+Tidak ada pemenang mutlak. Pemutar sungguhan umumnya menggabungkan keduanya: memakai perkiraan laju saat buffer masih tipis, lalu beralih ke isi buffer setelah cukup tebal, ditambah aturan agar tidak berganti terlalu sering.`,
+
+  logicSyntax: [
+    {
+      bahasa: 'python',
+      kode: "def throughput(buffer, ukur):\n    if not ukur:\n        return TANGGA[0]                  # belum ada data: aman dulu\n    akhir = ukur[-3:]\n    perkiraan = len(akhir) / sum(1 / x for x in akhir)   # rata-rata harmonik\n    boleh = [b for b in TANGGA if b <= 0.8 * perkiraan]\n    return boleh[-1] if boleh else TANGGA[0]",
+      penjelasan: `Strategi berbasis laju: tebak kecepatan jaringan dari masa lalu, lalu pilih kualitas yang aman di bawah tebakan itu.
+
+**Kenapa segmen pertama selalu terendah.**
+
+Sebelum ada satu pun unduhan, pemutar tidak tahu apa-apa tentang jaringannya. Memilih yang terendah membuat segmen pertama tiba secepat mungkin — dan sekaligus memberi ukuran kecepatan pertama.
+
+**Kenapa rata-rata harmonik, bukan rata-rata biasa.**
+
+Rata-rata harmonik didominasi nilai yang **kecil**. Kalau tiga ukuran terakhir adalah 5000, 5000, dan 500 kbps, rata-rata biasa memberi 3500, sedangkan rata-rata harmonik sekitar 1250.
+
+Untuk video, menebak terlalu rendah cuma berarti gambar sedikit buram; menebak terlalu tinggi berarti macet. Kesalahan yang kedua jauh lebih mahal, jadi tebakan yang condong ke bawah adalah pilihan yang masuk akal. Rata-rata harmonik juga cocok secara matematis: yang dirata-ratakan adalah kecepatan, dan waktu mengunduh data yang sama berbanding terbalik dengan kecepatan.
+
+**Kenapa dikali 0,8.**
+
+Kecepatan terukur adalah masa lalu; masa depan bisa lebih lambat. Faktor 0,8 menyisakan 20 persen ruang aman. Tanpa itu, pemutar akan memilih bitrate yang pas-pasan, dan penurunan kecil saja sudah cukup untuk mulai menguras buffer.
+
+**Kenapa hanya tiga ukuran terakhir.**
+
+Terlalu sedikit ukuran membuat pilihan melompat-lompat mengikuti setiap gangguan kecil. Terlalu banyak membuat pemutar lambat menyadari jaringan yang benar-benar turun. Tiga adalah kompromi di simulasi ini; pemutar sungguhan menyetel angka ini, dan sering memakai rata-rata bergerak dengan bobot yang meluruh.
+
+**Apa yang tidak dilihatnya.**
+
+Fungsi ini menerima \`buffer\` tetapi tidak memakainya. Karena itu di akhir simulasi ia memilih 400 kbps berturut-turut saat jaringan 700 kbps, walaupun buffernya penuh dan tidak ada bahaya macet dalam waktu dekat.`
+    },
+    {
+      bahasa: 'python',
+      kode: "def berbasis_buffer(buffer, ukur):\n    if buffer < 6:\n        return TANGGA[0]                  # tipis: jangan ambil risiko\n    if buffer > 20:\n        return TANGGA[-1]                 # tebal: ambil yang terbaik\n    i = int((buffer - 6) / (20 - 6) * (len(TANGGA) - 1))\n    return TANGGA[i]",
+      penjelasan: `Strategi berbasis buffer: lupakan jaringan, lihat saja berapa detik video yang tersimpan.
+
+**Idenya.**
+
+Buffer adalah ringkasan dari semua yang sudah terjadi di jaringan. Kalau jaringan lebih cepat dari bitrate yang dipilih, buffer bertambah; kalau lebih lambat, buffer berkurang. Jadi buffer yang tebal berarti ada ruang untuk mengambil risiko, dan buffer yang tipis berarti harus berhati-hati — tanpa perlu menebak kecepatan sama sekali.
+
+Pendekatan ini diteliti dan diuji dalam skala besar di Netflix, dan dipublikasikan pada 2014.
+
+**Tiga daerah.**
+
+- Di bawah 6 detik: **daerah bahaya**. Selalu pilih terendah, agar buffer cepat terisi kembali.
+- Di atas 20 detik: **daerah aman**. Pilih tertinggi; kalaupun jaringan tiba-tiba turun, ada 20 detik untuk bereaksi.
+- Di antaranya: bitrate naik lurus mengikuti isi buffer.
+
+**Kenapa kualitasnya sering berganti.**
+
+Di simulasi ini, saat jaringan 1200 kbps, isi buffer berada di sekitar batas antara dua anak tangga. Memilih 1500 kbps menguras buffer sedikit, sehingga segmen berikutnya 800 kbps; memilih 800 kbps mengisinya sedikit, sehingga segmen berikutnya 1500 kbps lagi. Hasilnya bolak-balik hampir setiap segmen — 27 pergantian.
+
+Perbaikan yang umum adalah **histeresis**: naik baru boleh kalau buffer melewati batas atas, turun baru boleh kalau buffer melewati batas bawah yang lebih rendah. Celah di antara kedua batas itu mencegah bolak-balik.
+
+**Kelemahannya di awal.**
+
+Setiap video dimulai dengan buffer kosong, jadi strategi ini selalu memulai dengan kualitas terendah — enam segmen pertama di simulasi ini, walaupun jaringannya 5000 kbps. Itu sebabnya pemutar sungguhan sering memakai perkiraan laju di awal, lalu beralih ke buffer.`
+    }
+  ],
+
+  kode: { python: String.raw`# ============================================
+# Streaming video: buffer, macet, dan bitrate adaptif
+# ============================================
+TANGGA = [400, 800, 1500, 3000, 6000]        # pilihan bitrate (kbps)
+SEG = 2.0                                    # detik video per segmen
+N_SEG = 60                                   # video 2 menit
+MULAI = 4.0                                  # mulai putar setelah buffer 4 detik
+BUFFER_MAKS = 30.0
+DT = 0.1
+
+# Laju jaringan tiruan (kbps): bagus, turun, pulih, turun parah, pulih
+POLA = [(10, 5000), (40, 1200), (20, 4500), (30, 700), (60, 3500)]
+def laju(t):
+    for lama, kbps in POLA:
+        if t < lama:
+            return kbps
+        t -= lama
+    return POLA[-1][1]
+
+def simulasi(pilih):
+    t, buffer, main = 0.0, 0.0, False
+    mulai = None
+    macet, n_macet, sedang_macet = 0.0, 0, False
+    pilihan, ukur = [], []
+
+    def maju():
+        nonlocal t, buffer, macet, n_macet, sedang_macet
+        if main:
+            if buffer > 0:
+                buffer = max(0.0, buffer - DT)
+            else:
+                macet += DT
+                if not sedang_macet:
+                    n_macet, sedang_macet = n_macet + 1, True
+        t += DT
+
+    for _ in range(N_SEG):
+        while buffer >= BUFFER_MAKS:          # buffer penuh: tunggu
+            maju()
+        bitrate = pilih(buffer, ukur)
+        sisa = bitrate * SEG                  # kilobit
+        t0 = t
+        while sisa > 0:
+            sisa -= laju(t) * DT
+            maju()
+        ukur.append(bitrate * SEG / (t - t0))  # laju terukur segmen ini
+        buffer += SEG
+        sedang_macet = False
+        pilihan.append(bitrate)
+        if not main and buffer >= MULAI:
+            main, mulai = True, t
+    ganti = sum(1 for a, b in zip(pilihan, pilihan[1:]) if a != b)
+    return dict(mulai=mulai, macet=macet, n_macet=n_macet,
+                rata=sum(pilihan) / len(pilihan), ganti=ganti, pilihan=pilihan)
+
+def tetap(kbps):
+    return lambda buffer, ukur: kbps
+
+def throughput(buffer, ukur):
+    """Pilih yang tertinggi di bawah 80% rata-rata harmonik 3 ukuran terakhir."""
+    if not ukur:
+        return TANGGA[0]
+    akhir = ukur[-3:]
+    perkiraan = len(akhir) / sum(1 / x for x in akhir)
+    boleh = [b for b in TANGGA if b <= 0.8 * perkiraan]
+    return boleh[-1] if boleh else TANGGA[0]
+
+def berbasis_buffer(buffer, ukur):
+    """Buffer < 6 s: terendah. Buffer > 20 s: tertinggi. Di antaranya lurus."""
+    if buffer < 6:
+        return TANGGA[0]
+    if buffer > 20:
+        return TANGGA[-1]
+    i = int((buffer - 6) / (20 - 6) * (len(TANGGA) - 1))
+    return TANGGA[i]
+
+STRATEGI = [
+    ("tetap 3000 kbps", tetap(3000)),
+    ("tetap 800 kbps", tetap(800)),
+    ("adaptif: laju", throughput),
+    ("adaptif: buffer", berbasis_buffer),
+]
+
+print("--- jaringan tiruan (kbps) ---")
+awal = 0
+for lama, kbps in POLA:
+    print("  detik " + format(awal, ">3") + "-" + format(awal + lama, "<4") + format(kbps, ">5") + " kbps")
+    awal += lama
+
+print("\n--- empat strategi, video 2 menit ---")
+print("  strategi          mulai  macet  kali  rata bitrate  ganti")
+hasil = {}
+for nama, f in STRATEGI:
+    h = simulasi(f)
+    hasil[nama] = h
+    print("  " + format(nama, "<16") + format(h["mulai"], ">6.1f") + format(h["macet"], ">7.1f")
+          + format(h["n_macet"], ">6") + format(h["rata"], ">10.0f") + " kbps" + format(h["ganti"], ">6"))
+print("  (mulai dan macet dalam detik)")
+
+print("\n--- bitrate yang dipilih tiap segmen (1 = 400 ... 5 = 6000) ---")
+for nama, pendek in [("adaptif: laju", "laju"), ("adaptif: buffer", "buffer")]:
+    jejak = "".join(str(TANGGA.index(b) + 1) for b in hasil[nama]["pilihan"])
+    print("  " + format(pendek, "<8") + jejak)
+print()
+print("  Bitrate tetap tinggi paling tajam gambarnya -- dan macet saat")
+print("  jaringan turun. Bitrate tetap rendah tidak pernah macet, tetapi")
+print("  buram sepanjang video, padahal jaringannya sering bagus.")
+print("  Strategi adaptif menurunkan kualitas saat jaringan turun, lalu")
+print("  menaikkannya kembali: kompromi antara tajam dan lancar.")
+hl, hb = hasil["adaptif: laju"], hasil["adaptif: buffer"]
+print("  Berbasis buffer memberi rata-rata lebih tinggi (" + format(hb["rata"], ".0f")
+      + " lawan " + format(hl["rata"], ".0f") + ")")
+print("  tetapi berganti kualitas " + str(hb["ganti"]) + " kali, lawan " + str(hl["ganti"])
+      + " -- gambar yang naik-turun")
+print("  terus juga mengganggu penonton.")` },
+  output: `--- jaringan tiruan (kbps) ---
+  detik   0-10   5000 kbps
+  detik  10-50   1200 kbps
+  detik  50-70   4500 kbps
+  detik  70-100   700 kbps
+  detik 100-160  3500 kbps
+
+--- empat strategi, video 2 menit ---
+  strategi          mulai  macet  kali  rata bitrate  ganti
+  tetap 3000 kbps    2.4   31.0    11      3000 kbps     0
+  tetap 800 kbps     0.8    0.0     0       800 kbps     0
+  adaptif: laju      1.4    0.0     0      1545 kbps     8
+  adaptif: buffer    0.4    0.0     0      1798 kbps    27
+  (mulai dan macet dalam detik)
+
+--- bitrate yang dipilih tiap segmen (1 = 400 ... 5 = 6000) ---
+  laju    144444444432222222222222222222222222234444444444443211111111
+  buffer  111111223344445433333323323232323344444454545322222222122333
+
+  Bitrate tetap tinggi paling tajam gambarnya -- dan macet saat
+  jaringan turun. Bitrate tetap rendah tidak pernah macet, tetapi
+  buram sepanjang video, padahal jaringannya sering bagus.
+  Strategi adaptif menurunkan kualitas saat jaringan turun, lalu
+  menaikkannya kembali: kompromi antara tajam dan lancar.
+  Berbasis buffer memberi rata-rata lebih tinggi (1798 lawan 1545)
+  tetapi berganti kualitas 27 kali, lawan 8 -- gambar yang naik-turun
+  terus juga mengganggu penonton.`,
+
+  kompleksitas: {
+    tabel: [
+      { operasi: 'Memilih bitrate berbasis laju', waktu: 'O(k + m) untuk k ukuran dan m anak tangga', memori: 'O(k)' },
+      { operasi: 'Memilih bitrate berbasis buffer', waktu: 'O(1)', memori: 'O(1)' },
+      { operasi: 'Simulasi n segmen dengan langkah DT', waktu: 'O(T / DT) untuk durasi total T', memori: 'O(n) untuk jejak' },
+      { operasi: 'Menyimpan video di server', waktu: 'satu kali encode per anak tangga', memori: 'jumlah semua bitrate × durasi' }
+    ],
+    intuisi: `Keputusan di pemutar sangat murah — beberapa perbandingan per segmen, sekali setiap dua detik. Yang mahal ada di sisi server: setiap video harus di-encode sekali untuk setiap anak tangga, dan semua versinya disimpan.
+
+Dengan tangga di simulasi ini, video yang sama disimpan dalam lima versi yang jumlah bitratenya 11.700 kbps — hampir dua kali versi tertinggi saja. Itu harga yang dibayar penyedia layanan agar setiap penonton bisa mendapat versi yang pas untuk jaringannya.`
+  },
+
+  kesalahanUmum: [
+    {
+      salah: 'Mengira video macet berarti internetnya putus.',
+      kenapa: 'Macet terjadi setiap kali bitrate yang dipilih melebihi kecepatan jaringan cukup lama untuk menguras buffer. Di simulasi, 3000 kbps di jaringan 1200 kbps macet 3 detik untuk setiap segmen, tanpa koneksi pernah terputus.',
+      benar: 'Bandingkan bitrate dengan kecepatan jaringan, dan periksa isi buffer di panel statistik pemutar.'
+    },
+    {
+      salah: 'Memilih satu bitrate tetap berdasarkan kecepatan jaringan saat video dimulai.',
+      kenapa: 'Kecepatan jaringan berubah. Di simulasi, jaringan awalnya 5000 kbps sehingga 3000 kbps tampak aman, tetapi setelah jaringan turun ke 1200 kbps bitrate itu macet total 31 detik.',
+      benar: 'Pakai bitrate adaptif yang terus menilai ulang, atau pilih bitrate tetap di bawah kecepatan terendah yang masih wajar.'
+    },
+    {
+      salah: 'Menilai kualitas streaming hanya dari rata-rata bitrate.',
+      kenapa: 'Penonton juga merasakan waktu mulai, lama macet, dan seberapa sering kualitas berganti. Rata-rata tertinggi di simulasi justru datang dari strategi yang berganti kualitas 27 kali.',
+      benar: 'Ukur beberapa angka sekaligus: waktu mulai, total dan jumlah macet, rata-rata bitrate, dan jumlah pergantian.'
+    },
+    {
+      salah: 'Memperkirakan kecepatan jaringan dengan rata-rata biasa dari ukuran terakhir.',
+      kenapa: 'Satu ukuran yang sangat cepat menaikkan rata-rata biasa terlalu tinggi, dan menebak terlalu tinggi berakibat macet.',
+      benar: 'Pakai rata-rata harmonik atau ukuran yang condong ke bawah, ditambah faktor aman.'
+    },
+    {
+      salah: 'Memakai segmen yang sangat panjang, misalnya 30 detik, agar jumlah permintaan sedikit.',
+      kenapa: 'Pemutar hanya bisa berganti kualitas di batas segmen, dan harus menunggu satu segmen penuh sebelum video bisa mulai.',
+      benar: 'Pakai segmen beberapa detik saja, seperti yang umum di HLS dan DASH.'
+    },
+    {
+      salah: 'Menganggap strategi berbasis buffer selalu lebih baik karena rata-ratanya lebih tinggi.',
+      kenapa: 'Ia selalu mulai dari kualitas terendah dan bisa bolak-balik antara dua anak tangga. Strategi berbasis laju sebaliknya mengabaikan buffer yang sudah tebal.',
+      benar: 'Gabungkan keduanya, dan tambahkan histeresis agar kualitas tidak berganti setiap segmen.'
+    }
+  ],
+
+  analogi: `Bayangkan kamu mengisi **bak mandi** sambil ada orang yang terus memakai airnya.
+
+**Keran** adalah jaringan: alirannya kadang deras, kadang tinggal menetes, dan kamu tidak tahu kapan berubah. **Lubang pembuangan** adalah pemutaran video: selalu mengalir dengan kecepatan tetap. **Air di bak** adalah buffer. Kalau bak kosong, orang di dalamnya harus menunggu — video macet.
+
+**Bitrate** adalah seberapa besar **ember** yang kamu pakai untuk setiap kali menuang. Ember besar memberi mandi yang nyaman — gambar tajam — tetapi butuh lama untuk diisi di keran yang menetes.
+
+**Bitrate tetap tinggi**: selalu pakai ember besar. Saat keran menetes, bak kosong sebelum ember penuh.
+
+**Bitrate tetap rendah**: selalu pakai gayung. Bak tidak pernah kosong, tetapi mandinya tidak pernah nyaman, bahkan saat keran deras.
+
+**Berbasis laju**: lihat seberapa deras keran tadi, lalu pilih ember yang pasti penuh tepat waktu. Masuk akal — tetapi kamu tidak pernah melirik bak, jadi saat bak sudah hampir penuh kamu masih memakai gayung.
+
+**Berbasis buffer**: lihat saja bak. Hampir kosong? Pakai gayung. Hampir penuh? Pakai ember besar. Tidak perlu memperhatikan keran — tetapi kalau airnya selalu di batas antara dua ukuran, kamu bolak-balik mengganti ember setiap kali menuang.`,
+
+  latihan: [
+    'Buka satu video daring dengan DevTools, lalu temukan segmen dan berkas daftar kualitasnya di tab Network.',
+    'Hitung berapa detik macet per segmen untuk bitrate 6000 kbps di jaringan 4500 kbps dengan segmen 2 detik.',
+    'Ubah faktor aman strategi laju dari 0,8 ke 1,0 dan 0,6, lalu bandingkan macet dan rata-rata bitrate-nya.',
+    'Ubah strategi laju agar memakai rata-rata biasa, lalu buat jaringan yang membuatnya macet sementara versi harmonik tidak.',
+    'Cetak waktu unduh dan isi buffer setiap segmen strategi laju, lalu periksa isi buffer saat 8 segmen terakhir diunduh.',
+    'Tambahkan histeresis ke strategi berbasis buffer, lalu hitung ulang jumlah pergantian dan rata-rata bitrate.',
+    'Buat strategi gabungan: berbasis laju saat buffer di bawah 10 detik, berbasis buffer di atasnya.',
+    'Ubah panjang segmen menjadi 6 detik dan jelaskan pengaruhnya terhadap waktu mulai dan pergantian kualitas.',
+    'Hitung ruang simpan yang dibutuhkan satu video 1 jam dengan tangga bitrate di simulasi ini.',
+    'Batasi kecepatan jaringan di DevTools saat menonton video, lalu catat kapan pemutar menurunkan dan menaikkan kualitas.'
   ]
 });
