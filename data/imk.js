@@ -12,6 +12,10 @@
    ketiga DIHITUNG ULANG dari data mentah laporan, bukan
    disalin. Dua selisih ditemukan dan dijelaskan apa adanya
    sebagai bahan belajar.
+
+   Tiga topik tambahan (hukum Fitts & Hick, KLM-GOMS, evaluasi
+   heuristik Nielsen) disusun dari REFERENSI LUAR -- keterangan
+   lengkapnya ada di kepala bagian tambahan di bawah.
    ============================================================ */
 
 TOPICS.push({
@@ -1608,5 +1612,1180 @@ Matamu tidak berbohong. Ia hanya **bukan alat ukur**.`,
     'Hitung rasio kontras antara teks #767676 dan latar #FFFFFF, lalu tentukan apakah ia lulus WCAG AA untuk teks biasa.',
     'Jelaskan kenapa hijau ditimbang jauh lebih berat daripada biru dalam perhitungan luminansi, dan apa akibatnya bagi pemilihan warna teks.',
     'Jelaskan kenapa purwarupa lo-fi sengaja dibuat polos, dan apa yang hilang kalau langsung menunjukkan hi-fi.'
+  ]
+});
+
+
+/* ------------------------------------------------------------
+   TAMBAHAN dari referensi luar (tiga topik di bawah).
+
+   Tiga topik di atas disusun dari worksheet dan projek kuliah
+   sendiri. Tiga topik berikutnya mengisi pokok bahasan evaluasi
+   yang ada di RPS IMK kampus lain tetapi tidak ada bahannya di
+   drive: evaluasi analitik (hukum Fitts, hukum Hick-Hyman,
+   KLM-GOMS) dan evaluasi heuristik Nielsen.
+
+   Konstanta Fitts dan Hick di topik pertama adalah konstanta
+   CONTOH, dan disebut begitu di teksnya. Nilai operator KLM
+   memakai nilai dari Card, Moran & Newell. Data pengukuran
+   Fitts, 40 masalah usability, dan temuan aplikasi presensi
+   adalah data TIRUAN. Semua program benar-benar dijalankan.
+   ------------------------------------------------------------ */
+TOPICS.push({
+  id: 'imk-fitts-hick',
+  judul: 'Hukum Fitts & Hukum Hick',
+  kategori: 'imk',
+  tag: ['hukum Fitts', 'hukum Hick', 'indeks kesulitan', 'ukuran target', 'tepi layar', 'menu', 'regresi'],
+  ringkas: 'Dua rumus logaritma yang meramal berapa lama orang menunjuk tombol dan memilih dari menu — dan kenapa menu di tepi layar begitu cepat dijangkau.',
+
+  fungsi: `**Meramal waktu yang dibutuhkan untuk menunjuk sebuah target dan untuk memilih di antara beberapa pilihan, sebelum antarmukanya dibuat dan diuji.**
+
+Terpakai di:
+
+- **Menentukan ukuran dan letak tombol** — tombol yang sering dipakai harus besar dan dekat; tombol berbahaya boleh kecil dan jauh
+- **Merancang menu** — menu datar lawan menu bertingkat, menu biasa lawan menu melingkar
+- **Menjelaskan kebiasaan desain** — kenapa menu di tepi layar, kenapa menu klik-kanan muncul di dekat kursor, kenapa target sentuh minimal berukuran tertentu
+- **Membandingkan perangkat masukan** — tetikus, touchpad, layar sentuh, dan stik permainan punya konstanta Fitts yang berbeda
+
+Yang paling penting dipahami: **yang dihitung adalah logaritma.** Tombol delapan kali lebih jauh tidak butuh waktu delapan kali lebih lama. Dan dalam hukum Fitts, menggandakan ukuran tombol sama nilainya dengan memotong jaraknya separuh.
+
+Dan satu batas yang sering dilupakan: **hukum Hick hanya berlaku untuk pilihan yang sudah dikenal.** Untuk pengguna baru yang harus membaca setiap pilihan, waktunya tumbuh lurus, bukan logaritmik.`,
+
+  praktik: {
+    tujuan: 'Kamu bisa menghitung indeks kesulitan dan waktu menunjuk sebuah target, membandingkan rancangan tombol dan menu, dan memperoleh konstanta Fitts sendiri dari pengukuran dengan regresi linear.',
+    alat: ['Python 3 dengan modul math dan statistics', 'Peramban untuk percobaan menunjuk sederhana (opsional)'],
+    langkah: [
+      { judul: 'Ukur jarak dan lebar target',
+        isi: `D adalah jarak dari posisi kursor ke tengah target. W adalah lebar target **searah gerakan** — untuk gerakan mendatar, lebar tombol; untuk gerakan tegak, tingginya.` },
+      { judul: 'Hitung indeks kesulitan',
+        isi: `ID = log₂(D/W + 1), dalam bit. Ini rumusan Shannon yang dipakai standar ISO 9241-9. ID 1 berarti sangat mudah; ID di atas 6 sudah sulit.` },
+      { judul: 'Hitung waktu menunjuk',
+        isi: `MT = a + b × ID. Konstanta a dan b bergantung pada perangkat dan orangnya. Untuk perbandingan antar-rancangan, konstanta contoh cukup; untuk ramalan angka mutlak, ukur sendiri.` },
+      { judul: 'Bandingkan rancangan',
+        isi: `Hitung ID untuk setiap tombol penting di rancanganmu. Tombol yang sering dipakai dengan ID tinggi adalah kandidat untuk diperbesar atau dipindah lebih dekat.` },
+      { judul: 'Hitung waktu memilih dengan Hick',
+        isi: `RT = a + b × log₂(n + 1) untuk n pilihan yang sudah dikenal pengguna. Pakai untuk membandingkan menu datar dan menu bertingkat.` },
+      { judul: 'Ukur konstantamu sendiri',
+        isi: `Buat halaman percobaan dengan target berbagai jarak dan lebar, catat waktu setiap klik, lalu regresikan waktu pada ID. Titik potong adalah a, kemiringan adalah b.
+
+1/b adalah "laju informasi" — berapa bit per detik yang bisa dikirim tangan lewat perangkat itu.` }
+    ],
+    cek: [
+      'Kamu bisa menghitung ID dan MT untuk sebuah tombol dari jarak dan lebarnya',
+      'Kamu bisa menjelaskan kenapa menu di tepi layar cepat dijangkau',
+      'Kamu bisa menjelaskan kapan hukum Hick tidak berlaku',
+      'Kamu bisa memperoleh a dan b dari data pengukuran dengan regresi'
+    ]
+  },
+
+  judulLogicSyntax: 'Bedah Konsep — kenapa logaritma',
+
+  konsep: `Topik manusia sebagai pemroses informasi membahas batas-batas manusia secara kualitatif: memori kerja, persepsi, kesalahan. Topik ini membahas dua batas yang bisa dihitung dengan rumus — dan dipakai untuk meramal, bukan cuma menjelaskan.
+
+**Hukum Fitts: menunjuk target**
+
+Paul Fitts (1954) menemukan bahwa waktu untuk menunjuk target bergantung pada **perbandingan** jarak dan ukurannya, lewat logaritma:
+
+MT = a + b · log₂(D/W + 1)
+
+Bagian log₂(D/W + 1) disebut **indeks kesulitan** (ID), dalam bit. Dengan konstanta contoh untuk tetikus — a = 0,20 s dan b = 0,15 s/bit:
+
+| Target | D (px) | W (px) | ID (bit) | MT (s) |
+|---|---|---|---|---|
+| tombol besar, dekat | 100 | 80 | 1,17 | 0,38 |
+| tombol besar, jauh | 800 | 80 | 3,46 | 0,72 |
+| tombol kecil, dekat | 100 | 16 | 2,86 | 0,63 |
+| tombol kecil, jauh | 800 | 16 | 5,67 | 1,05 |
+| ikon 8 px di pojok jauh | 1200 | 8 | 7,24 | 1,29 |
+
+Jarak delapan kali lebih jauh tidak berarti delapan kali lebih lama: 0,38 s menjadi 0,72 s. Dan karena yang dihitung adalah D/W, **menggandakan lebar tombol sama nilainya dengan memotong jaraknya separuh**.
+
+**Kenapa logaritma**
+
+Gerakan menunjuk bukan satu gerakan mulus, melainkan satu gerakan cepat yang kasar diikuti beberapa koreksi kecil. Setiap koreksi mengurangi sisa jarak dengan **perbandingan** yang kira-kira tetap. Banyaknya koreksi yang dibutuhkan untuk mengecilkan jarak D menjadi lebar W tumbuh seperti log(D/W) — persis seperti banyaknya langkah metode bagi dua di Matematika Dasar tumbuh seperti logaritma lebar awal dibagi toleransi.
+
+**Tepi layar: lebar yang tak hingga**
+
+| Target | ID | MT |
+|---|---|---|
+| menu 20 px di dalam jendela | 4,95 bit | 0,94 s |
+| menu di tepi atas layar | 0,38 bit | 0,26 s |
+
+Kursor berhenti di tepi layar. Pengguna bisa "melempar" tetikus ke atas tanpa mengerem, dan kursor pasti berhenti di menu. Kedalaman target searah gerakan praktis tak terbatas — program memakai 2000 px sebagai wakilnya — sehingga ID-nya hampir nol.
+
+Itu alasan menu di tepi atas layar di macOS, tombol Start di pojok kiri bawah pada Windows versi-versi lama, dan menu klik-kanan yang muncul **di bawah kursor** (D hampir nol) sama-sama cepat. Ketika Windows 11 memindahkan tombol Start ke tengah bilah tugas secara bawaan, keuntungan pojok itu ikut hilang.
+
+**Hukum Hick-Hyman: memilih di antara pilihan**
+
+Waktu untuk memilih satu di antara n pilihan yang **sudah dikenal**:
+
+RT = a + b · log₂(n + 1)
+
+| Pilihan | RT (s) |
+|---|---|
+| 2 | 0,44 |
+| 8 | 0,68 |
+| 32 | 0,96 |
+| 64 | 1,10 |
+
+Pilihan 32 kali lipat, dari 2 ke 64, cuma memperpanjang waktu 2,5 kali.
+
+**Menu datar lawan bertingkat**
+
+| Rancangan | Waktu memilih |
+|---|---|
+| 64 perintah dalam satu menu | 1,10 s |
+| 8 kategori × 8 perintah | 1,35 s |
+
+Menurut Hick, menu datar sedikit lebih cepat — setiap tingkat menambah konstanta a lagi. Tetapi syaratnya: pengguna sudah **hafal** letak perintahnya.
+
+Pengguna yang baru pertama kali membuka menu tidak memilih; ia **mencari** — membaca satu per satu. Waktu mencari tumbuh lurus dengan n, bukan logaritmik. Untuk mereka, kategori yang bermakna jauh membantu. Itu sebabnya hukum Hick tidak bisa dipakai untuk membenarkan menu 64 perintah tanpa pengelompokan.
+
+**Dari mana a dan b**
+
+Konstanta di atas adalah contoh. Konstanta sebenarnya diukur: buat target dengan berbagai jarak dan lebar, catat waktu setiap percobaan, lalu regresikan waktu pada ID — regresi linear yang sama dengan topik korelasi dan regresi di Probabilitas dan Statistika.
+
+Program membangkitkan 120 percobaan tiruan dari a = 0,25 dan b = 0,18 dengan derau, lalu mencoba menemukan kembali keduanya: regresinya memberi **a = 0,212 s, b = 0,188 s/bit**, r = 0,965. Dekat dengan nilai sebenarnya, tetapi tidak persis — derau pengukuran selalu ada, dan titik potong a biasanya lebih meleset dari kemiringan b karena ID tidak pernah benar-benar nol dalam percobaan.
+
+1/b ≈ 5,3 bit/s disebut **throughput**: laju informasi yang bisa dikirim tangan lewat perangkat itu. Angka ini yang dipakai untuk membandingkan tetikus, touchpad, dan layar sentuh secara adil.`,
+
+  logicSyntax: [
+    {
+      bahasa: 'python',
+      kode: "import math\n\ndef ID(D, W):\n    # indeks kesulitan (bit), rumusan Shannon\n    return math.log2(D / W + 1)\n\nA, B = 0.20, 0.15          # konstanta CONTOH untuk tetikus\n\ndef waktu_fitts(D, W):\n    return A + B * ID(D, W)\n\nwaktu_fitts(100, 80)    # 0.38 s\nwaktu_fitts(800, 80)    # 0.72 s   jarak 8x, waktu < 2x\nwaktu_fitts(800, 160)   # sama dengan (400, 80): D/W yang sama",
+      penjelasan: `Dua baris rumus, dan tiga keputusan di dalamnya yang membedakan rumus ini dari versi-versi yang lebih tua.
+
+**Kenapa D/W + 1, bukan 2D/W.**
+
+Rumusan asli Fitts memakai log₂(2D/W). Masalahnya: untuk target yang sangat besar atau sangat dekat — D lebih kecil dari W/2 — nilainya menjadi negatif, dan waktu yang diramal lebih kecil dari a. Tidak masuk akal.
+
+Rumusan Shannon, log₂(D/W + 1), yang diusulkan MacKenzie dan kini dipakai standar ISO 9241-9, tidak pernah negatif: untuk D = 0, ID = 0, dan MT = a. Selain itu, ia sedikit lebih cocok dengan data percobaan.
+
+**Kenapa satuannya bit.**
+
+log₂ menghitung "berapa kali harus membelah dua". Menunjuk target berlebar W di jarak D sama dengan memilih satu dari sekitar D/W + 1 posisi yang bisa dibedakan — dan memilih satu dari N butuh log₂ N bit informasi.
+
+Karena itu hukum Fitts dan hukum Hick berbentuk sama: keduanya mengukur informasi yang harus diproses, dan waktu tumbuh lurus dengan informasi itu.
+
+**Kenapa hanya perbandingan D/W yang penting.**
+
+Rumusnya tidak memuat D atau W sendiri-sendiri, hanya perbandingannya. Tombol 80 px di jarak 800 px sama sulitnya dengan tombol 160 px di jarak 1600 px — atau tombol 8 px di jarak 80 px.
+
+Akibat praktisnya: memperbesar tombol dan mendekatkannya adalah dua cara yang setara. Kalau tata letak tidak memungkinkan tombol didekatkan, perbesar.
+
+**Batas rumus ini.**
+
+Hukum Fitts memodelkan menunjuk dengan satu gerakan ke target yang diam, dengan perangkat yang dikendalikan tangan. Ia tidak memodelkan:
+
+- target yang bergerak, atau menu yang muncul dengan animasi
+- waktu **menemukan** target yang belum diketahui letaknya — itu pencarian visual, bukan menunjuk
+- gerakan dua dimensi di mana lebar dan tinggi target sama-sama penting; untuk itu ada perluasan yang memakai dimensi terkecil atau lebar efektif searah gerakan
+
+Di dalam batas itu, hukum Fitts termasuk model paling kokoh di seluruh IMK: puluhan tahun percobaan dengan berbagai perangkat mengonfirmasi bentuk logaritmanya.`
+    },
+    {
+      bahasa: 'python',
+      kode: "import statistics as st\n\nukur = []\nfor D in [128, 256, 512, 1024]:\n    for W in [16, 32, 64]:\n        for _ in range(10):\n            t = 0.25 + 0.18 * ID(D, W) + random.gauss(0, 0.06)\n            ukur.append((ID(D, W), t))\n\nfit = st.linear_regression([u[0] for u in ukur], [u[1] for u in ukur])\n# a = 0.212 s, b = 0.188 s/bit   (asli: 0.25 dan 0.18)\n# 1/b = 5.3 bit/s",
+      penjelasan: `Cara konstanta Fitts diperoleh di penelitian sungguhan — diperagakan dengan data tiruan supaya jawabannya bisa diperiksa.
+
+**Rancangan percobaannya.**
+
+Empat jarak dikali tiga lebar memberi 12 kombinasi, dengan ID dari sekitar 1,6 sampai 6 bit. Setiap kombinasi diulang 10 kali. Rentang ID yang lebar itu penting: regresi dengan ID yang hampir sama semua tidak bisa memisahkan a dari b.
+
+Di percobaan sungguhan, halaman web menampilkan satu target pada satu waktu dan mencatat waktu dari klik sebelumnya sampai klik di target. Urutan kombinasinya diacak, supaya kelelahan atau latihan tidak menumpuk di kombinasi tertentu.
+
+**Kenapa regresi linear.**
+
+MT = a + b · ID adalah persamaan garis lurus dengan ID sebagai x. Mencari a dan b dari titik-titik pengukuran adalah persis masalah kuadrat terkecil yang dibahas di Probabilitas dan Statistika dan di Aljabar Linear.
+
+**Kenapa hasilnya tidak persis 0,25 dan 0,18.**
+
+Setiap pengukuran diberi derau acak dengan simpangan baku 0,06 s — kira-kira seberapa bervariasi waktu klik manusia sungguhan. Dengan 120 titik, perkiraannya dekat tetapi tidak tepat: b meleset 0,008, a meleset 0,038.
+
+a meleset lebih jauh, dan itu wajar: a adalah titik potong di ID = 0, sedangkan data terdekat ada di ID sekitar 1,6. Titik potong adalah **ekstrapolasi** ke luar rentang data — masalah yang dibahas di topik regresi. Karena itu peneliti Fitts lebih memercayai b daripada a.
+
+**Throughput: angka pembanding.**
+
+1/b ≈ 5,3 bit/s adalah berapa banyak informasi yang bisa "dikirim" lewat perangkat ini per detik. Membandingkan b antar-perangkat — tetikus lawan touchpad lawan layar sentuh — adalah cara yang adil untuk menyatakan perangkat mana yang lebih cepat untuk menunjuk, terlepas dari ukuran tombol di aplikasinya.
+
+Standar ISO 9241-9 menetapkan cara menghitung throughput yang sedikit lebih canggih — memakai lebar efektif dari sebaran titik klik yang sebenarnya — tetapi gagasannya sama.`
+    }
+  ],
+
+  kode: { python: String.raw`# ============================================
+# Hukum Fitts dan Hukum Hick-Hyman
+# ============================================
+import math
+import random
+import statistics as st
+
+def ID(D, W):
+    """Indeks kesulitan (bit), rumusan Shannon: log2(D/W + 1)."""
+    return math.log2(D / W + 1)
+
+# Konstanta CONTOH untuk tetikus. Nilai sebenarnya harus diukur
+# per perangkat dan per orang -- lihat bagian 3.
+A, B = 0.20, 0.15          # detik, detik per bit
+
+def waktu_fitts(D, W):
+    return A + B * ID(D, W)
+
+# --------------------------------------------
+# 1. Ukuran dan jarak target
+# --------------------------------------------
+print("--- waktu menunjuk: MT = a + b log2(D/W + 1) ---")
+print("  (a = 0.20 s, b = 0.15 s/bit -- konstanta contoh)")
+print()
+print("  target                      D (px)  W (px)   ID (bit)   MT (s)")
+TARGET = [
+    ("tombol besar, dekat", 100, 80),
+    ("tombol besar, jauh", 800, 80),
+    ("tombol kecil, dekat", 100, 16),
+    ("tombol kecil, jauh", 800, 16),
+    ("ikon 8 px di pojok jauh", 1200, 8),
+]
+for nama, D, W in TARGET:
+    print("  " + format(nama, "<26") + format(D, ">8") + format(W, ">8")
+          + format(ID(D, W), ">11.2f") + format(waktu_fitts(D, W), ">9.2f"))
+print()
+print("  Jarak 8 kali lebih jauh tidak berarti 8 kali lebih lama:")
+print("  " + format(waktu_fitts(100, 80), ".2f") + " s menjadi " + format(waktu_fitts(800, 80), ".2f")
+      + " s. Yang dihitung adalah LOGARITMA D/W.")
+print("  Menggandakan W sama nilainya dengan memotong D separuh.")
+
+print("\n--- tepi layar: target yang lebarnya 'tak hingga' ---")
+# di tepi layar, kedalaman target searah gerakan praktis tak
+# terbatas; 2000 px dipakai sebagai wakilnya
+for nama, W in [("menu 20 px di dalam jendela", 20), ("menu di tepi atas layar", 2000)]:
+    print("  " + format(nama, "<30") + "ID " + format(ID(600, W), ".2f")
+          + " bit, MT " + format(waktu_fitts(600, W), ".2f") + " s")
+print("  Kursor berhenti di tepi layar, jadi pengguna bisa 'melempar'")
+print("  tetikus ke atas tanpa mengerem. Lebar efektifnya sangat")
+print("  besar -- itu sebabnya menu di tepi layar cepat dijangkau.")
+
+# --------------------------------------------
+# 2. Hick-Hyman: banyaknya pilihan
+# --------------------------------------------
+print("\n--- waktu memilih: RT = a + b log2(n + 1) ---")
+ah, bh = 0.20, 0.15
+def waktu_hick(n):
+    return ah + bh * math.log2(n + 1)
+print("  pilihan   RT (s)")
+for n in [2, 4, 8, 16, 32, 64]:
+    print("  " + format(n, "<9") + format(waktu_hick(n), ".2f"))
+print("  Pilihan 32 kali lipat (2 -> 64) cuma memperpanjang waktu")
+print("  " + format(waktu_hick(64) / waktu_hick(2), ".1f") + " kali.")
+satu = waktu_hick(64)
+dua = 2 * waktu_hick(8)
+print("\n  64 perintah dalam satu menu datar : " + format(satu, ".2f") + " s")
+print("  8 kategori x 8 perintah (2 menu)  : " + format(dua, ".2f") + " s")
+print("  Menurut Hick, menu datar sedikit LEBIH CEPAT -- asalkan")
+print("  pengguna sudah hafal letaknya. Hick hanya berlaku untuk")
+print("  pilihan yang sudah dikenal; untuk yang baru, pengguna membaca")
+print("  satu per satu, dan waktunya tumbuh lurus dengan n.")
+
+# --------------------------------------------
+# 3. Dari mana a dan b: mengukur, lalu regresi
+# --------------------------------------------
+print("\n--- menemukan a dan b dari pengukuran (data TIRUAN) ---")
+random.seed(3)
+a_asli, b_asli = 0.25, 0.18         # 'perangkat' yang ingin diukur
+ukur = []
+for D in [128, 256, 512, 1024]:
+    for W in [16, 32, 64]:
+        for _ in range(10):          # 10 percobaan per kondisi
+            t = a_asli + b_asli * ID(D, W) + random.gauss(0, 0.06)
+            ukur.append((ID(D, W), t))
+xs, ys = [u[0] for u in ukur], [u[1] for u in ukur]
+fit = st.linear_regression(xs, ys)
+r = st.correlation(xs, ys)
+print("  " + str(len(ukur)) + " percobaan, 12 kombinasi jarak-lebar")
+print("  regresi MT pada ID: a = " + format(fit.intercept, ".3f") + " s, b = "
+      + format(fit.slope, ".3f") + " s/bit, r = " + format(r, ".3f"))
+print("  (nilai yang dipakai membangkitkan data: a = 0.25, b = 0.18)")
+print("  1/b = " + format(1 / fit.slope, ".1f") + " bit/s -- 'laju informasi' tangan+tetikus")` },
+  output: `--- waktu menunjuk: MT = a + b log2(D/W + 1) ---
+  (a = 0.20 s, b = 0.15 s/bit -- konstanta contoh)
+
+  target                      D (px)  W (px)   ID (bit)   MT (s)
+  tombol besar, dekat            100      80       1.17     0.38
+  tombol besar, jauh             800      80       3.46     0.72
+  tombol kecil, dekat            100      16       2.86     0.63
+  tombol kecil, jauh             800      16       5.67     1.05
+  ikon 8 px di pojok jauh       1200       8       7.24     1.29
+
+  Jarak 8 kali lebih jauh tidak berarti 8 kali lebih lama:
+  0.38 s menjadi 0.72 s. Yang dihitung adalah LOGARITMA D/W.
+  Menggandakan W sama nilainya dengan memotong D separuh.
+
+--- tepi layar: target yang lebarnya 'tak hingga' ---
+  menu 20 px di dalam jendela   ID 4.95 bit, MT 0.94 s
+  menu di tepi atas layar       ID 0.38 bit, MT 0.26 s
+  Kursor berhenti di tepi layar, jadi pengguna bisa 'melempar'
+  tetikus ke atas tanpa mengerem. Lebar efektifnya sangat
+  besar -- itu sebabnya menu di tepi layar cepat dijangkau.
+
+--- waktu memilih: RT = a + b log2(n + 1) ---
+  pilihan   RT (s)
+  2        0.44
+  4        0.55
+  8        0.68
+  16       0.81
+  32       0.96
+  64       1.10
+  Pilihan 32 kali lipat (2 -> 64) cuma memperpanjang waktu
+  2.5 kali.
+
+  64 perintah dalam satu menu datar : 1.10 s
+  8 kategori x 8 perintah (2 menu)  : 1.35 s
+  Menurut Hick, menu datar sedikit LEBIH CEPAT -- asalkan
+  pengguna sudah hafal letaknya. Hick hanya berlaku untuk
+  pilihan yang sudah dikenal; untuk yang baru, pengguna membaca
+  satu per satu, dan waktunya tumbuh lurus dengan n.
+
+--- menemukan a dan b dari pengukuran (data TIRUAN) ---
+  120 percobaan, 12 kombinasi jarak-lebar
+  regresi MT pada ID: a = 0.212 s, b = 0.188 s/bit, r = 0.965
+  (nilai yang dipakai membangkitkan data: a = 0.25, b = 0.18)
+  1/b = 5.3 bit/s -- 'laju informasi' tangan+tetikus`,
+
+  kompleksitas: {
+    tabel: [
+      { operasi: 'Waktu menunjuk satu target', waktu: 'O(1)', memori: 'O(1)' },
+      { operasi: 'Waktu memilih dari n pilihan dikenal', waktu: 'tumbuh log₂(n + 1)', memori: '—' },
+      { operasi: 'Waktu mencari di n pilihan baru', waktu: 'tumbuh lurus dengan n', memori: '—' },
+      { operasi: 'Regresi konstanta dari k pengukuran', waktu: 'O(k)', memori: 'O(k)' }
+    ],
+    intuisi: `Tabel ini bukan tentang biaya komputasi, melainkan tentang biaya **manusia** — dan di situ perbedaan antara logaritma dan lurus sangat terasa.
+
+Menggandakan banyaknya pilihan dalam menu yang sudah dihafal menambah waktu memilih kurang dari 0,15 detik. Menggandakan banyaknya pilihan untuk pengguna baru bisa menggandakan waktu mencarinya. Keduanya menu yang sama; yang berbeda cuma apakah penggunanya sudah hafal.
+
+Karena itu desain yang baik melayani keduanya: letak yang tetap supaya pengguna lama bisa memilih tanpa mencari, dan pengelompokan yang bermakna supaya pengguna baru bisa mencari dengan cepat.`
+  },
+
+  kesalahanUmum: [
+    {
+      salah: 'Mengira waktu menunjuk sebanding dengan jarak.',
+      kenapa: 'Yang dihitung adalah logaritma perbandingan jarak dan lebar. Target delapan kali lebih jauh dengan lebar sama cuma butuh kurang dari dua kali lebih lama.',
+      benar: 'Hitung ID = log₂(D/W + 1) dan bandingkan rancangan dengan ID, bukan dengan jarak saja.'
+    },
+    {
+      salah: 'Membuat tombol yang sering dipakai kecil karena "masih bisa diklik".',
+      kenapa: 'Tombol kecil menaikkan ID dan waktu setiap klik, dan kerugian kecil itu dikalikan ribuan kali pemakaian. Di layar sentuh, tombol kecil juga menaikkan salah sentuh.',
+      benar: 'Perbesar tombol yang sering dipakai, dan pakai ukuran target sentuh minimal yang disarankan panduan platform.'
+    },
+    {
+      salah: 'Menaruh menu penting sedikit di dalam dari tepi layar.',
+      kenapa: 'Beberapa piksel dari tepi menghilangkan keuntungan tepi: kursor tidak lagi berhenti di target, sehingga pengguna harus mengerem dan mengoreksi.',
+      benar: 'Tempelkan target yang ingin cepat dijangkau langsung ke tepi atau pojok layar.'
+    },
+    {
+      salah: 'Memakai hukum Hick untuk membenarkan menu panjang tanpa pengelompokan.',
+      kenapa: 'Hukum Hick hanya berlaku untuk pilihan yang sudah dihafal. Pengguna baru membaca satu per satu, dan waktunya tumbuh lurus dengan banyaknya pilihan.',
+      benar: 'Kelompokkan pilihan secara bermakna dan pertahankan letaknya tetap, supaya pengguna baru bisa mencari dan pengguna lama bisa langsung memilih.'
+    },
+    {
+      salah: 'Memakai konstanta a dan b dari buku untuk meramal waktu mutlak di perangkatmu.',
+      kenapa: 'Konstanta bergantung pada perangkat, pengguna, dan cara pengukuran. Angka buku berguna untuk membandingkan rancangan, bukan untuk meramal detik yang tepat.',
+      benar: 'Ukur sendiri dengan percobaan menunjuk dan regresi, atau pakai konstanta contoh hanya untuk perbandingan relatif.'
+    },
+    {
+      salah: 'Memercayai titik potong a hasil regresi sama seperti kemiringan b.',
+      kenapa: 'a adalah ekstrapolasi ke ID = 0, di luar rentang data percobaan, sehingga lebih peka terhadap derau. Pada data tiruan di topik ini, a meleset hampir lima kali lebih jauh dari b.',
+      benar: 'Pakai b atau throughput 1/b untuk membandingkan perangkat, dan laporkan a dengan hati-hati.'
+    }
+  ],
+
+  analogi: `Bayangkan kamu melempar **anak panah** ke papan target.
+
+**Hukum Fitts.** Papan yang besar dan dekat: kamu tinggal melempar, hampir tanpa membidik. Papan yang kecil dan jauh: kamu membidik lama, menyesuaikan sedikit, menyesuaikan lagi.
+
+Tetapi perhatikan: papan kecil di jarak dekat terasa sama sulitnya dengan papan besar di jarak jauh — yang menentukan adalah seberapa kecil papannya **dibanding** jaraknya. Dan papan delapan kali lebih jauh tidak butuh waktu membidik delapan kali lebih lama; setiap penyesuaian memperbaiki bidikan dengan perbandingan yang kira-kira tetap, jadi banyaknya penyesuaian tumbuh pelan.
+
+**Tepi layar.** Sekarang bayangkan papan target itu dipasang di dinding, dan kamu tidak melempar, melainkan **mendorong** anak panah sepanjang meja yang ujungnya menempel ke dinding. Kamu tidak perlu membidik jarak sama sekali — dorong sekuat tenaga, dan dinding yang menghentikannya. Itulah menu di tepi layar.
+
+**Hukum Hick.** Di warung langgananmu, menunya dua puluh pilihan, dan kamu langsung bilang "nasi goreng" — karena kamu hafal. Menu dua puluh atau empat puluh hampir tidak mengubah kecepatanmu memesan.
+
+Di warung baru, dengan menu yang sama panjangnya, kamu membaca satu per satu dari atas. Empat puluh pilihan butuh kira-kira dua kali lebih lama dari dua puluh. Menunya sama; yang berbeda cuma apakah kamu sudah hafal.
+
+Warung yang cerdas melayani keduanya: menu dikelompokkan — nasi, mi, minuman — supaya pelanggan baru bisa cepat mencari, dan urutannya tidak pernah diubah supaya pelanggan lama tidak perlu mencari lagi.`,
+
+  latihan: [
+    'Hitung ID dan MT untuk tombol "Kirim" berlebar 120 px di jarak 600 px, lalu untuk lebar 60 px di jarak 300 px, dan jelaskan hasilnya.',
+    'Ukur jarak dan lebar tiga tombol yang paling sering kamu pakai di satu aplikasi, lalu hitung ID-nya.',
+    'Hitung berapa lebar tombol di jarak 1000 px yang memberi ID sama dengan tombol 40 px di jarak 200 px.',
+    'Jelaskan dengan hukum Fitts kenapa menu klik-kanan yang muncul di posisi kursor cepat dipakai.',
+    'Hitung waktu memilih menurut Hick untuk menu 12 pilihan lawan menu bertingkat 3 × 4.',
+    'Beri contoh situasi di mana hukum Hick tidak berlaku, dan jelaskan model waktu yang lebih cocok.',
+    'Buat halaman HTML sederhana yang menampilkan target acak dan mencatat waktu klik, lalu kumpulkan setidaknya 60 percobaan dari dirimu sendiri.',
+    'Regresikan data percobaanmu pada ID untuk mendapat a, b, dan throughput 1/b tanganmu dengan tetikus.',
+    'Ulangi percobaan dengan touchpad, lalu bandingkan throughput kedua perangkat.',
+    'Jelaskan kenapa rumusan log₂(D/W + 1) lebih baik daripada log₂(2D/W) untuk target yang sangat dekat.'
+  ]
+});
+
+
+TOPICS.push({
+  id: 'imk-klm-goms',
+  judul: 'KLM-GOMS — Meramal Waktu Tugas',
+  kategori: 'imk',
+  tag: ['GOMS', 'KLM', 'keystroke-level model', 'operator', 'evaluasi analitik', 'waktu tugas', 'formulir'],
+  ringkas: 'Menjumlahkan waktu setiap tekan tombol, gerakan tetikus, dan jeda berpikir untuk membandingkan rancangan — sebelum satu baris kode pun ditulis.',
+
+  fungsi: `**Meramal berapa lama pengguna mahir menyelesaikan sebuah tugas dengan sebuah rancangan antarmuka, cukup dengan menguraikan tugas itu menjadi operator-operator kecil.**
+
+Terpakai di:
+
+- **Membandingkan rancangan sejak sketsa** — dropdown atau kotak teks, kalender atau ketik langsung, tanpa perlu membuat dan menguji keduanya
+- **Tugas yang diulang ribuan kali** — formulir entri data, kasir, pusat panggilan; selisih dua detik per tugas menjadi berjam-jam per hari
+- **Menunjukkan dari mana waktu habis** — penguraian menunjukkan apakah yang mahal gerakan tetikus, pengetikan, atau jeda berpikir
+- **Evaluasi analitik** di mata kuliah IMK — pelengkap evaluasi heuristik dan uji pengguna
+
+Yang paling mengejutkan saat pertama kali memakainya: **operator M — jeda berpikir — sering mendominasi.** Satu keputusan mental memakan 1,35 detik, lebih lama dari satu gerakan tetikus ditambah klik. Rancangan yang memaksa pengguna berhenti dan berpikir di setiap langkah mahal, sekalipun jumlah kliknya sedikit.
+
+Dan pelajaran terpentingnya: **rancangan terbaik bergantung pada tugasnya.** Kalender adalah cara tercepat mengisi tanggal minggu depan, dan salah satu yang paling lambat untuk tanggal lahir.`,
+
+  praktik: {
+    tujuan: 'Kamu bisa menguraikan tugas menjadi operator KLM, menaruh operator M dengan aturan yang masuk akal, menghitung waktu tugas, dan membandingkan beberapa rancangan untuk tugas yang sama.',
+    alat: ['Python 3', 'Sketsa atau purwarupa rancangan yang ingin dibandingkan'],
+    langkah: [
+      { judul: 'Pilih tugas yang spesifik',
+        isi: `Bukan "mengisi formulir", melainkan "mengisi tanggal lahir 17-08-2003 di formulir pendaftaran". KLM butuh urutan langkah yang pasti.` },
+      { judul: 'Tulis urutan tindakan fisik',
+        isi: `Untuk setiap rancangan, tulis langkah demi langkah dengan operator:
+
+- **K** tekan tombol keyboard — 0,28 s untuk pengetik rata-rata
+- **P** arahkan tetikus ke target — 1,10 s
+- **B** tekan atau lepas tombol tetikus — 0,10 s; satu klik = BB
+- **H** pindah tangan keyboard-tetikus — 0,40 s` },
+      { judul: 'Taruh operator M',
+        isi: `M (1,35 s) adalah jeda mental sebelum sebuah langkah yang butuh keputusan atau mengingat. Aturan praktisnya: M sebelum setiap langkah yang memulai sub-tugas baru — memilih dropdown berikutnya, mulai mengetik sebuah isian — dan bukan di tengah urutan yang sudah otomatis, seperti mengetik kata yang sudah dihafal.
+
+Peletakan M adalah bagian KLM yang paling subjektif. Pakai aturan yang sama untuk semua rancangan yang dibandingkan.` },
+      { judul: 'Jumlahkan',
+        isi: `Waktu tugas = jumlah waktu semua operator. Tambahkan R (waktu tanggap sistem) kalau pengguna harus menunggu.` },
+      { judul: 'Bandingkan dan cari penyebabnya',
+        isi: `Urutkan rancangan menurut waktu. Lalu untuk rancangan yang lambat, hitung sumbangan setiap jenis operator. Kalau M mendominasi, kurangi keputusan; kalau P, dekatkan atau gabungkan target.` },
+      { judul: 'Uji dengan tugas lain',
+        isi: `Ulangi perhitungan untuk variasi tugas — tanggal dekat dan tanggal jauh, nama pendek dan panjang. Rancangan yang menang di satu variasi bisa kalah di variasi lain.` }
+    ],
+    cek: [
+      'Setiap rancangan yang kamu bandingkan diuraikan untuk tugas yang sama persis',
+      'Kamu memakai aturan peletakan M yang sama untuk semua rancangan',
+      'Kamu bisa menunjuk jenis operator yang paling banyak memakan waktu',
+      'Kamu sudah memeriksa apakah rancangan terbaik berubah untuk variasi tugas'
+    ]
+  },
+
+  judulLogicSyntax: 'Bedah Konsep — kenapa berpikir dihitung sebagai operator',
+
+  konsep: `Topik User-Centered Design membahas evaluasi **dengan** pengguna: uji usability dan SUS. Topik ini membahas evaluasi **tanpa** pengguna — evaluasi analitik — yang bisa dilakukan sejak rancangan masih berupa sketsa.
+
+**GOMS dan KLM**
+
+GOMS — *Goals, Operators, Methods, Selection rules* — adalah keluarga model dari Card, Moran, dan Newell (1983) untuk menguraikan cara pengguna mahir menyelesaikan tugas. Anggota yang paling sederhana dan paling banyak dipakai adalah **KLM**, *Keystroke-Level Model*: uraikan tugas menjadi operator-operator dasar, lalu jumlahkan waktunya.
+
+| Operator | Waktu | Arti |
+|---|---|---|
+| K | 0,28 s | tekan satu tombol keyboard (pengetik rata-rata) |
+| P | 1,10 s | arahkan tetikus ke sebuah target |
+| B | 0,10 s | tekan atau lepas tombol tetikus |
+| H | 0,40 s | pindah tangan antara keyboard dan tetikus |
+| M | 1,35 s | persiapan mental sebelum sebuah langkah |
+
+P adalah rata-rata hukum Fitts untuk target yang umum. Kalau jarak dan lebar targetnya diketahui, P bisa dihitung lebih tepat dengan topik hukum Fitts.
+
+**Kasus: mengisi tanggal lahir**
+
+Tiga rancangan untuk tanggal lahir 17-08-2003, tangan mulai di tetikus:
+
+| Rancangan | Operator | Waktu |
+|---|---|---|
+| A. tiga dropdown | M×6, P×7, B×14 | 17,20 s |
+| B. satu kotak teks | M×2, P×1, B×2, H×1, K×10 | **7,20 s** |
+| C. kalender pemilih | M×4, P×5, B×54 | 16,30 s |
+
+Kotak teks lebih dari dua kali lebih cepat dari kalender. Kalender terlihat paling ramah, tetapi untuk tanggal **lahir** — 23 tahun ke belakang — pengguna harus menekan tombol "tahun sebelumnya" berkali-kali. Tiga dropdown paling lambat: setiap dropdown adalah keputusan tersendiri, dan dropdown tahun yang panjang butuh menggulir.
+
+**Tugas lain, pemenang lain**
+
+Untuk tanggal janji temu minggu depan:
+
+| Rancangan | Waktu |
+|---|---|
+| B. kotak teks | 7,20 s |
+| C. kalender | **5,30 s** |
+
+Kalender kini yang tercepat: tanggalnya ada di bulan yang sedang terbuka, cukup dua kali tunjuk dan klik. Kotak teks tetap butuh sepuluh ketukan.
+
+Rancangan yang tepat bergantung pada **tugasnya**, bukan pada seberapa modern komponennya. Formulir pendaftaran yang memakai kalender untuk tanggal lahir — kesalahan yang sangat umum — memilih komponen yang tepat untuk tugas yang salah.
+
+**Dari mana waktunya habis**
+
+Untuk rancangan A:
+
+| Operator | Jumlah | Waktu | Bagian |
+|---|---|---|---|
+| M | 6 × 1,35 | 8,10 s | 47% |
+| P | 7 × 1,10 | 7,70 s | 45% |
+| B | 14 × 0,10 | 1,40 s | 8% |
+
+Enam keputusan mental memakan hampir separuh waktunya — lebih banyak dari semua gerakan tetikus. Klik hampir tidak berarti.
+
+Pelajarannya berlawanan dengan intuisi "kurangi klik": yang lebih mahal adalah **jumlah keputusan**. Satu layar yang meminta pengguna berhenti dan memilih tiga kali lebih lambat dari satu layar yang membiarkannya mengetik tanpa berhenti, meskipun yang kedua butuh lebih banyak tekan tombol.
+
+**Batas KLM**
+
+KLM meramal waktu pengguna **mahir** yang tidak membuat kesalahan. Ia tidak meramal waktu belajar, kesalahan, kelelahan, atau kepuasan. Untuk itu ada uji pengguna dan SUS. Dua jenis evaluasi ini saling melengkapi: KLM murah dan bisa dipakai sejak sketsa; uji pengguna mahal tetapi menangkap hal-hal yang tidak bisa dimodelkan.`,
+
+  logicSyntax: [
+    {
+      bahasa: 'python',
+      kode: "OPERATOR = {\n    'K': 0.28,   # tekan tombol keyboard\n    'P': 1.10,   # arahkan tetikus\n    'B': 0.10,   # tekan/lepas tombol tetikus\n    'H': 0.40,   # pindah keyboard <-> tetikus\n    'M': 1.35,   # persiapan mental\n}\n\ndef waktu(urutan):\n    return sum(OPERATOR[op] for op in urutan.split())\n\n# B. satu kotak teks: pikir, tunjuk, klik, ke keyboard, pikir, ketik\nwaktu('M P B B H M ' + 'K ' * 10)     # 7.20 s",
+      penjelasan: `Model yang sangat sederhana — sebuah kamus dan sebuah jumlah — dan justru kesederhanaannya yang membuatnya berguna.
+
+**Kenapa cukup dijumlahkan.**
+
+KLM menganggap operator-operator dikerjakan satu per satu, tanpa tumpang tindih, oleh pengguna mahir yang tidak ragu dan tidak salah. Dengan anggapan itu, waktu tugas adalah jumlah waktu operatornya.
+
+Anggapan itu jelas tidak sempurna — orang bisa mulai menggerakkan tetikus sambil berpikir. Tetapi percobaan Card, Moran, dan Newell menunjukkan bahwa ramalan KLM untuk tugas rutin biasanya meleset sekitar 20 persen — cukup untuk membandingkan rancangan yang selisihnya dua kali lipat.
+
+**Membaca urutan kotak teks.**
+
+- **M** — memutuskan untuk mengisi tanggal
+- **P B B** — menunjuk kotak isian dan mengkliknya
+- **H** — memindahkan tangan dari tetikus ke keyboard
+- **M** — mengingat format: tanggal dulu atau bulan dulu, pakai tanda hubung atau garis miring
+- **K × 10** — mengetik "17-08-2003"
+
+M kedua itu penting. Kotak teks dengan format yang tidak jelas memaksa pengguna berhenti dan berpikir — dan kalau ia salah menebak format, tugasnya gagal dan harus diulang. Contoh format di dalam kotak, seperti "dd-mm-yyyy", tidak menghapus M itu, tetapi mencegah kegagalannya.
+
+**Nilai operatornya.**
+
+Nilai K bergantung pada kecepatan mengetik: 0,28 s untuk pengetik rata-rata sekitar 40 kata per menit, lebih kecil untuk pengetik cepat, jauh lebih besar untuk orang yang mencari tombol. Card, Moran, dan Newell memberi tabel nilai K untuk berbagai tingkat keterampilan.
+
+M = 1,35 s adalah rata-rata dari percobaan mereka. Nilainya bisa diperdebatkan, dan peletakannya lebih bisa diperdebatkan lagi — karena itu aturan peletakan yang sama harus dipakai untuk semua rancangan yang dibandingkan.
+
+**Yang tidak ada di model ini.**
+
+Tidak ada operator untuk membaca, mencari di layar, atau menunggu. Kalau rancangan butuh pengguna mencari tombol di antara puluhan pilihan, KLM akan meramal terlalu cepat. Operator R — waktu tanggap sistem — bisa ditambahkan kalau pengguna harus menunggu layar berikutnya muncul.`
+    },
+    {
+      bahasa: 'python',
+      kode: "RANCANGAN_C = ('M P B B '              # buka kalender\n               'M P B B '              # klik judul tahun\n               'P B B ' + 'B B ' * 22 + # mundur 23 tahun\n               'M P B B M P B B')      # pilih bulan, pilih tanggal\n\nwaktu(RANCANGAN_C)            # 16.30 s   (tanggal lahir)\nwaktu('M P B B M P B B')      #  5.30 s   (tanggal minggu depan)\n\n# sumbangan operator rancangan A (tiga dropdown):\n#   M 47%   P 45%   B 8%",
+      penjelasan: `Uraian kalender yang menunjukkan dari mana 16 detik itu datang — dan kenapa rancangan yang sama bisa menjadi yang tercepat untuk tugas lain.
+
+**Menelusuri 23 tahun.**
+
+Kalender biasa menampilkan satu bulan. Untuk mundur ke 2003, pengguna menekan tombol "tahun sebelumnya" berulang-ulang. Menunjuk tombol itu cukup sekali (P); sesudahnya, kursor sudah di sana, dan setiap tahun cuma butuh satu klik (B B) — 23 klik, 0,2 detik masing-masing.
+
+Klik-klik itu sendiri cuma 4,6 detik. Yang membuat totalnya 16,3 detik adalah empat keputusan dan lima gerakan tetikus di sekelilingnya.
+
+Kalender yang lebih baik untuk tanggal lahir menyediakan cara melompat langsung ke tahun — misalnya daftar tahun yang bisa diketik atau dipilih sekali. Menghitung ulang dengan KLM akan menunjukkan berapa yang dihemat, sebelum kalender itu dibuat.
+
+**Tanggal dekat: kalender menang.**
+
+Untuk tanggal minggu depan, bulannya sudah terbuka. Cukup buka kalender dan klik tanggalnya: dua keputusan, dua tunjuk, dua klik — 5,30 detik. Tidak ada pengetikan, tidak ada pindah tangan ke keyboard, dan tidak ada keraguan soal format.
+
+**Kenapa M mendominasi rancangan A.**
+
+Setiap dropdown adalah dua keputusan: membuka dropdown yang benar, lalu memilih nilai yang benar di dalamnya. Tiga dropdown, enam keputusan, 8,1 detik — hampir separuh total.
+
+Ini menunjukkan ke mana perbaikan seharusnya diarahkan. Mengurangi satu klik menghemat 0,2 detik. Menghapus satu keputusan — misalnya menggabungkan tiga dropdown menjadi satu isian — menghemat 1,35 detik atau lebih.
+
+**Pola umumnya.**
+
+KLM paling berguna bukan untuk angka mutlaknya, melainkan untuk dua hal: **membandingkan** rancangan untuk tugas yang sama, dan **menunjukkan** operator mana yang menghabiskan waktu. Keduanya bisa dilakukan dengan kertas dan pensil, sebelum purwarupa apa pun dibuat.`
+    }
+  ],
+
+  kode: { python: String.raw`# ============================================
+# KLM-GOMS: meramal waktu tugas sebelum ada purwarupa
+# ============================================
+
+# Operator Keystroke-Level Model (Card, Moran & Newell)
+OPERATOR = {
+    "K": (0.28, "tekan satu tombol keyboard (pengetik rata-rata)"),
+    "P": (1.10, "arahkan tetikus ke sebuah target"),
+    "B": (0.10, "tekan atau lepas tombol tetikus"),
+    "H": (0.40, "pindah tangan antara keyboard dan tetikus"),
+    "M": (1.35, "persiapan mental sebelum sebuah langkah"),
+}
+
+def waktu(urutan):
+    """Jumlah waktu untuk deret operator, misalnya 'M P B B'."""
+    return sum(OPERATOR[op][0] for op in urutan.split())
+
+def rincian(urutan):
+    hitung = {}
+    for op in urutan.split():
+        hitung[op] = hitung.get(op, 0) + 1
+    return "  ".join(op + "x" + str(n) for op, n in sorted(hitung.items()))
+
+print("--- operator KLM ---")
+for op, (t, arti) in OPERATOR.items():
+    print("  " + op + "  " + format(t, ".2f") + " s  " + arti)
+
+# --------------------------------------------
+# 1. Mengisi tanggal lahir: tiga rancangan
+# --------------------------------------------
+print("\n--- tugas: mengisi tanggal lahir 17-08-2003 ---")
+print("  (tangan mulai di tetikus; M ditaruh sebelum setiap keputusan)")
+RANCANGAN = {
+    "A. tiga dropdown (tgl, bln, thn)":
+        # tiap dropdown: pikir, tunjuk, klik, tunjuk pilihan, klik
+        # tahun: daftar panjang, perlu gulir -> tambahan P dan klik
+        "M P B B M P B B  M P B B M P B B  M P B B M P B B P B B",
+    "B. satu kotak teks 'dd-mm-yyyy'":
+        # pikir, tunjuk kotak, klik, pindah ke keyboard, ketik 10 karakter
+        "M P B B H M " + "K " * 10,
+    "C. kalender pemilih tanggal":
+        # buka kalender, klik 'tahun' lalu mundur 23 tahun lewat tombol
+        "M P B B M P B B " + "P B B " * 1 + "B B " * 22 + "M P B B M P B B",
+}
+hasil = {}
+for nama, urut in RANCANGAN.items():
+    t = waktu(urut)
+    hasil[nama] = t
+    print("\n  " + nama)
+    print("    " + rincian(urut) + "   -> " + format(t, ".2f") + " s")
+
+urutan = sorted(hasil, key=hasil.get)
+print("\n  urutan: " + " < ".join(n.split(".")[0] + " " + format(hasil[n], ".2f")
+                                for n in urutan))
+print("  Kotak teks lebih dari dua kali lebih cepat dari kalender.")
+print("  Kalender terlihat paling ramah, tetapi untuk tanggal LAHIR --")
+print("  puluhan tahun ke belakang -- ia hampir selambat tiga dropdown.")
+
+# --------------------------------------------
+# 2. Kalender untuk tanggal dekat
+# --------------------------------------------
+print("\n--- tugas lain: tanggal janji temu minggu depan ---")
+dekat = {
+    "B. satu kotak teks": "M P B B H M " + "K " * 10,
+    "C. kalender": "M P B B M P B B",
+}
+for nama, urut in dekat.items():
+    print("  " + format(nama, "<22") + rincian(urut) + "   -> " + format(waktu(urut), ".2f") + " s")
+print("  Rancangan yang tepat bergantung pada TUGASNYA, bukan pada")
+print("  seberapa modern komponennya.")
+
+# --------------------------------------------
+# 3. Operator M yang mendominasi
+# --------------------------------------------
+print("\n--- sumbangan setiap operator (rancangan A) ---")
+urut = RANCANGAN["A. tiga dropdown (tgl, bln, thn)"].split()
+total = waktu(" ".join(urut))
+for op in "MPBKH":
+    n = urut.count(op)
+    if n:
+        t = n * OPERATOR[op][0]
+        print("  " + op + ": " + format(n, ">2") + " x " + format(OPERATOR[op][0], ".2f")
+              + " = " + format(t, "5.2f") + " s  (" + format(t / total, ".0%") + ")")
+print("  Enam keputusan mental memakan hampir separuh waktunya. Setiap")
+print("  langkah yang memaksa pengguna berhenti dan berpikir mahal --")
+print("  lebih mahal dari klik yang ditambahkan.")` },
+  output: `--- operator KLM ---
+  K  0.28 s  tekan satu tombol keyboard (pengetik rata-rata)
+  P  1.10 s  arahkan tetikus ke sebuah target
+  B  0.10 s  tekan atau lepas tombol tetikus
+  H  0.40 s  pindah tangan antara keyboard dan tetikus
+  M  1.35 s  persiapan mental sebelum sebuah langkah
+
+--- tugas: mengisi tanggal lahir 17-08-2003 ---
+  (tangan mulai di tetikus; M ditaruh sebelum setiap keputusan)
+
+  A. tiga dropdown (tgl, bln, thn)
+    Bx14  Mx6  Px7   -> 17.20 s
+
+  B. satu kotak teks 'dd-mm-yyyy'
+    Bx2  Hx1  Kx10  Mx2  Px1   -> 7.20 s
+
+  C. kalender pemilih tanggal
+    Bx54  Mx4  Px5   -> 16.30 s
+
+  urutan: B 7.20 < C 16.30 < A 17.20
+  Kotak teks lebih dari dua kali lebih cepat dari kalender.
+  Kalender terlihat paling ramah, tetapi untuk tanggal LAHIR --
+  puluhan tahun ke belakang -- ia hampir selambat tiga dropdown.
+
+--- tugas lain: tanggal janji temu minggu depan ---
+  B. satu kotak teks    Bx2  Hx1  Kx10  Mx2  Px1   -> 7.20 s
+  C. kalender           Bx4  Mx2  Px2   -> 5.30 s
+  Rancangan yang tepat bergantung pada TUGASNYA, bukan pada
+  seberapa modern komponennya.
+
+--- sumbangan setiap operator (rancangan A) ---
+  M:  6 x 1.35 =  8.10 s  (47%)
+  P:  7 x 1.10 =  7.70 s  (45%)
+  B: 14 x 0.10 =  1.40 s  (8%)
+  Enam keputusan mental memakan hampir separuh waktunya. Setiap
+  langkah yang memaksa pengguna berhenti dan berpikir mahal --
+  lebih mahal dari klik yang ditambahkan.`,
+
+  kompleksitas: {
+    tabel: [
+      { operasi: 'Menghitung waktu satu urutan n operator', waktu: 'O(n)', memori: 'O(1)' },
+      { operasi: 'Membandingkan r rancangan', waktu: 'O(r · n)', memori: 'O(r)' },
+      { operasi: 'Biaya evaluasi KLM (manusia)', waktu: 'menit per tugas', memori: 'tanpa pengguna, tanpa purwarupa' },
+      { operasi: 'Biaya uji pengguna (manusia)', waktu: 'jam per peserta', memori: 'butuh purwarupa dan peserta' }
+    ],
+    intuisi: `Perhitungannya sepele. Yang menarik adalah perbandingan biaya di dua baris terakhir: KLM bisa dikerjakan satu orang dalam hitungan menit per tugas, dengan sketsa di kertas. Uji pengguna butuh purwarupa yang bisa dipakai, peserta, ruang, dan waktu berjam-jam.
+
+Karena itu KLM paling berharga di awal rancangan, saat banyak alternatif masih terbuka dan membangun semuanya terlalu mahal. KLM menyaring pilihan; uji pengguna memastikan pilihan yang tersisa benar-benar bekerja untuk manusia sungguhan.`
+  },
+
+  kesalahanUmum: [
+    {
+      salah: 'Membandingkan rancangan dengan menghitung jumlah klik saja.',
+      kenapa: 'Klik adalah operator termurah. Pada rancangan tiga dropdown, klik cuma 8 persen waktu, sedangkan keputusan mental 47 persen.',
+      benar: 'Uraikan tugas menjadi semua operator, termasuk M dan P, lalu bandingkan total waktunya.'
+    },
+    {
+      salah: 'Memakai aturan peletakan M yang berbeda untuk rancangan yang dibandingkan.',
+      kenapa: 'M adalah operator termahal dan paling subjektif. Menaruh satu M lebih banyak di satu rancangan saja sudah menggeser hasilnya 1,35 detik.',
+      benar: 'Tetapkan aturan peletakan M lebih dulu dan terapkan sama untuk semua rancangan.'
+    },
+    {
+      salah: 'Menyimpulkan rancangan terbaik dari satu variasi tugas.',
+      kenapa: 'Kalender tercepat untuk tanggal minggu depan tetapi jauh lebih lambat dari kotak teks untuk tanggal lahir.',
+      benar: 'Hitung ulang untuk variasi tugas yang realistis dan pilih rancangan sesuai tugas yang paling sering.'
+    },
+    {
+      salah: 'Memakai KLM untuk meramal waktu pengguna pemula.',
+      kenapa: 'KLM memodelkan pengguna mahir tanpa kesalahan. Pengguna pemula membaca, mencari, ragu, dan salah, sehingga waktunya jauh lebih lama.',
+      benar: 'Pakai KLM untuk membandingkan rancangan bagi pengguna yang sudah terbiasa, dan uji pengguna untuk pemula.'
+    },
+    {
+      salah: 'Melupakan operator H saat tugas berganti antara tetikus dan keyboard.',
+      kenapa: 'Setiap perpindahan tangan memakan 0,4 detik. Formulir yang memaksa bolak-balik antara klik dan ketik menumpuk operator H yang tidak terlihat di sketsa.',
+      benar: 'Tulis H setiap kali tangan berpindah, dan rancang formulir supaya bisa diisi dari keyboard saja dengan tombol Tab.'
+    }
+  ],
+
+  analogi: `Bayangkan kamu memperkirakan **waktu memasak mi instan** dengan dua cara berbeda, sebelum benar-benar memasaknya.
+
+KLM berkata: pecah menjadi langkah-langkah kecil yang waktunya sudah diketahui. Mengambil panci: 3 detik. Mengisi air: 10 detik. Menyalakan kompor: 2 detik. Menunggu mendidih: 3 menit. Membuka bungkus: 5 detik. Dan seterusnya. Jumlahkan, dan kamu punya perkiraan — tanpa menyalakan kompor sama sekali.
+
+**Operator M.** Sekarang temanmu memasak mi dengan resep baru yang belum pernah ia coba. Di setiap langkah ia berhenti: "bumbunya dimasukkan sekarang atau nanti?" "Airnya segini cukup?" Setiap jeda itu mungkin cuma sedetik dua detik — tetapi ada di **setiap** langkah, dan totalnya bisa melebihi waktu gerakan tangannya. Itulah M: berpikir adalah pekerjaan, dan ia makan waktu.
+
+**Tugas yang berbeda.** Memasak satu porsi mi paling cepat dengan panci kecil. Memasak untuk sepuluh orang di acara kos paling cepat dengan panci besar — meskipun mengambil dan mencuci panci besar lebih repot. Peralatan terbaik bergantung pada tugasnya, sama seperti kalender dan kotak teks.
+
+**Batasnya.** Perkiraan ini untuk orang yang sudah biasa memasak mi. Untuk adik kecilmu yang baru pertama kali — yang mungkin menumpahkan air atau lupa menyalakan kompor — perkiraannya akan meleset jauh. Untuk tahu bagaimana ia benar-benar memasak, kamu harus melihatnya memasak.`,
+
+  latihan: [
+    'Uraikan tugas "masuk ke akun dengan nama pengguna dan kata sandi lalu klik Masuk" dengan operator KLM, dan hitung waktunya.',
+    'Hitung ulang rancangan kotak teks untuk pengetik cepat dengan K = 0,12 s.',
+    'Rancang kalender dengan pilihan tahun langsung (klik judul, pilih tahun dari daftar), uraikan dengan KLM, dan bandingkan dengan rancangan C.',
+    'Uraikan dua cara menyalin berkas di pengelola berkas: seret dan lepas, lawan klik kanan lalu salin dan tempel.',
+    'Hitung sumbangan setiap jenis operator untuk rancangan kotak teks, lalu tentukan operator mana yang layak dikurangi.',
+    'Tunjukkan bagaimana waktu rancangan A berubah kalau peletakan M diubah menjadi satu M per dropdown, bukan dua.',
+    'Pakai hukum Fitts untuk menghitung P yang lebih tepat bagi tombol kecil di pojok, lalu bandingkan dengan P = 1,10 s.',
+    'Pilih satu formulir dari aplikasi kampus yang kamu pakai, uraikan satu tugasnya dengan KLM, dan usulkan perbaikan yang mengurangi waktunya.',
+    'Jelaskan kenapa formulir yang bisa diisi dengan tombol Tab dari keyboard saja bisa lebih cepat, dengan operator H.',
+    'Jelaskan dua hal yang tidak bisa diramal KLM dan metode evaluasi apa yang cocok untuk masing-masing.'
+  ]
+});
+
+
+TOPICS.push({
+  id: 'imk-evaluasi-heuristik',
+  judul: 'Evaluasi Heuristik Nielsen',
+  kategori: 'imk',
+  tag: ['evaluasi heuristik', 'Nielsen', 'sepuluh heuristik', 'tingkat keparahan', 'jumlah evaluator', 'discount usability'],
+  ringkas: 'Beberapa orang memeriksa antarmuka dengan sepuluh prinsip — cara murah menemukan banyak masalah usability, dengan satu batas yang sering dilebih-lebihkan: "lima evaluator sudah cukup".',
+
+  fungsi: `**Menemukan masalah usability dengan meminta beberapa evaluator memeriksa antarmuka terhadap sepuluh prinsip, tanpa perlu merekrut pengguna.**
+
+Terpakai di:
+
+- **Tahap awal perancangan** — purwarupa kertas atau Figma bisa dievaluasi sebelum ada kode
+- **Proyek dengan anggaran kecil** — Nielsen menyebutnya bagian dari *discount usability engineering*
+- **Tugas dan projek akhir IMK** — evaluasi heuristik adalah metode evaluasi yang paling sering diminta bersama SUS
+- **Sebelum uji pengguna** — menyingkirkan masalah yang jelas dulu, supaya waktu uji pengguna dipakai untuk masalah yang lebih halus
+
+Yang paling penting dipahami: **satu evaluator menemukan sebagian kecil masalah.** Evaluator yang berbeda menemukan masalah yang berbeda, dan menggabungkan temuan beberapa evaluator jauh lebih efektif daripada satu evaluator yang bekerja lebih lama.
+
+Dan yang paling sering disalahpahami: **"lima evaluator cukup" bukan jaminan.** Angka itu berasal dari rumus yang menganggap semua masalah sama mudahnya ditemukan. Masalah yang tersembunyi tetap sebagian besar lolos, bahkan dengan sepuluh evaluator.`,
+
+  praktik: {
+    tujuan: 'Kamu bisa menjalankan evaluasi heuristik dengan beberapa evaluator, memetakan setiap temuan ke heuristik, memberi tingkat keparahan, menggabungkan hasilnya, dan memperkirakan berapa masalah yang mungkin masih terlewat.',
+    alat: ['Purwarupa atau aplikasi yang dievaluasi', 'Lembar temuan: masalah, lokasi, heuristik, keparahan', 'Python 3 untuk menggabungkan hasil'],
+    langkah: [
+      { judul: 'Siapkan tiga sampai lima evaluator',
+        isi: `Evaluator sebaiknya memahami kesepuluh heuristik. Orang yang paham usability **dan** paham bidang aplikasinya menemukan paling banyak masalah.
+
+Setiap evaluator bekerja **sendiri-sendiri** — tidak berdiskusi sebelum semua selesai, supaya temuan yang satu tidak memengaruhi yang lain.` },
+      { judul: 'Periksa dua kali',
+        isi: `Putaran pertama: jelajahi aplikasi untuk memahami alurnya. Putaran kedua: periksa setiap layar terhadap kesepuluh heuristik, satu per satu.` },
+      { judul: 'Catat setiap temuan',
+        isi: `Untuk setiap masalah: apa masalahnya, di mana, heuristik mana yang dilanggar, dan kenapa itu masalah bagi pengguna. "Warna jelek" bukan temuan; "tombol Hapus dan Simpan berwarna sama sehingga mudah tertukar" adalah temuan.` },
+      { judul: 'Beri tingkat keparahan',
+        isi: `Setiap evaluator memberi nilai 0–4 untuk setiap masalah di daftar gabungan — termasuk masalah yang ditemukan evaluator lain:
+
+- 0 bukan masalah usability
+- 1 kosmetik
+- 2 kecil
+- 3 besar, harus diperbaiki
+- 4 bencana usability, wajib sebelum rilis` },
+      { judul: 'Gabungkan dan urutkan',
+        isi: `Satukan daftar semua evaluator, buang yang kembar, rata-ratakan keparahannya, lalu urutkan dari yang paling parah. Catat juga berapa evaluator yang menemukan setiap masalah.` },
+      { judul: 'Perkirakan yang terlewat',
+        isi: `Masalah yang cuma ditemukan satu evaluator adalah petunjuk: kalau banyak, kemungkinan masih ada masalah lain yang tidak ditemukan siapa pun. Tambah evaluator, atau lanjutkan dengan uji pengguna.` }
+    ],
+    cek: [
+      'Setiap temuanmu menyebut lokasi, heuristik yang dilanggar, dan akibatnya bagi pengguna',
+      'Evaluator bekerja sendiri-sendiri sebelum temuan digabung',
+      'Daftar akhirmu diurutkan menurut rata-rata keparahan',
+      'Kamu tidak menyimpulkan semua masalah sudah ditemukan hanya karena sudah memakai lima evaluator'
+    ]
+  },
+
+  judulLogicSyntax: 'Bedah Konsep — kenapa evaluator tambahan makin sedikit gunanya',
+
+  konsep: `Topik User-Centered Design membahas evaluasi dengan pengguna — uji usability dan SUS. Topik KLM-GOMS membahas evaluasi analitik yang meramal waktu. **Evaluasi heuristik** berada di antara keduanya: pemeriksaan oleh evaluator, tanpa pengguna, memakai prinsip-prinsip yang sudah teruji.
+
+**Sepuluh heuristik Nielsen**
+
+Jakob Nielsen menyusun sepuluh prinsip umum usability (1994), yang sampai sekarang paling luas dipakai:
+
+1. Visibilitas status sistem
+2. Kecocokan sistem dengan dunia nyata
+3. Kendali dan kebebasan pengguna
+4. Konsistensi dan standar
+5. Pencegahan kesalahan
+6. Mengenali, bukan mengingat
+7. Fleksibilitas dan efisiensi
+8. Desain estetis dan minimalis
+9. Bantu mengenali, mendiagnosis, dan pulih dari kesalahan
+10. Bantuan dan dokumentasi
+
+Beberapa heuristik terhubung langsung dengan topik-topik sebelumnya: "mengenali, bukan mengingat" adalah batas memori kerja dari topik manusia sebagai pemroses informasi; "visibilitas status sistem" adalah jurang evaluasi di model Norman.
+
+**Berapa masalah yang ditemukan i evaluator**
+
+Nielsen dan Landauer (1993) memodelkan bagian masalah yang ditemukan i evaluator sebagai 1 − (1 − L)^i, dengan L peluang satu evaluator menemukan satu masalah:
+
+| Evaluator | L = 0,20 | L = 0,31 | L = 0,45 |
+|---|---|---|---|
+| 1 | 20% | 31% | 45% |
+| 3 | 49% | 67% | 83% |
+| 5 | 67% | 84% | 95% |
+| 10 | 89% | 98% | 100% |
+| 15 | 96% | 100% | 100% |
+
+L = 0,31 adalah rata-rata yang dilaporkan dari proyek-proyek yang mereka teliti, dan dari situ lahir pedoman terkenal: lima evaluator — atau lima peserta uji — menemukan sekitar 85 persen masalah.
+
+Bentuk kurvanya yang penting: evaluator pertama menemukan paling banyak; setiap evaluator berikutnya sebagian besar menemukan **ulang** masalah yang sudah ditemukan. Hasil yang makin menurun ini adalah alasan untuk memakai beberapa evaluator yang bekerja singkat, bukan satu evaluator yang bekerja lama.
+
+**Kenyataannya: masalah tidak sama mudahnya ditemukan**
+
+Rumus itu memakai satu L untuk semua masalah. Program membuat 40 masalah tiruan: 15 mudah terlihat (L 0,5–0,8), 17 sedang (0,15–0,4), dan 8 tersembunyi (0,02–0,08). Rata-rata L-nya 0,36.
+
+| Evaluator | Rumus (L rata-rata) | Simulasi | 8 masalah tersembunyi |
+|---|---|---|---|
+| 1 | 36% | 37% | 6% |
+| 3 | 74% | 65% | 18% |
+| 5 | **90%** | **77%** | 28% |
+| 10 | 99% | 87% | 47% |
+| 20 | 100% | 94% | 72% |
+
+Dengan lima evaluator, rumus meramal 90 persen; simulasi menemukan 77 persen. Dan dari delapan masalah tersembunyi, lima evaluator rata-rata cuma menemukan 28 persen — sepuluh evaluator pun belum separuhnya.
+
+Rumus terlalu optimis karena masalah yang mudah terlihat ditemukan hampir semua evaluator, sehingga "menarik" rata-rata L ke atas, sementara masalah yang sulit hampir tidak pernah ditemukan. **Lima evaluator adalah pedoman untuk masalah yang cukup mudah terlihat, bukan jaminan untuk semuanya.** Masalah yang tersembunyi — sering yang hanya muncul di alur tertentu atau bagi pengguna tertentu — butuh metode lain, terutama uji pengguna dengan tugas yang realistis.
+
+**Menggabungkan temuan**
+
+Tiga evaluator memeriksa aplikasi presensi kampus (tiruan). Temuan digabung, keparahan dirata-rata, lalu diurutkan:
+
+| Rata-rata | Oleh | Masalah | Heuristik |
+|---|---|---|---|
+| 3,7 | 3/3 | Tidak ada tanda presensi tersimpan | Visibilitas status sistem |
+| 3,5 | 2/3 | Tombol Hapus tanpa konfirmasi | Pencegahan kesalahan |
+| 3,0 | 3/3 | Pesan galat "Error 0x1F" | Pulih dari kesalahan |
+| 3,0 | 1/3 | Kode kelas harus diingat dari halaman lain | Mengenali, bukan mengingat |
+| 2,0 | 2/3 | Istilah "sinkronisasi token" di layar utama | Kecocokan dengan dunia nyata |
+| 1,5 | 2/3 | Ikon berbeda untuk aksi sama | Konsistensi dan standar |
+| 1,0 | 2/3 | Warna latar terlalu ramai | Estetis dan minimalis |
+
+Perhatikan baris keempat: keparahan 3 — masalah besar — tetapi cuma **satu** dari tiga evaluator yang menemukannya. Dengan dua evaluator, ada kemungkinan besar masalah itu tidak pernah tercatat. Itu gambaran kecil dari tabel simulasi di atas: masalah yang sulit ditemukan bukan berarti masalah yang ringan.`,
+
+  logicSyntax: [
+    {
+      bahasa: 'python',
+      kode: "def simulasi(i, ulang=2000):\n    total, tersembunyi = 0, 0\n    for _ in range(ulang):\n        # masalah ditemukan kalau SETIDAKNYA SATU dari i evaluator menemukannya\n        temu = [any(random.random() < L for _ in range(i)) for L in MASALAH]\n        total += sum(temu)\n        tersembunyi += sum(temu[32:])\n    return total / ulang / len(MASALAH), tersembunyi / ulang / 8\n\n# 5 evaluator: rumus 90%, simulasi 77%, tersembunyi 28%",
+      penjelasan: `Simulasi yang menguji rumus Nielsen-Landauer dengan melepas satu anggapannya — dan menunjukkan seberapa besar anggapan itu menentukan hasilnya.
+
+**Dari mana rumus 1 − (1 − L)^i.**
+
+Satu evaluator **gagal** menemukan satu masalah dengan peluang 1 − L. Kalau evaluator bekerja sendiri-sendiri, peluang **semua** i evaluator gagal adalah (1 − L)^i. Masalah ditemukan kalau tidak semuanya gagal: 1 − (1 − L)^i.
+
+Ini perhitungan peluang yang sama dengan "peluang setidaknya satu" di topik peluang Probabilitas dan Statistika. Dan anggapan "evaluator bekerja sendiri-sendiri" adalah alasan evaluator tidak boleh berdiskusi sebelum selesai: kalau mereka saling memengaruhi, temuannya tidak lagi saling bebas, dan evaluator tambahan memberi lebih sedikit.
+
+**Anggapan yang dilepas: L sama untuk semua masalah.**
+
+Rumus memakai satu L. Simulasi memberi setiap masalah L-nya sendiri — sebagian besar, sebagian sangat kecil. Lalu untuk setiap masalah, \`any(...)\` memeriksa apakah setidaknya satu dari i evaluator menemukannya.
+
+**Kenapa rumus terlalu optimis.**
+
+Fungsi 1 − (1 − L)^i **cekung** terhadap L: untuk L besar, tambahan L hampir tidak menambah apa-apa karena hasilnya sudah dekat 100 persen; untuk L kecil, setiap tambahan L sangat berarti.
+
+Jadi masalah dengan L = 0,8 dan masalah dengan L = 0,05 tidak "saling menutupi" menjadi dua masalah dengan L = 0,425. Masalah yang mudah sudah hampir pasti ditemukan — ia tidak bisa menyumbang lebih dari 100 persen. Masalah yang sulit hampir pasti terlewat. Rata-ratanya lebih rendah dari yang diramal rumus dengan L rata-rata.
+
+Secara matematis, ini ketidaksamaan Jensen: untuk fungsi cekung, rata-rata fungsinya lebih kecil dari fungsi rata-ratanya.
+
+**Apa artinya untuk praktik.**
+
+"Lima evaluator menemukan 85 persen masalah" adalah angka yang berguna sebagai pedoman **perencanaan** — ia menunjukkan bahwa tiga sampai lima evaluator memberi hasil yang baik untuk biayanya. Tetapi ia tidak boleh dipakai sebagai **klaim** bahwa 85 persen masalah sudah ditemukan.
+
+Nielsen sendiri menganjurkan beberapa putaran kecil dengan perbaikan di antaranya, bukan satu putaran besar lalu berhenti. Dan menggabungkan metode — karena setiap metode menemukan jenis masalah yang berbeda.`
+    },
+    {
+      bahasa: 'python',
+      kode: "TEMUAN = [\n    # (masalah, heuristik, keparahan evaluator 1, 2, 3; None = tidak menemukan)\n    ('Tidak ada tanda presensi berhasil tersimpan', 0, [4, 3, 4]),\n    ('Tombol Hapus tanpa konfirmasi',               4, [4, None, 3]),\n    ('Kode kelas harus diingat dari halaman lain',  5, [None, None, 3]),\n]\nfor nama, h, nilai in TEMUAN:\n    ada = [v for v in nilai if v is not None]\n    baris.append((sum(ada) / len(ada), len(ada), nama, h))\nbaris.sort(key=lambda t: (-t[0], -t[1]))   # parah dulu, lalu yang banyak ditemukan",
+      penjelasan: `Menggabungkan temuan beberapa evaluator menjadi satu daftar prioritas — dengan satu keputusan tentang nilai yang kosong.
+
+**None, bukan nol.**
+
+Evaluator yang tidak menemukan sebuah masalah dicatat \`None\`, dan nilai itu **dibuang** dari rata-rata. Kalau dicatat 0, artinya "evaluator ini menilai ini bukan masalah" — padahal ia cuma tidak melihatnya.
+
+Perbedaannya besar. "Kode kelas harus diingat" dinilai 3 oleh satu-satunya evaluator yang menemukannya. Dengan None dibuang, rata-ratanya 3,0. Dengan None dianggap 0, rata-ratanya 1,0 — dan masalah besar itu turun ke dasar daftar, di bawah "warna latar terlalu ramai".
+
+**Cara yang lebih baik: minta semua evaluator menilai semua masalah.**
+
+Praktik yang dianjurkan Nielsen: setelah daftar gabungan disusun, **setiap** evaluator memberi keparahan untuk **setiap** masalah di daftar, termasuk yang tidak ia temukan sendiri. Menilai masalah yang sudah dijelaskan jauh lebih mudah daripada menemukannya, dan rata-rata dari beberapa penilai lebih bisa dipercaya daripada penilaian satu orang.
+
+Program ini memakai cara yang lebih sederhana — rata-rata dari yang menemukan saja — supaya pengaruh "siapa yang menemukan" terlihat jelas.
+
+**Kenapa diurutkan dua kunci.**
+
+\`(-rata, -oleh)\`: yang lebih parah dulu; kalau sama parahnya, yang ditemukan lebih banyak evaluator dulu. Pesan galat "Error 0x1F" dan "kode kelas harus diingat" sama-sama 3,0, tetapi yang pertama ditemukan ketiga evaluator — lebih pasti nyata dan lebih pasti dialami banyak pengguna.
+
+**Memetakan ke heuristik.**
+
+Setiap temuan menyimpan nomor heuristiknya. Menghitung temuan per heuristik menunjukkan pola: kalau banyak temuan jatuh di "konsistensi dan standar", masalahnya mungkin bukan di satu layar, melainkan tidak adanya panduan gaya — dan perbaikannya pun di tingkat itu.`
+    }
+  ],
+
+  kode: { python: String.raw`# ============================================
+# Evaluasi heuristik: berapa evaluator yang cukup?
+# ============================================
+import random
+
+HEURISTIK = [
+    "Visibilitas status sistem",
+    "Kecocokan sistem dengan dunia nyata",
+    "Kendali dan kebebasan pengguna",
+    "Konsistensi dan standar",
+    "Pencegahan kesalahan",
+    "Mengenali, bukan mengingat",
+    "Fleksibilitas dan efisiensi",
+    "Desain estetis dan minimalis",
+    "Bantu mengenali, mendiagnosis, pulih dari kesalahan",
+    "Bantuan dan dokumentasi",
+]
+
+# --------------------------------------------
+# 1. Rumus Nielsen-Landauer: masalah yang ditemukan i evaluator
+# --------------------------------------------
+print("--- bagian masalah yang ditemukan: 1 - (1 - L)^i ---")
+print("  L = peluang satu evaluator menemukan satu masalah")
+print()
+print("  evaluator   L = 0.20   L = 0.31   L = 0.45")
+for i in [1, 2, 3, 5, 8, 10, 15]:
+    print("  " + format(i, "<10") + "".join(format(1 - (1 - L) ** i, ">11.0%") for L in [0.20, 0.31, 0.45]))
+print()
+print("  Evaluator pertama menemukan paling banyak. Setiap evaluator")
+print("  berikutnya sebagian besar menemukan ulang masalah yang sama.")
+
+# --------------------------------------------
+# 2. Kenyataannya: masalah tidak sama mudahnya ditemukan
+# --------------------------------------------
+random.seed(4)
+MASALAH = []
+for k in range(40):
+    if k < 15:
+        L = random.uniform(0.5, 0.8)       # mudah terlihat
+    elif k < 32:
+        L = random.uniform(0.15, 0.4)      # sedang
+    else:
+        L = random.uniform(0.02, 0.08)     # tersembunyi
+    MASALAH.append(L)
+rata_L = sum(MASALAH) / len(MASALAH)
+
+def simulasi(i, ulang=2000):
+    total, tersembunyi = 0, 0
+    for _ in range(ulang):
+        temu = [any(random.random() < L for _ in range(i)) for L in MASALAH]
+        total += sum(temu)
+        tersembunyi += sum(temu[32:])
+    return total / ulang / len(MASALAH), tersembunyi / ulang / 8
+
+print("\n--- 40 masalah tiruan: 15 mudah, 17 sedang, 8 tersembunyi ---")
+print("  rata-rata L = " + format(rata_L, ".2f"))
+print()
+print("  evaluator   rumus (L rata)   simulasi   8 tersembunyi")
+for i in [1, 3, 5, 10, 20]:
+    ditemukan, sembunyi = simulasi(i)
+    print("  " + format(i, "<10") + format(1 - (1 - rata_L) ** i, ">14.0%")
+          + format(ditemukan, ">11.0%") + format(sembunyi, ">15.0%"))
+print()
+print("  Rumus memakai satu L untuk semua masalah dan terlalu optimis.")
+print("  Masalah tersembunyi tetap sebagian besar lolos bahkan dengan")
+print("  sepuluh evaluator -- 'lima evaluator cukup' adalah pedoman")
+print("  untuk masalah yang cukup mudah terlihat, bukan jaminan.")
+
+# --------------------------------------------
+# 3. Menggabungkan temuan dan tingkat keparahan
+# --------------------------------------------
+print("\n--- menggabungkan temuan 3 evaluator (aplikasi presensi, tiruan) ---")
+TEMUAN = [
+    # (masalah, heuristik, keparahan dari evaluator 1, 2, 3; None = tidak menemukan)
+    ("Tidak ada tanda presensi berhasil tersimpan", 0, [4, 3, 4]),
+    ("Tombol 'Hapus' tanpa konfirmasi", 4, [4, None, 3]),
+    ("Istilah 'sinkronisasi token' di layar utama", 1, [2, 2, None]),
+    ("Ikon berbeda untuk aksi sama di dua halaman", 3, [None, 2, 1]),
+    ("Pesan galat 'Error 0x1F'", 8, [3, 3, 3]),
+    ("Kode kelas harus diingat dari halaman lain", 5, [None, None, 3]),
+    ("Warna latar terlalu ramai", 7, [1, None, 1]),
+]
+print("  (keparahan 0-4: 0 bukan masalah ... 4 bencana usability)")
+print()
+baris = []
+for nama, h, nilai in TEMUAN:
+    ada = [v for v in nilai if v is not None]
+    baris.append((sum(ada) / len(ada), len(ada), nama, h))
+baris.sort(key=lambda t: (-t[0], -t[1]))
+print("  rata  oleh  masalah")
+for rata, n, nama, h in baris:
+    print("  " + format(rata, "4.1f") + format(str(n) + "/3", ">6") + "  " + nama)
+    print("               -> " + HEURISTIK[h])
+print()
+print("  Masalah dengan rata-rata keparahan tertinggi diperbaiki")
+print("  dulu. Perhatikan 'kode kelas harus diingat': cuma SATU")
+print("  evaluator yang menemukannya, dengan keparahan 3. Tanpa")
+print("  evaluator ketiga, masalah itu tidak pernah tercatat.")` },
+  output: `--- bagian masalah yang ditemukan: 1 - (1 - L)^i ---
+  L = peluang satu evaluator menemukan satu masalah
+
+  evaluator   L = 0.20   L = 0.31   L = 0.45
+  1                 20%        31%        45%
+  2                 36%        52%        70%
+  3                 49%        67%        83%
+  5                 67%        84%        95%
+  8                 83%        95%        99%
+  10                89%        98%       100%
+  15                96%       100%       100%
+
+  Evaluator pertama menemukan paling banyak. Setiap evaluator
+  berikutnya sebagian besar menemukan ulang masalah yang sama.
+
+--- 40 masalah tiruan: 15 mudah, 17 sedang, 8 tersembunyi ---
+  rata-rata L = 0.36
+
+  evaluator   rumus (L rata)   simulasi   8 tersembunyi
+  1                    36%        37%             6%
+  3                    74%        65%            18%
+  5                    90%        77%            28%
+  10                   99%        87%            47%
+  20                  100%        94%            72%
+
+  Rumus memakai satu L untuk semua masalah dan terlalu optimis.
+  Masalah tersembunyi tetap sebagian besar lolos bahkan dengan
+  sepuluh evaluator -- 'lima evaluator cukup' adalah pedoman
+  untuk masalah yang cukup mudah terlihat, bukan jaminan.
+
+--- menggabungkan temuan 3 evaluator (aplikasi presensi, tiruan) ---
+  (keparahan 0-4: 0 bukan masalah ... 4 bencana usability)
+
+  rata  oleh  masalah
+   3.7   3/3  Tidak ada tanda presensi berhasil tersimpan
+               -> Visibilitas status sistem
+   3.5   2/3  Tombol 'Hapus' tanpa konfirmasi
+               -> Pencegahan kesalahan
+   3.0   3/3  Pesan galat 'Error 0x1F'
+               -> Bantu mengenali, mendiagnosis, pulih dari kesalahan
+   3.0   1/3  Kode kelas harus diingat dari halaman lain
+               -> Mengenali, bukan mengingat
+   2.0   2/3  Istilah 'sinkronisasi token' di layar utama
+               -> Kecocokan sistem dengan dunia nyata
+   1.5   2/3  Ikon berbeda untuk aksi sama di dua halaman
+               -> Konsistensi dan standar
+   1.0   2/3  Warna latar terlalu ramai
+               -> Desain estetis dan minimalis
+
+  Masalah dengan rata-rata keparahan tertinggi diperbaiki
+  dulu. Perhatikan 'kode kelas harus diingat': cuma SATU
+  evaluator yang menemukannya, dengan keparahan 3. Tanpa
+  evaluator ketiga, masalah itu tidak pernah tercatat.`,
+
+  kompleksitas: {
+    tabel: [
+      { operasi: 'Rumus bagian ditemukan untuk i evaluator', waktu: 'O(1)', memori: 'O(1)' },
+      { operasi: 'Simulasi: u ulangan, i evaluator, m masalah', waktu: 'O(u · i · m)', memori: 'O(m)' },
+      { operasi: 'Menggabungkan t temuan dari e evaluator', waktu: 'O(t · e + t log t)', memori: 'O(t)' },
+      { operasi: 'Biaya evaluasi (manusia)', waktu: '1–2 jam per evaluator', memori: 'tanpa pengguna' }
+    ],
+    intuisi: `Seperti KLM, biaya komputasinya tidak penting; yang penting biaya manusianya. Evaluasi heuristik butuh satu sampai dua jam per evaluator, ditambah waktu menggabungkan — jauh lebih murah dari uji pengguna.
+
+Yang menentukan efektivitas biaya adalah bentuk kurva di tabel konsep: setiap evaluator tambahan menambah temuan baru lebih sedikit dari yang sebelumnya. Sampai titik tertentu, uang dan waktu lebih baik dipakai untuk putaran evaluasi berikutnya setelah perbaikan, atau untuk metode yang berbeda, daripada untuk evaluator keenam dan ketujuh di putaran yang sama.`
+  },
+
+  kesalahanUmum: [
+    {
+      salah: 'Menulis temuan tanpa lokasi dan akibat, misalnya "navigasi membingungkan".',
+      kenapa: 'Temuan yang tidak spesifik tidak bisa diperbaiki dan tidak bisa digabung dengan temuan evaluator lain, karena tidak jelas apakah dua evaluator membicarakan masalah yang sama.',
+      benar: 'Tulis apa masalahnya, di layar mana, heuristik mana yang dilanggar, dan apa akibatnya bagi pengguna.'
+    },
+    {
+      salah: 'Membiarkan evaluator berdiskusi sebelum semuanya selesai.',
+      kenapa: 'Evaluator saling memengaruhi dan cenderung mencari masalah yang sama, sehingga keuntungan memakai banyak evaluator — masing-masing menemukan hal berbeda — berkurang.',
+      benar: 'Minta setiap evaluator bekerja sendiri, lalu gabungkan dan diskusikan setelah semua daftar selesai.'
+    },
+    {
+      salah: 'Menganggap lima evaluator sudah menemukan 85 persen masalah.',
+      kenapa: 'Angka itu dari rumus yang menganggap semua masalah sama mudahnya ditemukan. Dengan masalah yang kemudahannya bervariasi, simulasi di topik ini menemukan 77 persen, dan masalah tersembunyi cuma 28 persen.',
+      benar: 'Pakai angka itu sebagai pedoman perencanaan, bukan sebagai klaim, dan lengkapi dengan uji pengguna.'
+    },
+    {
+      salah: 'Menghitung evaluator yang tidak menemukan masalah sebagai nilai keparahan nol.',
+      kenapa: 'Tidak menemukan tidak sama dengan menilai bukan masalah. Masalah besar yang cuma ditemukan satu evaluator akan turun ke dasar daftar prioritas.',
+      benar: 'Buang nilai kosong dari rata-rata, atau lebih baik, minta semua evaluator menilai semua masalah di daftar gabungan.'
+    },
+    {
+      salah: 'Mengganti uji pengguna sepenuhnya dengan evaluasi heuristik.',
+      kenapa: 'Evaluator bukan pengguna sungguhan. Mereka menemukan pelanggaran prinsip dengan baik, tetapi melewatkan masalah yang hanya muncul saat orang dengan tujuan dan pengetahuan tertentu mencoba menyelesaikan tugas nyata.',
+      benar: 'Pakai evaluasi heuristik untuk menyaring masalah yang jelas lebih dulu, lalu uji pengguna untuk sisanya.'
+    },
+    {
+      salah: 'Memakai satu evaluator yang bekerja lebih lama sebagai ganti beberapa evaluator.',
+      kenapa: 'Setiap orang punya titik buta yang sama sepanjang waktu. Evaluator yang berbeda menemukan masalah yang berbeda, dan itu yang membuat kurva penemuan naik.',
+      benar: 'Pakai tiga sampai lima evaluator yang masing-masing bekerja singkat.'
+    }
+  ],
+
+  analogi: `Bayangkan kamu mencari **salah ketik** di laporan tugas akhir sepanjang lima puluh halaman.
+
+**Satu pembaca.** Kamu sendiri membaca ulang, dan menemukan sepertiga salah ketiknya. Membaca untuk kedua kalinya hampir tidak membantu — mata yang sama melewatkan hal yang sama, karena kamu sudah tahu apa yang ingin kamu tulis.
+
+**Beberapa pembaca.** Kamu memberikan laporan kepada tiga teman, dan meminta mereka membaca **sendiri-sendiri**. Masing-masing menemukan sekitar sepertiga — tetapi sepertiga yang **berbeda**. Gabungan ketiganya menemukan jauh lebih banyak dari siapa pun sendirian.
+
+**Makin sedikit gunanya.** Teman keempat dan kelima masih menemukan beberapa hal baru, tetapi sebagian besar yang mereka tandai sudah ditemukan tiga teman pertama. Teman kesepuluh hampir tidak menambah apa-apa.
+
+**Salah ketik yang tersembunyi.** Tetapi ada jenis kesalahan yang hampir tidak pernah ditemukan: angka di tabel yang tidak cocok dengan angka di teks, atau nama variabel yang berbeda di bab tiga dan bab lima. Pembaca yang mencari salah ketik tidak melihatnya — mereka tidak membandingkan halaman. Sepuluh pembaca pun akan melewatkannya. Untuk kesalahan seperti itu, butuh cara lain: misalnya meminta dosen pembimbing menguji, atau menjalankan ulang perhitungannya.
+
+**Keparahan.** Ketika semua temuan digabung, kamu tidak memperbaikinya sesuai urutan halaman. Salah ketik di judul bab lebih penting dari salah ketik di catatan kaki. Salah angka di hasil penelitian lebih penting dari keduanya — meskipun cuma satu teman yang menemukannya.`,
+
+  latihan: [
+    'Pilih satu aplikasi yang kamu pakai setiap hari, lalu temukan satu contoh pelanggaran untuk lima heuristik Nielsen yang berbeda.',
+    'Tulis ulang temuan "tampilan membingungkan" menjadi temuan yang spesifik: lokasi, heuristik, dan akibatnya.',
+    'Hitung dengan rumus berapa evaluator yang dibutuhkan supaya bagian ditemukan mencapai 90 persen untuk L = 0,25.',
+    'Ubah simulasi supaya 20 dari 40 masalah tersembunyi, lalu bandingkan hasil 5 evaluator dengan rumus.',
+    'Jelaskan dengan kata-katamu sendiri kenapa rumus dengan L rata-rata terlalu optimis ketika L bervariasi.',
+    'Lakukan evaluasi heuristik bersama dua teman pada satu halaman situs kampus, masing-masing sendiri-sendiri, lalu gabungkan temuannya.',
+    'Minta setiap evaluator menilai keparahan semua masalah di daftar gabungan, lalu bandingkan urutannya dengan urutan dari yang menemukan saja.',
+    'Hitung banyaknya temuan per heuristik dari evaluasi kelompokmu, lalu jelaskan pola yang terlihat.',
+    'Jelaskan kenapa masalah yang cuma ditemukan satu evaluator bisa jadi masalah yang paling parah.',
+    'Rancang rencana evaluasi untuk projek IMK-mu yang menggabungkan evaluasi heuristik, KLM, dan uji pengguna dengan SUS, lengkap dengan urutannya.'
   ]
 });
