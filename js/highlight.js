@@ -296,8 +296,10 @@ function hl(code, lang) {
    Sintaks yang didukung (sengaja sedikit, biar gampang diingat):
      baris kosong   → paragraf baru
      **tebal**      → huruf tebal
+     *miring*       → huruf miring
      `kode`         → kode sebaris
      - item         → daftar berpoin
+     1. item        → daftar bernomor (semua baris blok harus bernomor)
 */
 function _inline(s) {
   const simpan = [];
@@ -307,9 +309,14 @@ function _inline(s) {
     simpan.push('<code class="icode">' + isi + '</code>');
     return '<<' + (simpan.length - 1) + '>>';
   });
-  // 2) tebal
-  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  // 3) kembalikan kode
+  // 2) tebal -- isinya boleh memuat *miring* (bintang tunggal)
+  s = s.replace(/\*\*((?:[^*]|\*(?!\*))+)\*\*/g, '<strong>$1</strong>');
+  // 3) miring: *kata* -- bintang tidak boleh menempel pada huruf di
+  //    luarnya (supaya SQL*Plus atau a*b*c tidak ikut), dan isinya
+  //    tidak boleh diawali/diakhiri spasi (supaya 2 * 3 tidak ikut).
+  //    Sengaja tanpa lookbehind: Safari lama belum mendukungnya.
+  s = s.replace(/(^|[^*\w])\*([^\s*](?:[^*\n]*[^\s*])?)\*(?![*\w])/g, '$1<em>$2</em>');
+  // 4) kembalikan kode
   return s.replace(/<<(\d+)>>/g, function (_, i) { return simpan[+i]; });
 }
 
@@ -339,6 +346,13 @@ function fmt(teks) {
       return '<ul>' + baris.map(function (x) {
         return '<li>' + _inline(x.replace(/^-\s+/, '')) + '</li>';
       }).join('') + '</ul>';
+    }
+    // daftar bernomor: setiap baris diawali "1. ", "2. ", ...
+    if (baris.length && baris.every(function (x) { return /^\d+\.\s+/.test(x); })) {
+      const mulai = parseInt(baris[0], 10);
+      return '<ol' + (mulai !== 1 ? ' start="' + mulai + '"' : '') + '>' + baris.map(function (x) {
+        return '<li>' + _inline(x.replace(/^\d+\.\s+/, '')) + '</li>';
+      }).join('') + '</ol>';
     }
     if (_tabel(baris)) {
       const kepala = _sel(baris[0]);

@@ -294,7 +294,7 @@ h1 { font-size: 34px; line-height: 1.2; letter-spacing: -.02em; margin: 0 0 12px
 
 .prose p { margin: 0 0 14px; }
 .prose p:last-child { margin-bottom: 0; }
-.prose ul { margin: 0 0 14px; padding-left: 22px; }
+.prose ul, .prose ol { margin: 0 0 14px; padding-left: 22px; }
 .prose li { margin-bottom: 6px; }
 
 /* Tabel di dalam prosa — ditulis bergaya markdown di data,
