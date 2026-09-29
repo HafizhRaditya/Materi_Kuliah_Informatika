@@ -15,6 +15,10 @@
    dengan Python polos supaya bisa dijalankan siapa pun tanpa
    memasang apa-apa -- dan supaya tiap langkahnya kelihatan,
    bukan tersembunyi di dalam pustaka.
+
+   Tiga topik tambahan (relasi fuzzy & komposisi, Fuzzy C-Means,
+   variabel linguistik & bilangan fuzzy) disusun dari REFERENSI
+   LUAR -- keterangan lengkapnya ada di kepala bagian tambahan.
    ============================================================ */
 
 TOPICS.push({
@@ -1798,5 +1802,1258 @@ Itulah kenapa Tsukamoto hanya menerima kata sifat yang **satu arah**.`,
     'Jelaskan kenapa Mamdani jauh lebih berat dihitung daripada Sugeno, dan sebutkan berapa kali lipat selisihnya pada contoh di materi ini.',
     'Jelaskan apa yang hilang ketika memilih Sugeno demi kecepatan, dan sebutkan satu jenis sistem yang karenanya tidak boleh memakai Sugeno.',
     'Untuk tiap keadaan berikut tentukan metode yang paling cocok beserta alasannya: kendali suhu tungku pabrik yang harus diaudit, pengatur kecepatan kipas pada cip mikro, dan penentu diskon yang selalu naik seiring jumlah pembelian.'
+  ]
+});
+
+
+/* ------------------------------------------------------------
+   TAMBAHAN dari referensi luar (tiga topik di bawah).
+
+   Tiga topik di atas disusun dari slide kuliah sendiri
+   (pertemuan 1-4). Tiga topik berikutnya mengisi pokok bahasan
+   yang ada di RPS Logika Fuzzy kampus lain tetapi tidak ada
+   slidenya di drive: relasi fuzzy dan komposisi, fuzzy
+   clustering (Fuzzy C-Means), serta variabel linguistik, hedge,
+   alfa-cut, dan aritmetika bilangan fuzzy.
+
+   Sama seperti topik di atas, semuanya ditulis dengan Python
+   polos tanpa skfuzzy atau numpy. Data diagnosis laptop dan
+   data pelanggan warung kopi adalah data TIRUAN.
+   ------------------------------------------------------------ */
+TOPICS.push({
+  id: 'fuzzy-relasi',
+  judul: 'Relasi Fuzzy & Komposisi Max-Min',
+  kategori: 'fuzzy',
+  tag: ['relasi fuzzy', 'hasil kali kartesius', 'komposisi max-min', 'max-product', 'diagnosis', 'aturan inferensi komposisional'],
+  ringkas: 'Hubungan yang tidak hitam-putih — "gejala ini agak menunjuk kerusakan itu" — dan satu operasi yang menyambungkan hubungan-hubungan seperti itu, yang ternyata juga inti dari inferensi Mamdani.',
+
+  fungsi: `**Menyimpan hubungan berderajat antara dua kumpulan benda, lalu menyambungkan beberapa hubungan seperti itu untuk menarik kesimpulan.**
+
+Topik himpunan fuzzy membahas satu kumpulan: seberapa "panas" suatu suhu. Relasi fuzzy membahas **pasangan**: seberapa kuat gejala "layar mati" menunjuk kerusakan "daya".
+
+Terpakai di:
+
+- **Sistem pakar diagnosis** — gejala ke penyakit, gejala ke kerusakan, dengan derajat keyakinan dari pakar
+- **Sistem rekomendasi sederhana** — pengguna ke kategori, kategori ke produk
+- **Menyambung pengetahuan** — dari tabel gejala-kerusakan dan kerusakan-tindakan, turunkan tabel gejala-tindakan tanpa mengisinya dengan tangan
+- **Memahami inferensi fuzzy** — pemotongan (clipping) di Mamdani ternyata adalah komposisi max-min
+
+Yang paling penting dipahami: **komposisi max-min mengikuti jalur terkuat.** Kesimpulan ditarik lewat setiap jalur yang mungkin, dan yang diambil adalah jalur yang paling meyakinkan — di mana setiap jalur hanya sekuat mata rantai terlemahnya.`,
+
+  praktik: {
+    tujuan: 'Kamu bisa membentuk relasi fuzzy dari dua himpunan, menghitung komposisi max-min dan max-product, menyambung dua relasi, dan menunjukkan bahwa inferensi Mamdani adalah komposisi.',
+    alat: ['Python 3', 'Kertas untuk menelusuri satu sel komposisi dengan tangan'],
+    langkah: [
+      { judul: 'Bentuk relasi dari dua himpunan',
+        isi: `Untuk himpunan A di X dan B di Y, hasil kali kartesius fuzzy adalah R(x, y) = min(μA(x), μB(y)). Setiap sel menjawab: seberapa benar "x adalah A **dan** y adalah B".` },
+      { judul: 'Susun relasi dari pengetahuan pakar',
+        isi: `Untuk diagnosis, relasi tidak dibentuk dari dua himpunan melainkan diisi langsung: baris gejala, kolom kerusakan, isinya seberapa kuat gejala itu menunjuk kerusakan itu, 0 sampai 1.
+
+Ajak pakar mengisi satu baris pada satu waktu, dan tanyakan alasan setiap angka di atas 0,5.` },
+      { judul: 'Hitung komposisi max-min',
+        isi: `Untuk vektor gejala g dan relasi R, derajat kerusakan j = max atas semua gejala i dari min(gᵢ, Rᵢⱼ).
+
+Kerjakan satu sel dengan tangan: tulis min untuk setiap jalur, lalu ambil yang terbesar.` },
+      { judul: 'Bandingkan dengan max-product',
+        isi: `Ganti min dengan perkalian: max atas i dari gᵢ × Rᵢⱼ. Hasilnya tidak pernah lebih besar dari max-min, karena a × b ≤ min(a, b) untuk a dan b di antara 0 dan 1.` },
+      { judul: 'Sambungkan dua relasi',
+        isi: `Kalau R menghubungkan gejala ke kerusakan dan S menghubungkan kerusakan ke tindakan, R ∘ S menghubungkan gejala ke tindakan: (R ∘ S)ᵢₖ = max atas j dari min(Rᵢⱼ, Sⱼₖ).
+
+Pakar cukup mengisi dua tabel kecil; tabel ketiga diturunkan.` },
+      { judul: 'Tunjukkan bahwa Mamdani adalah komposisi',
+        isi: `Tulis aturan "JIKA suhu tinggi MAKA kipas cepat" sebagai relasi R(x, y) = min(tinggi(x), cepat(y)). Ubah masukan tegas menjadi himpunan tunggal — 1 di satu titik, 0 di tempat lain — lalu komposisikan dengan R.
+
+Hasilnya sama persis dengan memotong himpunan "cepat" setinggi derajat masukan.` }
+    ],
+    cek: [
+      'Kamu bisa menghitung satu sel komposisi max-min dengan tangan dan menunjuk jalur mana yang menentukannya',
+      'Kamu bisa menjelaskan kenapa max-product tidak pernah lebih besar dari max-min',
+      'Kamu bisa menurunkan relasi gejala-tindakan dari dua relasi yang lebih kecil',
+      'Kamu bisa menunjukkan dengan angka bahwa pemotongan Mamdani sama dengan komposisi max-min'
+    ]
+  },
+
+  judulLogicSyntax: 'Bedah Konsep — kenapa max dari min',
+
+  konsep: `Himpunan fuzzy memberi derajat pada **satu** benda: suhu 34 °C "panas" dengan derajat 0,5. **Relasi fuzzy** memberi derajat pada **pasangan** benda: suhu 80 °C dan putaran kipas 4000 rpm "cocok" dengan derajat 0,7.
+
+**Relasi dari dua himpunan**
+
+"Suhu CPU tinggi" dan "kipas berputar cepat" masing-masing himpunan fuzzy. Hasil kali kartesiusnya, dengan min:
+
+| | 2000 rpm | 3000 rpm | 4000 rpm |
+|---|---|---|---|
+| 60 °C | 0,00 | 0,00 | 0,00 |
+| 70 °C | 0,20 | 0,30 | 0,30 |
+| 80 °C | 0,20 | 0,60 | 0,70 |
+| 90 °C | 0,20 | 0,60 | 1,00 |
+
+Setiap sel: seberapa benar "suhu x tinggi **dan** rpm y cepat". Operator DAN di himpunan fuzzy adalah min — dibahas di topik operator — jadi relasi ini adalah DAN yang dihitung untuk setiap pasangan sekaligus.
+
+**Relasi dari pengetahuan: diagnosis**
+
+Relasi tidak harus dibentuk dari dua himpunan. Ia bisa diisi langsung oleh pakar. Tabel tiruan untuk kerusakan laptop:
+
+| Gejala | RAM | Pendingin | Daya | Penyimpan |
+|---|---|---|---|---|
+| Layar mati | 0,70 | 0,10 | 0,80 | 0,20 |
+| Kipas bising | 0,00 | 0,90 | 0,10 | 0,00 |
+| Panas | 0,10 | 0,90 | 0,30 | 0,10 |
+| Restart | 0,60 | 0,70 | 0,60 | 0,40 |
+
+Laptop X menunjukkan gejala dengan derajat: layar mati 0,2, kipas bising 0,8, panas 0,9, restart sendiri 0,6.
+
+**Komposisi max-min**
+
+Derajat setiap kerusakan = **max** atas semua gejala dari **min**(derajat gejala, relasi gejala-kerusakan).
+
+| Kerusakan | Max-min | Max-product |
+|---|---|---|
+| RAM | 0,60 | 0,36 |
+| Pendingin | **0,90** | **0,81** |
+| Daya | 0,60 | 0,36 |
+| Penyimpan | 0,40 | 0,24 |
+
+Kenapa Pendingin 0,90? Setiap gejala adalah satu **jalur** menuju kerusakan itu:
+
+| Jalur | min(gejala, relasi) |
+|---|---|
+| lewat layar mati | min(0,2; 0,1) = 0,10 |
+| lewat kipas bising | min(0,8; 0,9) = 0,80 |
+| lewat panas | min(0,9; 0,9) = **0,90** |
+| lewat restart | min(0,6; 0,7) = 0,60 |
+
+Min: sebuah jalur hanya sekuat mata rantai terlemahnya. Max: kesimpulan mengikuti jalur yang paling kuat. Satu bukti yang kuat sudah cukup.
+
+**Max-product** mengganti min dengan perkalian. Hasilnya selalu lebih kecil atau sama — di sini 0,81 untuk Pendingin — dan lebih "halus": setiap perubahan kecil pada derajat gejala ikut mengubah hasil, sedangkan max-min hanya bereaksi pada jalur yang sedang menjadi penentu.
+
+**Menyambung dua relasi**
+
+Relasi kedua S menghubungkan kerusakan ke tindakan: RAM → ganti RAM, Pendingin → bersihkan, Daya → cek adaptor. Komposisi R ∘ S langsung menghubungkan **gejala ke tindakan**:
+
+| Gejala | Ganti RAM | Bersihkan | Cek adaptor |
+|---|---|---|---|
+| Layar mati | 0,70 | 0,20 | 0,80 |
+| Kipas bising | 0,10 | 0,90 | 0,10 |
+| Panas | 0,10 | 0,90 | 0,30 |
+| Restart | 0,60 | 0,70 | 0,60 |
+
+Pakar hanya mengisi dua tabel kecil. Tabel ketiga diturunkan — dan kalau satu tabel diperbarui, tabel turunannya tinggal dihitung ulang.
+
+Untuk laptop X, jalur gejala → (R ∘ S) dan jalur (gejala → R) → S memberi hasil yang sama: 0,60 · 0,90 · 0,60. Komposisi max-min **asosiatif**, jadi urutan penyambungannya tidak penting.
+
+**Mamdani adalah komposisi**
+
+Aturan "JIKA suhu tinggi MAKA kipas cepat" bisa ditulis sebagai relasi — tabel pertama di atas. Masukan tegas 80 °C adalah himpunan tunggal: derajat 1 di 80, 0 di tempat lain.
+
+| | 2000 | 3000 | 4000 |
+|---|---|---|---|
+| komposisi max-min | 0,20 | 0,60 | 0,70 |
+| potong "cepat" di α = 0,7 | 0,20 | 0,60 | 0,70 |
+
+Sama persis. Pemotongan setinggi α-predikat — yang di topik Mamdani disebut implikasi MIN — adalah komposisi max-min antara masukan dan relasi aturannya. Zadeh menyebutnya **aturan inferensi komposisional**, dan itulah dasar teoretis seluruh inferensi Mamdani.`,
+
+  logicSyntax: [
+    {
+      bahasa: 'python',
+      kode: "def komposisi(R, S, gabung=min):\n    \"\"\"(R o S)[i][k] = max_j gabung(R[i][j], S[j][k])\"\"\"\n    return [[max(gabung(R[i][j], S[j][k]) for j in range(len(S)))\n             for k in range(len(S[0]))] for i in range(len(R))]\n\nlaptop = [[0.2, 0.8, 0.9, 0.6]]          # 1 baris x 4 gejala\nkomposisi(laptop, R)                    # max-min\nkomposisi(laptop, R, lambda a, b: a * b)  # max-product\n# Pendingin: 0.90 (max-min), 0.81 (max-product)",
+      penjelasan: `Tiga baris yang meniru perkalian matriks — dengan dua operasi yang diganti.
+
+**Mirip perkalian matriks.**
+
+Perkalian matriks biasa: (RS)ᵢₖ = **jumlah** atas j dari Rᵢⱼ **×** Sⱼₖ. Komposisi max-min: (R ∘ S)ᵢₖ = **max** atas j dari **min**(Rᵢⱼ, Sⱼₖ).
+
+Bentuknya sama persis — baris i dari R dipasangkan dengan kolom k dari S, satu per satu untuk setiap j — tetapi penjumlahan diganti max dan perkalian diganti min. Karena itu kodenya pun berbentuk seperti perkalian matriks, dengan \`max\` dan \`gabung\` di tempat \`sum\` dan \`*\`.
+
+**Kenapa min untuk setiap jalur.**
+
+Jalur dari gejala i ke kerusakan k lewat j butuh dua hal benar sekaligus: gejala i ada, **dan** gejala i menunjuk kerusakan k. "Dan" di logika fuzzy adalah min. Jalur itu hanya seyakin bagiannya yang paling lemah.
+
+**Kenapa max di antara jalur.**
+
+Kerusakan k disimpulkan kalau **ada** jalur yang meyakinkan — lewat gejala 1, **atau** lewat gejala 2, atau lewat gejala 3. "Atau" adalah max.
+
+Jadi max-min adalah "ada jalur di mana semua bagiannya benar", ditulis dalam logika fuzzy.
+
+**Parameter \`gabung\`.**
+
+Mengirim fungsi sebagai parameter membuat satu kode melayani dua jenis komposisi. Dengan \`min\`, max-min. Dengan perkalian, max-product.
+
+Max-product berguna ketika dua keyakinan yang sama-sama sedang seharusnya memberi kesimpulan yang lebih lemah dari masing-masing — 0,8 × 0,9 = 0,72, bukan 0,8. Max-min menganggap keyakinan gabungan tidak pernah lebih lemah dari yang terlemah; max-product menganggap setiap ketidakpastian menambah ketidakpastian.
+
+**Satu sifat yang perlu diingat.**
+
+Max-min "tidak peka" terhadap jalur yang bukan penentu. Kalau derajat layar mati naik dari 0,2 menjadi 0,5, derajat Pendingin tetap 0,90 — jalur lewat panas masih yang terkuat. Itu bisa menjadi kelebihan (hasil stabil) atau kekurangan (bukti tambahan diabaikan), tergantung kasusnya.`
+    },
+    {
+      bahasa: 'python',
+      kode: "R0 = [[min(a, b) for b in CEPAT] for a in TINGGI]   # relasi aturan\n\nmasukan = 80\ntunggal = [[1.0 if s == masukan else 0.0 for s in SUHU]]\nlewat_komposisi = komposisi(tunggal, R0)[0]\n\nalfa = TINGGI[SUHU.index(masukan)]                   # 0.7\nlewat_potong = [min(alfa, c) for c in CEPAT]\n\n# keduanya: [0.20, 0.60, 0.70]",
+      penjelasan: `Dua cara menghitung keluaran satu aturan Mamdani — dan bukti bahwa keduanya adalah hal yang sama.
+
+**Aturan sebagai relasi.**
+
+"JIKA suhu tinggi MAKA kipas cepat" menghubungkan dua himpunan. Relasinya R₀(x, y) = min(tinggi(x), cepat(y)) — setiap pasangan suhu-rpm mendapat derajat seberapa cocok pasangan itu dengan aturan.
+
+**Masukan tegas sebagai himpunan tunggal.**
+
+Suhu 80 °C bukan himpunan fuzzy, tetapi bisa ditulis sebagai himpunan: derajat 1 di 80, 0 di semua suhu lain. Himpunan seperti ini disebut **singleton**.
+
+**Komposisi.**
+
+Singleton ∘ R₀: untuk setiap rpm y, max atas semua suhu x dari min(singleton(x), R₀(x, y)). Karena singleton nol di semua tempat kecuali 80, satu-satunya suku yang tidak nol adalah x = 80, dan hasilnya min(1, R₀(80, y)) = R₀(80, y) = min(tinggi(80), cepat(y)) = min(0,7; cepat(y)).
+
+**Itu persis pemotongan.**
+
+Memotong himpunan "cepat" setinggi α = tinggi(80) = 0,7 adalah min(0,7; cepat(y)) untuk setiap y. Program menunjukkan kedua cara memberi 0,20 · 0,60 · 0,70.
+
+**Kenapa ini penting.**
+
+Di topik Mamdani, pemotongan diperkenalkan sebagai langkah dengan nama tersendiri. Di sini ia muncul sebagai akibat dari operasi yang lebih umum.
+
+Komposisi juga bekerja untuk masukan yang **bukan** tegas — misalnya pembacaan sensor yang tidak pasti, "sekitar 80 °C". Singleton diganti himpunan fuzzy yang lebar, dan komposisi yang sama memberi keluarannya. Pemotongan tidak bisa melakukan itu; ia hanya bekerja untuk satu angka.
+
+Dan komposisi bisa disambung: keluaran satu aturan menjadi masukan aturan berikutnya — rantai penalaran, persis seperti gejala → kerusakan → tindakan.`
+    }
+  ],
+
+  kode: { python: String.raw`# ============================================
+# Relasi fuzzy dan komposisi max-min
+# ============================================
+
+def tulis(judul_baris, judul_kolom, M, lebar=9):
+    print("  " + " " * 15 + "".join(format(k, ">" + str(lebar)) for k in judul_kolom))
+    for nama, baris in zip(judul_baris, M):
+        print("  " + format(nama, "<15") + "".join(format(x, ">" + str(lebar) + ".2f") for x in baris))
+
+def komposisi(R, S, gabung=min):
+    """(R o S)[i][k] = max_j gabung(R[i][j], S[j][k])"""
+    return [[max(gabung(R[i][j], S[j][k]) for j in range(len(S)))
+             for k in range(len(S[0]))] for i in range(len(R))]
+
+def kali(a, b):
+    return a * b
+
+# --------------------------------------------
+# 1. Relasi dari dua himpunan: hasil kali kartesius
+# --------------------------------------------
+print("--- 'suhu CPU tinggi' x 'kipas berputar cepat' ---")
+SUHU = [60, 70, 80, 90]
+TINGGI = [0.0, 0.3, 0.7, 1.0]
+RPM = [2000, 3000, 4000]
+CEPAT = [0.2, 0.6, 1.0]
+print("  tinggi(suhu): " + ", ".join(str(s) + ":" + str(m) for s, m in zip(SUHU, TINGGI)))
+print("  cepat(rpm)  : " + ", ".join(str(r) + ":" + str(m) for r, m in zip(RPM, CEPAT)))
+print("\n  R(x, y) = min(tinggi(x), cepat(y))")
+R0 = [[min(a, b) for b in CEPAT] for a in TINGGI]
+tulis([str(s) + " C" for s in SUHU], [str(r) for r in RPM], R0)
+print("  Setiap sel: seberapa benar 'suhu x tinggi DAN rpm y cepat'.")
+
+# --------------------------------------------
+# 2. Diagnosis: gejala -> kerusakan
+# --------------------------------------------
+GEJALA = ["Layar mati", "Kipas bising", "Panas", "Restart"]
+RUSAK = ["RAM", "Pendingin", "Daya", "Penyimpan"]
+# R[i][j]: seberapa kuat gejala i menunjuk kerusakan j (penilaian ahli, tiruan)
+R = [
+    [0.7, 0.1, 0.8, 0.2],     # layar mati
+    [0.0, 0.9, 0.1, 0.0],     # kipas bising
+    [0.1, 0.9, 0.3, 0.1],     # panas berlebih
+    [0.6, 0.7, 0.6, 0.4],     # restart sendiri
+]
+print("\n--- relasi gejala -> kerusakan (penilaian ahli, tiruan) ---")
+tulis(GEJALA, RUSAK, R, 11)
+
+laptop = [[0.2, 0.8, 0.9, 0.6]]           # gejala yang teramati pada satu laptop
+print("\n  laptop X: " + ", ".join(g + " " + str(v) for g, v in zip(GEJALA, laptop[0])))
+mm = komposisi(laptop, R)[0]
+mp = komposisi(laptop, R, kali)[0]
+print("\n  kerusakan      max-min    max-product")
+for k, a, b in zip(RUSAK, mm, mp):
+    print("  " + format(k, "<12") + format(a, "10.2f") + format(b, "13.2f"))
+print()
+j = 1
+jalur = [(min(laptop[0][i], R[i][j]), GEJALA[i]) for i in range(4)]
+print("  mengapa Pendingin 0.90 (max-min)? min(gejala, relasi) per jalur:")
+for v, g in jalur:
+    print("    lewat " + format(g, "<13") + format(v, ".2f"))
+print("  max dari semua jalur = " + format(max(v for v, _ in jalur), ".2f"))
+print("  Satu jalur yang kuat sudah cukup: 'panas' 0.9 dan relasinya 0.9.")
+
+# --------------------------------------------
+# 3. Komposisi dua relasi: gejala -> kerusakan -> tindakan
+# --------------------------------------------
+TINDAKAN = ["Ganti RAM", "Bersihkan", "Cek adaptor"]
+S = [
+    [1.0, 0.0, 0.1],     # RAM
+    [0.0, 1.0, 0.0],     # pendingin
+    [0.1, 0.2, 1.0],     # daya
+    [0.3, 0.0, 0.2],     # penyimpan
+]
+print("\n--- R o S: gejala -> tindakan, tanpa tabel gejala-tindakan ---")
+RS = komposisi(R, S)
+tulis(GEJALA, TINDAKAN, RS, 13)
+print("  Hanya dua tabel kecil yang diisi ahli; tabel ketiga diturunkan.")
+tx = komposisi(laptop, RS)[0]
+lewat_dua = komposisi(komposisi(laptop, R), S)[0]
+print("\n  laptop X o (R o S)   : " + "  ".join(format(v, ".2f") for v in tx))
+print("  (laptop X o R) o S   : " + "  ".join(format(v, ".2f") for v in lewat_dua))
+print("  Sama: komposisi max-min bersifat asosiatif.")
+
+# --------------------------------------------
+# 4. Inferensi Mamdani adalah komposisi
+# --------------------------------------------
+print("\n--- aturan 'JIKA suhu tinggi MAKA kipas cepat' sebagai relasi ---")
+masukan = 80                                  # suhu tegas
+tunggal = [[1.0 if s == masukan else 0.0 for s in SUHU]]
+lewat_komposisi = komposisi(tunggal, R0)[0]
+alfa = TINGGI[SUHU.index(masukan)]
+lewat_potong = [min(alfa, c) for c in CEPAT]
+print("  masukan tegas 80 C -> himpunan tunggal (1 di 80, 0 lainnya)")
+print("  komposisi max-min    : " + "  ".join(format(v, ".2f") for v in lewat_komposisi))
+print("  " + format("potong di alfa " + format(alfa, ".1f"), "<21") + ": "
+      + "  ".join(format(v, ".2f") for v in lewat_potong))
+print("  Hasilnya sama. Pemotongan (clipping) di Mamdani adalah")
+print("  komposisi max-min antara masukan dan relasi aturannya.")` },
+  output: `--- 'suhu CPU tinggi' x 'kipas berputar cepat' ---
+  tinggi(suhu): 60:0.0, 70:0.3, 80:0.7, 90:1.0
+  cepat(rpm)  : 2000:0.2, 3000:0.6, 4000:1.0
+
+  R(x, y) = min(tinggi(x), cepat(y))
+                      2000     3000     4000
+  60 C                0.00     0.00     0.00
+  70 C                0.20     0.30     0.30
+  80 C                0.20     0.60     0.70
+  90 C                0.20     0.60     1.00
+  Setiap sel: seberapa benar 'suhu x tinggi DAN rpm y cepat'.
+
+--- relasi gejala -> kerusakan (penilaian ahli, tiruan) ---
+                         RAM  Pendingin       Daya  Penyimpan
+  Layar mati            0.70       0.10       0.80       0.20
+  Kipas bising          0.00       0.90       0.10       0.00
+  Panas                 0.10       0.90       0.30       0.10
+  Restart               0.60       0.70       0.60       0.40
+
+  laptop X: Layar mati 0.2, Kipas bising 0.8, Panas 0.9, Restart 0.6
+
+  kerusakan      max-min    max-product
+  RAM               0.60         0.36
+  Pendingin         0.90         0.81
+  Daya              0.60         0.36
+  Penyimpan         0.40         0.24
+
+  mengapa Pendingin 0.90 (max-min)? min(gejala, relasi) per jalur:
+    lewat Layar mati   0.10
+    lewat Kipas bising 0.80
+    lewat Panas        0.90
+    lewat Restart      0.60
+  max dari semua jalur = 0.90
+  Satu jalur yang kuat sudah cukup: 'panas' 0.9 dan relasinya 0.9.
+
+--- R o S: gejala -> tindakan, tanpa tabel gejala-tindakan ---
+                     Ganti RAM    Bersihkan  Cek adaptor
+  Layar mati              0.70         0.20         0.80
+  Kipas bising            0.10         0.90         0.10
+  Panas                   0.10         0.90         0.30
+  Restart                 0.60         0.70         0.60
+  Hanya dua tabel kecil yang diisi ahli; tabel ketiga diturunkan.
+
+  laptop X o (R o S)   : 0.60  0.90  0.60
+  (laptop X o R) o S   : 0.60  0.90  0.60
+  Sama: komposisi max-min bersifat asosiatif.
+
+--- aturan 'JIKA suhu tinggi MAKA kipas cepat' sebagai relasi ---
+  masukan tegas 80 C -> himpunan tunggal (1 di 80, 0 lainnya)
+  komposisi max-min    : 0.20  0.60  0.70
+  potong di alfa 0.7   : 0.20  0.60  0.70
+  Hasilnya sama. Pemotongan (clipping) di Mamdani adalah
+  komposisi max-min antara masukan dan relasi aturannya.`,
+
+  kompleksitas: {
+    tabel: [
+      { operasi: 'Hasil kali kartesius |X| × |Y|', waktu: 'O(|X| · |Y|)', memori: 'O(|X| · |Y|)' },
+      { operasi: 'Vektor gejala ∘ relasi (g gejala, k kerusakan)', waktu: 'O(g · k)', memori: 'O(k)' },
+      { operasi: 'Relasi ∘ relasi (a × b dan b × c)', waktu: 'O(a · b · c)', memori: 'O(a · c)' },
+      { operasi: 'Inferensi lewat relasi di semesta diskret', waktu: 'O(|X| · |Y|)', memori: 'jauh lebih mahal dari pemotongan O(|Y|)' }
+    ],
+    intuisi: `Komposisi punya biaya yang sama dengan perkalian matriks: kubik untuk matriks persegi. Untuk tabel pakar yang berisi puluhan gejala dan kerusakan, itu tidak terasa.
+
+Baris terakhir menjelaskan kenapa sistem Mamdani sungguhan tidak menghitung lewat relasi. Membentuk relasi aturan di semesta yang dibagi halus — misalnya 1000 titik suhu × 1000 titik rpm — butuh sejuta sel per aturan. Pemotongan menghasilkan jawaban yang sama untuk masukan tegas dengan cuma 1000 operasi. Relasi adalah cara **memahami** inferensi; pemotongan adalah cara **menghitung**-nya.`
+  },
+
+  kesalahanUmum: [
+    {
+      salah: 'Menjumlahkan jalur-jalur komposisi seperti perkalian matriks biasa.',
+      kenapa: 'Penjumlahan bisa menghasilkan derajat di atas 1 dan menganggap banyak bukti lemah setara satu bukti kuat. Komposisi fuzzy mengambil jalur terkuat, bukan jumlah semua jalur.',
+      benar: 'Pakai max untuk menggabungkan jalur, dan min atau perkalian untuk setiap jalur.'
+    },
+    {
+      salah: 'Menganggap relasi gejala-kerusakan simetris dengan relasi kerusakan-gejala.',
+      kenapa: 'Seberapa kuat gejala menunjuk kerusakan tidak sama dengan seberapa sering kerusakan menimbulkan gejala itu. RAM rusak hampir selalu membuat restart, tetapi restart tidak selalu karena RAM.',
+      benar: 'Tentukan arah relasi dengan jelas dan isi tabelnya sesuai arah itu.'
+    },
+    {
+      salah: 'Mengharapkan kesimpulan menguat karena ada banyak gejala yang cocok.',
+      kenapa: 'Max-min hanya mengikuti jalur terkuat. Menambah gejala yang lebih lemah dari jalur penentu tidak mengubah hasil sama sekali.',
+      benar: 'Kalau bukti yang bertumpuk memang harus menguatkan kesimpulan, pakai operator lain atau metode yang dirancang untuk itu, dan jelaskan pilihannya.'
+    },
+    {
+      salah: 'Mengira max-min dan max-product memberi urutan kesimpulan yang sama.',
+      kenapa: 'Kedua operasi memberi nilai berbeda, dan pada kasus yang tipis urutan kerusakan teratas bisa berbeda karena max-product menurunkan jalur yang bagiannya sama-sama sedang.',
+      benar: 'Pilih salah satu dengan alasan, dan laporkan kalau hasilnya bergantung pada pilihan itu.'
+    },
+    {
+      salah: 'Membentuk relasi aturan di semesta yang sangat halus untuk menghitung inferensi Mamdani dengan masukan tegas.',
+      kenapa: 'Relasi di semesta halus butuh memori dan waktu kuadratik, padahal untuk masukan tegas hasilnya sama persis dengan pemotongan yang linear.',
+      benar: 'Pakai pemotongan untuk masukan tegas, dan komposisi hanya bila masukannya sendiri berupa himpunan fuzzy.'
+    }
+  ],
+
+  analogi: `Bayangkan kamu mencari **jalan dari rumah ke kampus** saat musim hujan, dan setiap ruas jalan punya "derajat bisa dilewati".
+
+**Satu jalur.** Rute lewat jalan raya terdiri dari dua ruas: ruas pertama bisa dilewati 0,9, ruas kedua 0,4 karena sering banjir. Seberapa bisa dilewati rute itu? **0,4** — rute hanya sebaik ruasnya yang paling buruk. Kalau satu ruas banjir, seluruh rute terhambat, sebagus apa pun ruas yang lain. Itulah min.
+
+**Banyak jalur.** Ada tiga rute: lewat jalan raya (0,4), lewat perumahan (0,7), lewat jalan tikus (0,3). Seberapa bisa kamu sampai ke kampus? **0,7** — kamu tinggal memilih rute terbaik. Rute-rute yang lebih buruk tidak mengurangi apa pun; mereka cuma tidak dipakai. Itulah max.
+
+Max-min adalah "cari rute yang ruas terburuknya paling baik".
+
+**Menyambung peta.** Kamu punya peta dari rumah ke pertigaan-pertigaan, dan temanmu punya peta dari pertigaan-pertigaan ke kampus. Tanpa menjelajah ulang, kalian bisa menyusun peta rumah-ke-kampus: untuk setiap tujuan, coba lewat setiap pertigaan, ambil yang terbaik. Itu R ∘ S.
+
+**Max-product.** Sekarang ruas-ruas itu bukan "seberapa bisa dilewati" melainkan "peluang tidak terlambat". Ruas pertama 0,9 dan ruas kedua 0,9 — apakah seluruh rute 0,9? Tidak: dua ruas yang masing-masing agak berisiko, kalau dilalui berurutan, menumpuk risikonya menjadi 0,81. Untuk hal-hal seperti ini, perkalian lebih masuk akal daripada min.`,
+
+  latihan: [
+    'Bentuk relasi kartesius dari "nilai tugas tinggi" dan "nilai ujian tinggi" dengan tiga titik masing-masing, lalu tafsirkan setiap selnya.',
+    'Hitung komposisi max-min untuk laptop dengan gejala [0,9; 0,1; 0,2; 0,3] dengan tangan, lalu periksa dengan program.',
+    'Tunjukkan satu kasus di mana urutan kerusakan teratas berbeda antara max-min dan max-product.',
+    'Naikkan derajat "layar mati" laptop X dari 0,2 menjadi 0,5, lalu jelaskan kenapa derajat Pendingin tidak berubah.',
+    'Tambahkan tindakan keempat "Ganti SSD" ke relasi S dan hitung ulang R ∘ S.',
+    'Buktikan dengan angka bahwa (A ∘ R) ∘ S = A ∘ (R ∘ S) untuk vektor gejala pilihanmu.',
+    'Susun relasi aturan "JIKA kelembapan tinggi MAKA penyiraman sedikit" di semesta tiga titik, lalu tunjukkan bahwa komposisi dengan singleton sama dengan pemotongan.',
+    'Ganti masukan tegas 80 °C dengan himpunan fuzzy "sekitar 80 °C" (70: 0,5; 80: 1; 90: 0,5), lalu hitung keluarannya dengan komposisi.',
+    'Rancang relasi fuzzy kecil untuk diagnosis masalah jaringan (gejala: lambat, putus-putus, tidak bisa terhubung) bersama temanmu sebagai "pakar".',
+    'Jelaskan kenapa sistem Mamdani sungguhan memakai pemotongan, bukan komposisi, untuk masukan tegas.'
+  ]
+});
+
+
+TOPICS.push({
+  id: 'fuzzy-cmeans',
+  judul: 'Fuzzy C-Means Clustering',
+  kategori: 'fuzzy',
+  tag: ['Fuzzy C-Means', 'FCM', 'clustering', 'derajat keanggotaan', 'pangkat m', 'K-Means', 'segmentasi pelanggan'],
+  ringkas: 'K-Means memaksa setiap data masuk tepat satu kelompok. FCM membiarkan data yang berada di tengah-tengah mengaku sedikit mirip beberapa kelompok sekaligus — dan itu informasi yang berguna.',
+
+  fungsi: `**Mengelompokkan data tanpa label, dengan setiap data mendapat derajat keanggotaan di setiap kelompok, bukan satu label tunggal.**
+
+Topik Klasifikasi & Clustering di Data Mining membahas K-Means: setiap data masuk tepat satu kelompok. Fuzzy C-Means (FCM) melonggarkan satu hal itu, dengan akibat yang sangat berguna.
+
+Terpakai di:
+
+- **Segmentasi pelanggan** — pelanggan yang berada di antara dua segmen bisa dikenali, bukan dipaksa ke salah satunya
+- **Segmentasi citra medis** — piksel di batas dua jaringan punya derajat di keduanya, sesuai kenyataan fisiknya
+- **Mendeteksi data yang meragukan** — data dengan keanggotaan tertinggi yang rendah adalah data yang tidak cocok dengan kelompok mana pun
+- **Membuat himpunan fuzzy dari data** — pusat dan sebaran kelompok FCM bisa menjadi fungsi keanggotaan untuk sistem inferensi Mamdani atau Sugeno
+
+Yang paling penting dipahami: **keanggotaan setiap data berjumlah 1.** Pelanggan yang 0,98 di satu kelompok jelas anggotanya; pelanggan yang 0,32 · 0,37 · 0,31 sedang memberi tahu bahwa ia tidak cocok dengan kelompok mana pun — informasi yang hilang total di K-Means.
+
+Dan satu angka yang mengatur semuanya: **pangkat m.** Mendekati 1, FCM berperilaku seperti K-Means. Makin besar, batas antar-kelompok makin kabur.`,
+
+  praktik: {
+    tujuan: 'Kamu bisa menjalankan FCM dari nol, memeriksa bahwa fungsi objektifnya turun, membaca pusat dan keanggotaan, memilih pangkat m, dan memakai keanggotaan untuk menemukan data yang meragukan.',
+    alat: ['Python 3 dengan modul math dan random', 'Topik K-Means di Data Mining untuk perbandingan'],
+    langkah: [
+      { judul: 'Tentukan c dan m',
+        isi: `c adalah banyaknya kelompok — seperti k di K-Means, harus ditentukan lebih dulu. m adalah pangkat pengabur, lebih dari 1; nilai 2 adalah pilihan yang paling lazim.` },
+      { judul: 'Isi keanggotaan awal secara acak',
+        isi: `Setiap data mendapat c bilangan acak yang dinormalkan supaya berjumlah 1. Pasang benih acak supaya hasilnya bisa diulang.` },
+      { judul: 'Hitung pusat kelompok',
+        isi: `Pusat kelompok j = rata-rata semua data, masing-masing diberi bobot uᵢⱼ^m. Data yang keanggotaannya tinggi di kelompok itu menarik pusatnya lebih kuat.` },
+      { judul: 'Perbarui keanggotaan',
+        isi: `uᵢⱼ = 1 / jumlah atas k dari (dᵢⱼ / dᵢₖ)^(2/(m − 1)), dengan dᵢⱼ jarak data i ke pusat j. Makin dekat ke sebuah pusat, makin besar keanggotaannya di kelompok itu.
+
+Tangani kasus jarak nol secara khusus: data yang tepat di sebuah pusat mendapat keanggotaan 1 di kelompok itu.` },
+      { judul: 'Ulangi sampai stabil, pantau J',
+        isi: `Hitung fungsi objektif J = jumlah uᵢⱼ^m × dᵢⱼ² setiap putaran. J harus turun di setiap putaran; berhenti saat perubahan keanggotaan terbesar di bawah toleransi.
+
+Kalau J pernah naik, ada kesalahan di rumus.` },
+      { judul: 'Baca keanggotaan, bukan cuma label',
+        isi: `Untuk setiap data, catat keanggotaan tertingginya. Data dengan nilai tertinggi di bawah ambang — misalnya 0,6 — adalah data yang tidak jelas kelompoknya. Tangani mereka secara terpisah.` },
+      { judul: 'Coba beberapa nilai m',
+        isi: `Jalankan dengan m = 1,1, 1,5, 2, dan 3. Lihat bagaimana keanggotaan data inti dan data yang di tengah berubah. Pilih m yang memberi pemisahan yang masuk akal untuk tujuanmu.` }
+    ],
+    cek: [
+      'Fungsi objektif J hasil programmu turun di setiap putaran',
+      'Keanggotaan setiap data berjumlah 1',
+      'Kamu bisa menunjuk data mana yang tidak jelas kelompoknya dari keanggotaannya',
+      'Kamu bisa menjelaskan pengaruh m dengan hasil percobaanmu sendiri'
+    ]
+  },
+
+  judulLogicSyntax: 'Bedah Konsep — kenapa keanggotaan dihitung dari perbandingan jarak',
+
+  konsep: `K-Means di Data Mining mengulang dua langkah: masukkan setiap data ke pusat terdekat, lalu pindahkan setiap pusat ke rata-rata anggotanya. Setiap data milik **tepat satu** kelompok.
+
+**Fuzzy C-Means** mengganti "milik tepat satu" dengan **derajat keanggotaan** di setiap kelompok, berjumlah 1 per data. Dua langkahnya tetap sama bentuknya:
+
+1. **Pusat** = rata-rata semua data, **dibobot** keanggotaannya dipangkatkan m
+2. **Keanggotaan** = dihitung dari seberapa dekat data ke setiap pusat, **relatif** terhadap pusat-pusat lain
+
+Keduanya meminimalkan satu fungsi objektif: J = jumlah uᵢⱼ^m × jarak². Data yang jauh dari pusatnya menyumbang besar ke J, kecuali keanggotaannya di pusat itu kecil.
+
+**Kasus: pelanggan warung kopi**
+
+Enam belas pelanggan, dengan dua ciri: kunjungan per bulan dan belanja rata-rata (ribu rupiah). Tiga kelompok yang jelas — jarang dan hemat, sering dan hemat, jarang dan boros — ditambah satu pelanggan di tengah-tengah: 12 kunjungan, belanja 50 ribu.
+
+**Fungsi objektif**
+
+| Putaran | 1 | 2 | 3 | 4 | 5 | 6 | ... | 11 |
+|---|---|---|---|---|---|---|---|---|
+| J | 5057 | 3306 | 992 | 720 | 542 | 537 | ... | 537,5 |
+
+J turun di setiap putaran, dan FCM berhenti setelah 11 putaran. Penurunan yang dijamin ini yang membuat FCM pasti berhenti — meski, seperti K-Means, belum tentu di minimum terbaik; hasilnya bisa bergantung pada keanggotaan awal.
+
+**Pusat kelompok**
+
+| Kelompok | Pusat (kunjungan, belanja) |
+|---|---|
+| jarang, hemat | (3,0; 17,3) |
+| sering, hemat | (20,7; 19,9) |
+| jarang, boros | (4,7; 83,5) |
+
+**Keanggotaan**
+
+| Pelanggan | Jarang, hemat | Sering, hemat | Jarang, boros |
+|---|---|---|---|
+| (2, 15) | **0,982** | 0,016 | 0,001 |
+| (20, 18) | 0,014 | **0,985** | 0,001 |
+| (5, 80) | 0,003 | 0,003 | **0,994** |
+| (12, 50) | 0,318 | 0,372 | 0,310 |
+
+Tiga pelanggan pertama jelas anggota kelompoknya. Pelanggan (12, 50) **tidak** — keanggotaannya hampir rata di ketiganya.
+
+K-Means akan memasukkan (12, 50) ke kelompok "sering, hemat", karena dengan pusat-pusat ini, pusat itulah yang sedikit lebih dekat. Tim pemasaran lalu memberinya promosi untuk pelanggan setia yang hemat. FCM memberi tahu hal yang lebih jujur: pelanggan ini tidak cocok dengan pola mana pun, dan mungkin layak ditanyai langsung.
+
+**Pangkat m**
+
+| m | (2, 15): keanggotaan tertinggi | (12, 50): tertinggi |
+|---|---|---|
+| 1,1 | 1,000 | 0,988 |
+| 1,5 | 1,000 | 0,427 |
+| 2,0 | 0,982 | 0,372 |
+| 3,0 | 0,872 | 0,352 |
+
+Dengan m = 1,1, pelanggan di tengah pun mendapat keanggotaan 0,988 di satu kelompok — FCM hampir sama dengan K-Means. Makin besar m, keanggotaan makin merata, menuju 1/3: pelanggan inti (2, 15) pun mulai "ragu", 0,872 di m = 3.
+
+m = 2 adalah pilihan yang paling lazim, dan di sini ia memberi yang dicari: pelanggan inti tetap jelas, pelanggan di tengah jelas terlihat di tengah.`,
+
+  logicSyntax: [
+    {
+      bahasa: 'python',
+      kode: "# 1. pusat = rata-rata terbobot u^m\nfor j in range(c):\n    w = [U[i][j] ** m for i in range(n)]\n    pusat.append(tuple(sum(w[i] * data[i][d] for i in range(n)) / sum(w)\n                       for d in range(2)))\n\n# 2. keanggotaan baru dari perbandingan jarak\nfor i in range(n):\n    d = [jarak(data[i], p) for p in pusat]\n    if min(d) == 0:                      # tepat di sebuah pusat\n        U_baru.append([1.0 if x == 0 else 0.0 for x in d])\n        continue\n    U_baru.append([1 / sum((d[j] / d[k]) ** (2 / (m - 1)) for k in range(c))\n                   for j in range(c)])",
+      penjelasan: `Dua langkah yang saling bergantian, dan satu kasus khusus yang membuat program tidak mogok.
+
+**Pusat: rata-rata terbobot.**
+
+K-Means menghitung pusat sebagai rata-rata anggotanya — setiap anggota berbobot 1, bukan anggota berbobot 0. FCM menghitung rata-rata **semua** data, dengan bobot uᵢⱼ^m.
+
+Kenapa dipangkatkan m? Dengan m = 2, data yang keanggotaannya 0,9 berbobot 0,81, sedangkan data yang keanggotaannya 0,3 berbobot cuma 0,09 — sembilan kali lebih kecil, bukan tiga. Pemangkatan membuat anggota inti jauh lebih menentukan letak pusat daripada data pinggiran. Tanpa pangkat — m = 1 — setiap data menarik setiap pusat sebanding keanggotaannya, dan semua pusat cenderung terseret ke tengah seluruh data.
+
+**Keanggotaan: perbandingan jarak.**
+
+Rumusnya terlihat rumit, tetapi isinya sederhana. Untuk data i dan kelompok j, bandingkan jaraknya ke pusat j dengan jaraknya ke setiap pusat k: dᵢⱼ/dᵢₖ. Kalau pusat j jauh lebih dekat dari yang lain, perbandingan-perbandingan itu kecil, jumlahnya kecil, dan keanggotaannya mendekati 1.
+
+Yang menentukan adalah jarak **relatif**. Data yang berjarak 10 ke semua pusat mendapat keanggotaan 1/3 di setiap kelompok — sama dengan data yang berjarak 1000 ke semua pusat. FCM tidak tahu bahwa data kedua itu jauh dari semua kelompok; ia cuma tahu data itu sama jauhnya dari semuanya.
+
+**Pangkat 2/(m − 1).**
+
+Dengan m = 2, pangkatnya 2: perbandingan jarak dikuadratkan. Dengan m mendekati 1, pangkatnya menuju tak hingga: perbandingan di atas 1 meledak, di bawah 1 lenyap, dan keanggotaan menjadi 0 atau 1 — K-Means. Dengan m besar, pangkatnya menuju 0: semua perbandingan menjadi 1, dan keanggotaan menjadi 1/c — semua kelompok melebur.
+
+Satu angka m mengatur seluruh rentang antara K-Means dan "semua sama".
+
+**Kasus khusus: jarak nol.**
+
+Kalau data tepat di sebuah pusat, dᵢⱼ = 0, dan rumus membagi dengan nol. Program menangani ini lebih dulu: data itu mendapat keanggotaan 1 di kelompok tersebut dan 0 di yang lain — yang juga merupakan limit rumusnya saat jarak menuju nol. Pada data nyata dengan angka pecahan, ini jarang terjadi. Pada data bilangan bulat yang sering kembar, ini bisa terjadi di putaran pertama — dan tanpa penanganan ini, program mogok.`
+    },
+    {
+      bahasa: 'python',
+      kode: "for m in [1.1, 1.5, 2.0, 3.0]:\n    _, U_m, _ = fcm(DATA, 3, m)\n    # keanggotaan tertinggi pelanggan inti dan pelanggan di tengah\n\n# m     (2, 15)   (12, 50)\n# 1.1   1.000     0.988      <- hampir K-Means\n# 2.0   0.982     0.372\n# 3.0   0.872     0.352      <- makin merata\n\nragu = [DATA[i] for i in range(len(DATA)) if max(U[i]) < 0.6]\n# [(12, 50)]",
+      penjelasan: `Dua pemakaian keanggotaan: memilih m, dan menemukan data yang tidak cocok dengan kelompok mana pun.
+
+**Tidak ada m yang "benar".**
+
+Berbeda dengan c, yang setidaknya bisa dipilih dengan melihat data, m adalah pilihan tentang seberapa kabur batas yang kamu inginkan. Tabelnya menunjukkan rentangnya:
+
+- m = 1,1: pelanggan (12, 50) mendapat 0,988 di satu kelompok. Informasi "ia di tengah" hilang — persis seperti K-Means.
+- m = 2: pelanggan inti tetap jelas (0,982), pelanggan di tengah jelas terlihat ragu (0,372).
+- m = 3: pelanggan inti pun mulai kabur (0,872).
+
+m = 2 dipakai paling luas bukan karena terbukti optimal, melainkan karena memberi keseimbangan yang masuk akal di banyak kasus, dan rumusnya paling sederhana — pangkat 2/(m − 1) menjadi 2. Laporkan m yang dipakai, dan kalau hasilnya penting, tunjukkan bahwa kesimpulan utamanya tidak berubah untuk m di sekitarnya.
+
+**Keanggotaan tertinggi sebagai ukuran keyakinan.**
+
+\`max(U[i])\` adalah seberapa yakin FCM tentang kelompok data i. Mendekati 1: jelas. Mendekati 1/c: tidak tahu sama sekali.
+
+Ambang 0,6 memilih data yang tidak punya kelompok dengan keanggotaan di atas 60 persen. Di data ini cuma satu: (12, 50).
+
+Ambangnya adalah keputusan, bukan hasil perhitungan. Ambang yang lebih tinggi menandai lebih banyak data sebagai meragukan; yang lebih rendah, lebih sedikit. Pilih berdasarkan apa yang akan dilakukan pada data meragukan itu — kalau penanganannya mahal, misalnya wawancara langsung, pakai ambang yang lebih rendah.
+
+**Batas yang harus diingat.**
+
+Keanggotaan FCM relatif: data yang sangat jauh dari **semua** kelompok bisa tetap mendapat keanggotaan tinggi di kelompok yang paling tidak jauh. Pencilan sungguhan — misalnya pelanggan yang belanja 5 juta sekali datang — mungkin mendapat 0,9 di kelompok "boros" dan tidak ditandai sebagai meragukan.
+
+Untuk menemukan pencilan seperti itu, keanggotaan saja tidak cukup; periksa juga jarak mutlak ke pusat terdekat, atau pakai varian FCM yang dirancang untuk itu, seperti Possibilistic C-Means.`
+    }
+  ],
+
+  kode: { python: String.raw`# ============================================
+# Fuzzy C-Means: setiap titik boleh milik beberapa kelompok
+# ============================================
+import math
+import random
+
+# Pelanggan warung kopi: (kunjungan per bulan, belanja rata-rata dalam ribu)
+DATA = [
+    (2, 15), (3, 18), (2, 20), (4, 16), (3, 14),        # jarang, hemat
+    (20, 18), (22, 22), (19, 20), (21, 16), (23, 19),   # sering, hemat
+    (5, 80), (4, 85), (6, 78), (3, 90), (5, 88),        # jarang, boros
+    (12, 50),                                           # di tengah-tengah
+]
+NAMA_TENGAH = len(DATA) - 1
+
+def jarak(a, b):
+    return math.dist(a, b)
+
+def fcm(data, c, m, seed=1, toleransi=1e-6, cetak=False):
+    random.seed(seed)
+    n = len(data)
+    # keanggotaan awal acak, setiap baris berjumlah 1
+    U = []
+    for _ in range(n):
+        r = [random.random() for _ in range(c)]
+        U.append([x / sum(r) for x in r])
+    riwayat = []
+    for putaran in range(1, 301):
+        # 1. pusat = rata-rata terbobot u^m
+        pusat = []
+        for j in range(c):
+            w = [U[i][j] ** m for i in range(n)]
+            pusat.append(tuple(sum(w[i] * data[i][d] for i in range(n)) / sum(w)
+                               for d in range(2)))
+        # 2. keanggotaan baru dari jarak ke setiap pusat
+        U_baru = []
+        for i in range(n):
+            d = [jarak(data[i], p) for p in pusat]
+            if min(d) == 0:                      # tepat di sebuah pusat
+                U_baru.append([1.0 if x == 0 else 0.0 for x in d])
+                continue
+            U_baru.append([1 / sum((d[j] / d[k]) ** (2 / (m - 1)) for k in range(c))
+                           for j in range(c)])
+        # 3. fungsi objektif
+        J = sum(U_baru[i][j] ** m * jarak(data[i], pusat[j]) ** 2
+                for i in range(n) for j in range(c))
+        riwayat.append(J)
+        ubah = max(abs(U_baru[i][j] - U[i][j]) for i in range(n) for j in range(c))
+        U = U_baru
+        if ubah < toleransi:
+            break
+    return pusat, U, riwayat
+
+# --------------------------------------------
+# 1. Menjalankan FCM dengan m = 2
+# --------------------------------------------
+print("--- 16 pelanggan, 3 kelompok, m = 2 ---")
+pusat, U, riwayat = fcm(DATA, 3, 2)
+print("  fungsi objektif J per putaran (harus turun):")
+print("  " + "  ".join(format(J, ".0f") for J in riwayat[:6]) + "  ...  "
+      + format(riwayat[-1], ".1f"))
+turun = all(a >= b - 1e-9 for a, b in zip(riwayat, riwayat[1:]))
+print("  selalu turun: " + ("YA" if turun else "TIDAK") + ", berhenti setelah "
+      + str(len(riwayat)) + " putaran")
+
+urut = sorted(range(3), key=lambda j: (pusat[j][1], pusat[j][0]))
+LABEL = {}
+for j in urut:
+    x, y = pusat[j]
+    LABEL[j] = ("sering" if x > 12 else "jarang") + ", " + ("boros" if y > 50 else "hemat")
+print("\n  pusat kelompok:")
+for j in urut:
+    print("    " + format(LABEL[j], "<16") + "(" + format(pusat[j][0], ".1f") + ", "
+          + format(pusat[j][1], ".1f") + ")")
+
+print("\n  keanggotaan beberapa pelanggan:")
+print("  pelanggan    " + "".join(format(LABEL[j], ">17") for j in urut))
+for i in [0, 5, 10, NAMA_TENGAH]:
+    print("  " + format(str(DATA[i]), "<13") + "".join(format(U[i][j], ">17.3f") for j in urut))
+print("  (setiap baris berjumlah " + format(sum(U[NAMA_TENGAH]), ".3f") + ")")
+print()
+print("  Pelanggan (12, 50) bukan milik satu kelompok. K-Means akan")
+print("  memaksanya masuk satu kotak; FCM mengatakan apa adanya:")
+print("  ia sedikit mirip ketiganya.")
+
+# --------------------------------------------
+# 2. Pangkat m mengatur seberapa kabur batasnya
+# --------------------------------------------
+print("\n--- pengaruh pangkat m ---")
+print("  m       (2, 15): keanggotaan tertinggi   (12, 50): tertinggi")
+for m in [1.1, 1.5, 2.0, 3.0]:
+    _, U_m, _ = fcm(DATA, 3, m)
+    print("  " + format(m, "<6") + format(max(U_m[0]), "22.3f") + format(max(U_m[NAMA_TENGAH]), "25.3f"))
+print()
+print("  m mendekati 1: keanggotaan mendekati 0 atau 1 -- mirip K-Means.")
+print("  m makin besar: keanggotaan makin merata, menuju 1/3 --")
+print("  kelompok-kelompok mulai melebur.")
+print("  m = 2 adalah pilihan yang paling lazim.")
+
+# --------------------------------------------
+# 3. Dari keanggotaan ke keputusan
+# --------------------------------------------
+print("\n--- pelanggan yang 'tidak jelas kelompoknya' ---")
+ambang = 0.6
+ragu = [DATA[i] for i in range(len(DATA)) if max(U[i]) < ambang]
+print("  keanggotaan tertinggi di bawah " + str(ambang) + ": " + str(ragu))
+print("  Pelanggan seperti ini layak ditangani terpisah -- misalnya")
+print("  ditanya langsung -- daripada diberi promosi kelompok yang")
+print("  belum tentu cocok. Informasi ini hilang di K-Means.")` },
+  output: `--- 16 pelanggan, 3 kelompok, m = 2 ---
+  fungsi objektif J per putaran (harus turun):
+  5057  3306  992  720  542  537  ...  537.5
+  selalu turun: YA, berhenti setelah 11 putaran
+
+  pusat kelompok:
+    jarang, hemat   (3.0, 17.3)
+    sering, hemat   (20.7, 19.9)
+    jarang, boros   (4.7, 83.5)
+
+  keanggotaan beberapa pelanggan:
+  pelanggan        jarang, hemat    sering, hemat    jarang, boros
+  (2, 15)                  0.982            0.016            0.001
+  (20, 18)                 0.014            0.985            0.001
+  (5, 80)                  0.003            0.003            0.994
+  (12, 50)                 0.318            0.372            0.310
+  (setiap baris berjumlah 1.000)
+
+  Pelanggan (12, 50) bukan milik satu kelompok. K-Means akan
+  memaksanya masuk satu kotak; FCM mengatakan apa adanya:
+  ia sedikit mirip ketiganya.
+
+--- pengaruh pangkat m ---
+  m       (2, 15): keanggotaan tertinggi   (12, 50): tertinggi
+  1.1                    1.000                    0.988
+  1.5                    1.000                    0.427
+  2.0                    0.982                    0.372
+  3.0                    0.872                    0.352
+
+  m mendekati 1: keanggotaan mendekati 0 atau 1 -- mirip K-Means.
+  m makin besar: keanggotaan makin merata, menuju 1/3 --
+  kelompok-kelompok mulai melebur.
+  m = 2 adalah pilihan yang paling lazim.
+
+--- pelanggan yang 'tidak jelas kelompoknya' ---
+  keanggotaan tertinggi di bawah 0.6: [(12, 50)]
+  Pelanggan seperti ini layak ditangani terpisah -- misalnya
+  ditanya langsung -- daripada diberi promosi kelompok yang
+  belum tentu cocok. Informasi ini hilang di K-Means.`,
+
+  kompleksitas: {
+    tabel: [
+      { operasi: 'Satu putaran FCM (n data, c kelompok, d dimensi)', waktu: 'O(n · c · d + n · c²)', memori: 'O(n · c) untuk matriks keanggotaan' },
+      { operasi: 'Satu putaran K-Means', waktu: 'O(n · c · d)', memori: 'O(n) untuk label' },
+      { operasi: 'Seluruh FCM, t putaran', waktu: 'O(t · n · (c · d + c²))', memori: 'O(n · c)' },
+      { operasi: 'Mencari data meragukan', waktu: 'O(n · c)', memori: 'O(1) tambahan' }
+    ],
+    intuisi: `FCM lebih mahal dari K-Means per putaran. Setiap data butuh jarak ke setiap pusat, seperti K-Means — tetapi lalu setiap keanggotaan butuh jumlah atas semua pusat, sehingga muncul faktor c tambahan. Untuk c kecil, selisihnya tidak terasa; untuk ratusan kelompok, terasa.
+
+FCM juga menyimpan matriks keanggotaan n × c, bukan cuma satu label per data. Untuk sejuta data dan sepuluh kelompok, itu sepuluh juta angka.
+
+Keduanya sama-sama bisa berakhir di minimum lokal. Praktik yang lazim sama: jalankan beberapa kali dengan benih acak berbeda, dan ambil hasil dengan J terkecil.`
+  },
+
+  kesalahanUmum: [
+    {
+      salah: 'Mengambil kelompok dengan keanggotaan tertinggi lalu membuang keanggotaannya.',
+      kenapa: 'Itu mengubah FCM kembali menjadi K-Means dengan biaya lebih mahal, dan membuang satu-satunya informasi yang diberikan FCM: seberapa yakin setiap data termasuk kelompoknya.',
+      benar: 'Simpan keanggotaan lengkapnya, dan pakai keanggotaan tertinggi sebagai ukuran keyakinan.'
+    },
+    {
+      salah: 'Memakai m = 1.',
+      kenapa: 'Pangkat 2/(m − 1) menjadi pembagian dengan nol. Secara konsep, m = 1 adalah K-Means, bukan FCM.',
+      benar: 'Pakai m lebih dari 1, lazimnya 2, dan pakai K-Means kalau memang ingin keanggotaan tegas.'
+    },
+    {
+      salah: 'Tidak menangani data yang tepat berada di sebuah pusat.',
+      kenapa: 'Jarak nol membuat rumus keanggotaan membagi dengan nol, dan program mogok. Pada data bilangan bulat yang sering kembar, ini bisa terjadi.',
+      benar: 'Periksa jarak nol lebih dulu dan beri keanggotaan 1 di kelompok itu, 0 di yang lain.'
+    },
+    {
+      salah: 'Menganggap keanggotaan tinggi berarti data dekat dengan kelompoknya.',
+      kenapa: 'Keanggotaan dihitung dari jarak relatif. Pencilan yang jauh dari semua kelompok bisa tetap mendapat keanggotaan tinggi di kelompok yang paling tidak jauh.',
+      benar: 'Periksa juga jarak mutlak ke pusat terdekat untuk menemukan pencilan.'
+    },
+    {
+      salah: 'Mengelompokkan data yang cirinya berbeda satuan tanpa menyamakan skalanya.',
+      kenapa: 'Jarak Euclidean didominasi ciri dengan angka terbesar. Kalau belanja dicatat dalam rupiah, bukan ribuan, kunjungan per bulan praktis diabaikan.',
+      benar: 'Normalkan setiap ciri lebih dulu, seperti di topik persiapan data Data Mining.'
+    },
+    {
+      salah: 'Menjalankan FCM sekali dan menganggap hasilnya pasti yang terbaik.',
+      kenapa: 'Seperti K-Means, FCM bisa berakhir di minimum lokal yang bergantung pada keanggotaan awal.',
+      benar: 'Jalankan beberapa kali dengan benih acak berbeda dan ambil hasil dengan J terkecil.'
+    }
+  ],
+
+  analogi: `Bayangkan kamu mengelompokkan teman-teman sekelas berdasarkan **tempat nongkrong** favorit mereka: perpustakaan, kantin, dan lapangan basket.
+
+**K-Means.** Setiap teman dimasukkan ke tepat satu kelompok — tempat yang paling sering ia datangi. Budi paling sering ke kantin, jadi Budi "anak kantin".
+
+Masalahnya: Budi ke kantin 35 persen waktunya, ke perpustakaan 33 persen, ke lapangan 32 persen. Menyebutnya "anak kantin" sama saja dengan menyebut Ani — yang ke kantin 95 persen waktunya — "anak kantin". Keduanya mendapat label yang sama, padahal sama sekali tidak mirip.
+
+**FCM.** Setiap teman mendapat tiga angka yang berjumlah 100 persen. Ani: kantin 95, perpustakaan 3, lapangan 2 — jelas anak kantin. Budi: 35, 33, 32 — tidak jelas anak mana-mana. Informasi itu yang berguna: kalau kamu ingin mengajak "anak kantin" rapat di kantin, Ani pasti datang, Budi belum tentu.
+
+**Pusat kelompok.** "Suasana khas" kelompok kantin ditentukan lebih banyak oleh Ani daripada Budi — karena Ani benar-benar anak kantin. Itulah rata-rata terbobot dengan pangkat m: anggota inti menentukan pusat jauh lebih kuat daripada anggota pinggiran.
+
+**Pangkat m.** Dengan m yang sangat kecil, kamu kembali memaksa setiap orang ke satu kelompok. Dengan m yang sangat besar, kamu jadi bilang "semua orang sedikit anak kantin, sedikit anak perpustakaan, sedikit anak lapangan" — benar, tetapi tidak berguna.
+
+**Batasnya.** Ada satu teman yang hampir tidak pernah ke mana pun — ia langsung pulang setelah kuliah. FCM tetap memberinya tiga angka yang berjumlah 100, mungkin 60 persen "perpustakaan" karena itu yang paling dekat ke ruang kelas. FCM tidak bisa bilang "orang ini bukan anak kelompok mana pun" — untuk itu, kamu harus melihat seberapa jarang ia ke mana-mana, bukan cuma ke mana ia paling sering pergi.`,
+
+  latihan: [
+    'Jalankan FCM pada data pelanggan dengan c = 2 dan c = 4, lalu bandingkan keanggotaan pelanggan (12, 50).',
+    'Hitung dengan tangan keanggotaan titik (12, 50) di ketiga kelompok, memakai pusat hasil program dan m = 2.',
+    'Tambahkan pelanggan (60, 500) ke data, jalankan FCM, dan tunjukkan bahwa ia bisa mendapat keanggotaan tinggi di satu kelompok padahal jauh dari semuanya.',
+    'Jalankan FCM lima kali dengan benih acak berbeda, catat J akhir masing-masing, dan periksa apakah pusatnya selalu sama.',
+    'Jalankan K-Means dari topik Data Mining pada data yang sama, lalu bandingkan kelompok pelanggan (12, 50) dengan hasil FCM.',
+    'Ubah belanja menjadi satuan rupiah penuh (15 ribu menjadi 15000), jalankan FCM tanpa normalisasi, dan jelaskan hasilnya.',
+    'Buat grafik J per putaran untuk m = 1,5, 2, dan 3, lalu bandingkan kecepatan kekonvergenannya.',
+    'Tentukan ambang keanggotaan yang menandai tepat dua pelanggan sebagai meragukan setelah kamu menambahkan satu pelanggan baru di tengah.',
+    'Pakai pusat dan sebaran kelompok FCM untuk membuat tiga fungsi keanggotaan segitiga bagi ciri "belanja".',
+    'Jelaskan kenapa pangkat 2/(m − 1) membuat FCM mendekati K-Means saat m mendekati 1.'
+  ]
+});
+
+
+TOPICS.push({
+  id: 'fuzzy-linguistik',
+  judul: 'Variabel Linguistik, Hedge & Bilangan Fuzzy',
+  kategori: 'fuzzy',
+  tag: ['variabel linguistik', 'hedge', 'sangat', 'agak', 'alfa-cut', 'bilangan fuzzy', 'aritmetika fuzzy'],
+  ringkas: '"Sangat panas", "agak panas", "sekitar lima hari" — cara logika fuzzy mengubah kata-kata sehari-hari menjadi hitungan, dan satu jembatan kembali ke logika biasa.',
+
+  fungsi: `**Memberi arti yang bisa dihitung pada kata-kata seperti "sangat", "agak", dan "sekitar", lalu menghitung dengan besaran yang tidak pasti.**
+
+Terpakai di:
+
+- **Menulis aturan fuzzy yang lebih kaya** — "JIKA suhu SANGAT panas" tanpa perlu membuat himpunan baru untuk setiap penekanan
+- **Mengubah derajat fuzzy menjadi syarat biasa** — α-cut memberi selang tegas yang bisa ditulis sebagai \`if\` di kode mana pun
+- **Estimasi di bawah ketidakpastian** — lama proyek "sekitar 5 hari" ditambah "sekitar 3 hari", dengan ketidakpastian yang ikut dihitung
+- **Survei dan penilaian kualitatif** — jawaban "cukup baik", "sangat baik" diubah menjadi angka yang bisa diolah
+
+Yang paling berguna dipahami: **setiap himpunan fuzzy adalah tumpukan selang biasa**, satu untuk setiap tingkat keyakinan α. Itu jembatan dua arah antara logika fuzzy dan logika biasa — dan dasar untuk menghitung dengan bilangan fuzzy.
+
+Dan yang paling mengejutkan: **"sekitar 5" dikurangi "sekitar 5" bukan nol.** Aritmetika fuzzy tidak tahu bahwa keduanya besaran yang sama.`,
+
+  praktik: {
+    tujuan: 'Kamu bisa menerapkan hedge pada himpunan fuzzy, menghitung α-cut dan menyusun ulang himpunan darinya, menjumlahkan dan mengalikan bilangan fuzzy lewat α-cut, dan mengenali kapan aritmetika fuzzy melebih-lebihkan ketidakpastian.',
+    alat: ['Python 3'],
+    langkah: [
+      { judul: 'Tentukan variabel linguistiknya',
+        isi: `Variabel linguistik punya nama (suhu ruang server), semesta (20–60 °C), dan istilah-istilah (dingin, hangat, panas), masing-masing dengan fungsi keanggotaan.` },
+      { judul: 'Terapkan hedge',
+        isi: `Tiga hedge klasik dari Zadeh:
+
+- **sangat** A: μ², konsentrasi — himpunan menyempit
+- **agak** A: √μ, dilasi — himpunan melebar
+- **tidak** A: 1 − μ
+
+Hitung untuk beberapa titik dan perhatikan bahwa derajat 0 dan 1 tidak pernah berubah oleh "sangat" dan "agak".` },
+      { judul: 'Hitung α-cut',
+        isi: `α-cut adalah himpunan biasa {x : μ(x) ≥ α}. Untuk himpunan yang naik lurus, batas bawahnya bisa dihitung langsung dengan membalik fungsi keanggotaan.
+
+Tulis hasilnya sebagai syarat biasa: "panas dengan keyakinan minimal 0,5" berarti \`suhu >= 34\`.` },
+      { judul: 'Susun ulang himpunan dari α-cut-nya',
+        isi: `Untuk setiap x, ambil α terbesar yang α-cut-nya memuat x. Dengan cukup banyak tingkat α, hasilnya mendekati fungsi keanggotaan aslinya.
+
+Ini teorema dekomposisi: himpunan fuzzy sepenuhnya ditentukan oleh tumpukan α-cut-nya.` },
+      { judul: 'Tulis bilangan fuzzy sebagai α-cut',
+        isi: `Bilangan fuzzy segitiga (a, b, c) — "sekitar b, paling kecil a, paling besar c" — punya α-cut [a + α(b − a), c − α(c − b)].` },
+      { judul: 'Hitung dengan selang di setiap α',
+        isi: `Penjumlahan: [a₁ + b₁, a₂ + b₂]. Perkalian: min dan max dari keempat hasil kali ujung. Lakukan untuk setiap α, dan tumpukan hasilnya adalah bilangan fuzzy hasilnya.` },
+      { judul: 'Waspadai besaran yang sama muncul dua kali',
+        isi: `Hitung "sekitar 5" dikurangi dirinya sendiri. Hasilnya bukan nol, melainkan selang di sekitar nol.
+
+Kalau rumusmu memakai besaran tak pasti yang sama lebih dari sekali, sederhanakan rumusnya lebih dulu sebelum menghitung dengan α-cut.` }
+    ],
+    cek: [
+      'Kamu bisa menghitung derajat "sangat panas" dan "agak panas" dari derajat "panas"',
+      'Kamu bisa menulis α-cut sebagai syarat if biasa',
+      'Penjumlahan dua bilangan fuzzy segitigamu menghasilkan segitiga dengan lebar yang dijumlahkan',
+      'Kamu bisa menjelaskan kenapa "sekitar 5" dikurangi dirinya sendiri tidak memberi nol'
+    ]
+  },
+
+  judulLogicSyntax: 'Bedah Konsep — kenapa himpunan fuzzy adalah tumpukan selang',
+
+  konsep: `Topik himpunan fuzzy memberi derajat pada "panas". Topik ini membahas tiga hal yang dibangun di atasnya: cara memberi arti pada kata-kata penekan seperti "sangat", cara kembali ke logika biasa, dan cara menghitung dengan besaran yang tidak pasti.
+
+**Variabel linguistik**
+
+Zadeh memperkenalkan **variabel linguistik**: variabel yang nilainya kata-kata, bukan angka. "Suhu ruang server" bernilai "dingin", "hangat", atau "panas", dan setiap kata adalah himpunan fuzzy di semesta angka suhu.
+
+Di sini "panas" naik lurus dari 30 °C (derajat 0) sampai 38 °C (derajat 1).
+
+**Hedge: sangat, agak, tidak**
+
+| Istilah | 30 °C | 32 °C | 34 °C | 36 °C | 38 °C |
+|---|---|---|---|---|---|
+| panas | 0,00 | 0,25 | 0,50 | 0,75 | 1,00 |
+| sangat panas | 0,00 | 0,06 | 0,25 | 0,56 | 1,00 |
+| agak panas | 0,00 | 0,50 | 0,71 | 0,87 | 1,00 |
+| tidak panas | 1,00 | 0,75 | 0,50 | 0,25 | 0,00 |
+| sangat tidak panas | 1,00 | 0,56 | 0,25 | 0,06 | 0,00 |
+
+**Sangat** mengkuadratkan derajat. Karena derajat di antara 0 dan 1, kuadratnya selalu lebih kecil: 0,5 menjadi 0,25. Himpunannya **menyempit** — lebih sulit untuk dianggap "sangat panas" daripada "panas". Itu yang dimaksud kata "sangat".
+
+**Agak** mengakarkan: 0,5 menjadi 0,71. Himpunannya **melebar** — lebih mudah dianggap "agak panas".
+
+Derajat 0 dan 1 tidak berubah oleh keduanya. Suhu yang sepenuhnya panas tetap sepenuhnya "sangat panas"; yang sama sekali tidak panas tetap sama sekali tidak "agak panas".
+
+Hedge bisa digabung: "sangat tidak panas" = (1 − μ)². Satu himpunan "panas" melahirkan seluruh keluarga istilah, tanpa satu pun fungsi keanggotaan baru.
+
+Pangkat 2 dan ½ adalah usulan Zadeh, bukan hasil pengukuran. Di aplikasi sungguhan, pangkatnya bisa disesuaikan dengan cara pengguna benar-benar memakai kata-kata itu.
+
+**α-cut: jembatan ke logika biasa**
+
+α-cut adalah himpunan biasa — tegas, tanpa derajat — berisi semua x dengan derajat minimal α:
+
+| α | α-cut "panas" |
+|---|---|
+| 0,25 | suhu 32 ke atas |
+| 0,50 | suhu 34 ke atas |
+| 0,75 | suhu 36 ke atas |
+| 1,00 | suhu 38 ke atas |
+
+"Sangat panas" di α = 0,5: suhu 35,66 ke atas — lebih ketat, sesuai arti "sangat".
+
+α-cut membuat kesimpulan fuzzy bisa dipakai di mana pun: "nyalakan pendingin cadangan kalau suhu panas dengan keyakinan minimal 0,5" menjadi \`if suhu >= 34\` — kode biasa, tanpa pustaka fuzzy.
+
+**Himpunan fuzzy = tumpukan α-cut**
+
+Arah sebaliknya juga berlaku. Kalau semua α-cut diketahui, himpunannya bisa disusun ulang: derajat x adalah α terbesar yang α-cut-nya memuat x.
+
+| Tingkat α | Galat terbesar penyusunan ulang |
+|---|---|
+| 4 | 0,237 |
+| 10 | 0,088 |
+| 100 | 0,008 |
+
+Makin banyak tingkat, makin tepat. Ini **teorema dekomposisi**: setiap himpunan fuzzy adalah tumpukan selang biasa, satu untuk setiap tingkat keyakinan. Dan itu yang membuat aritmetika fuzzy bisa dihitung.
+
+**Bilangan fuzzy dan aritmetikanya**
+
+"Sekitar 5 hari" bisa ditulis sebagai bilangan fuzzy segitiga (4, 5, 6): paling mungkin 5, tidak kurang dari 4, tidak lebih dari 6. "Sekitar 3 hari" = (2, 3, 4).
+
+Untuk menjumlahkan atau mengalikannya, hitung dengan **selang biasa** di setiap tingkat α, lalu tumpukan hasilnya:
+
+| α | A | B | A + B | A × B |
+|---|---|---|---|---|
+| 0,0 | [4, 6] | [2, 4] | [6, 10] | [8, 24] |
+| 0,5 | [4,5; 5,5] | [2,5; 3,5] | [7, 9] | [11,25; 19,25] |
+| 1,0 | [5, 5] | [3, 3] | [8, 8] | [15, 15] |
+
+**A + B** = segitiga (6, 8, 10): "sekitar 8 hari". Ketidakpastiannya **bertambah**: lebar 2 + 2 = 4. Merencanakan proyek dari dua tugas yang masing-masing "kurang lebih sehari" menghasilkan proyek yang "kurang lebih dua hari".
+
+**A × B** di α = 0,5 adalah [11,25; 19,25]. Kalau hasilnya segitiga, di α = 0,5 seharusnya [11,5; 19,5] — tepat di tengah antara [8, 24] dan [15, 15]. Ternyata tidak. Hasil kali dua bilangan segitiga **bukan segitiga** lagi; sisi-sisinya melengkung.
+
+**"Sekitar 5" dikurangi "sekitar 5"**
+
+| α | Hasil |
+|---|---|
+| 0,0 | [−2, 2] |
+| 0,5 | [−1, 1] |
+| 1,0 | [0, 0] |
+
+Bukan nol. Aritmetika selang tidak tahu bahwa kedua "sekitar 5" adalah **besaran yang sama** — ia menganggapnya dua besaran tak pasti yang terpisah, yang bisa saja satu 4 dan yang lain 6. Masalah yang sama muncul di aritmetika selang biasa, dan disebut **masalah ketergantungan**. Jalan keluarnya: sederhanakan rumus lebih dulu, sehingga setiap besaran tak pasti muncul sekali.`,
+
+  logicSyntax: [
+    {
+      bahasa: 'python',
+      kode: "HEDGE = [\n    ('panas',              lambda m: m),\n    ('sangat panas',       lambda m: m ** 2),        # konsentrasi\n    ('agak panas',         lambda m: m ** 0.5),      # dilasi\n    ('tidak panas',        lambda m: 1 - m),\n    ('sangat tidak panas', lambda m: (1 - m) ** 2),\n]\n\n# di 34 C, panas = 0.5:\n#   sangat panas  0.25\n#   agak panas    0.71\n#   tidak panas   0.50",
+      penjelasan: `Lima baris yang mengubah satu himpunan menjadi lima — dan kenapa operasi yang dipilih adalah pangkat.
+
+**Hedge adalah fungsi dari derajat, bukan dari suhu.**
+
+Perhatikan bahwa setiap \`lambda\` menerima derajat m, bukan suhu t. Hedge tidak peduli apa semestanya — suhu, kecepatan, nilai ujian. Ia cuma mengubah seberapa benar sesuatu.
+
+Itu yang membuat hedge begitu hemat. "Sangat" yang sama bisa dipakai untuk "sangat panas", "sangat cepat", "sangat mahal" — tanpa satu pun fungsi keanggotaan baru.
+
+**Kenapa pangkat.**
+
+Hedge yang baik harus memenuhi beberapa syarat yang masuk akal:
+
+- Derajat 0 tetap 0 dan derajat 1 tetap 1. "Sangat panas" tidak boleh membuat suhu yang sama sekali tidak panas menjadi sedikit panas.
+- Urutan tidak berubah. Kalau 36 °C lebih panas dari 34 °C, ia juga lebih "sangat panas".
+- "Sangat" menurunkan derajat di antara 0 dan 1; "agak" menaikkannya.
+
+Fungsi pangkat mᵖ memenuhi semuanya, untuk p > 1 (menurunkan) dan p < 1 (menaikkan). Pangkat 2 dan ½ adalah pilihan Zadeh yang paling sederhana.
+
+**Kenapa "sangat" menyempitkan, bukan menggeser.**
+
+Bayangkan grafik "panas" dan "sangat panas". Titik di mana keduanya mulai naik sama — 30 °C. Titik di mana keduanya mencapai 1 sama — 38 °C. Yang berubah adalah **bentuk** di antaranya: "sangat panas" naik lebih lambat di awal, lalu mengejar di akhir.
+
+Jadi "sangat panas" tidak berarti "panas yang digeser ke suhu lebih tinggi". Ia berarti "panas, dengan standar yang lebih ketat" — suhu yang cuma setengah panas hanya seperempat "sangat panas".
+
+**Kenapa "tidak" berbeda.**
+
+\`1 - m\` membalik derajat, dan 0 menjadi 1. "Tidak" adalah komplemen dari topik operator fuzzy, bukan hedge dalam arti penekanan — tetapi karena juga fungsi dari derajat, ia bisa digabung dengan hedge lain. "Sangat tidak panas" menerapkan "tidak" dulu, lalu "sangat": (1 − m)².
+
+Urutan itu penting. "Tidak sangat panas" — 1 − m² — berbeda: di 34 °C, "sangat tidak panas" 0,25 sedangkan "tidak sangat panas" 0,75.`
+    },
+    {
+      bahasa: 'python',
+      kode: "def segitiga(a, b, c):\n    # alfa-cut bilangan fuzzy segitiga (a, b, c)\n    return lambda alfa: (a + alfa * (b - a), c - alfa * (c - b))\n\nA = segitiga(4, 5, 6)      # sekitar 5 hari\nB = segitiga(2, 3, 4)      # sekitar 3 hari\n\na1, a2 = A(0.5); b1, b2 = B(0.5)\n(a1 + b1, a2 + b2)                    # A + B: (7, 9)\nhasil = [a1*b1, a1*b2, a2*b1, a2*b2]\n(min(hasil), max(hasil))              # A x B: (11.25, 19.25)\n(a1 - a2, a2 - a1)                    # A - A: (-1, 1), bukan 0",
+      penjelasan: `Bilangan fuzzy ditulis sebagai fungsi dari α ke selang — dan setiap operasi aritmetika menjadi operasi pada selang biasa.
+
+**Bilangan fuzzy sebagai fungsi.**
+
+\`segitiga(4, 5, 6)\` tidak menyimpan fungsi keanggotaan. Ia menyimpan **cara menghitung α-cut**: diberi α, kembalikan selang [4 + α, 6 − α]. Di α = 0, selang terlebar [4, 6]. Di α = 1, satu titik [5, 5].
+
+Menurut teorema dekomposisi, ini informasi yang sama persis dengan fungsi keanggotaan — hanya ditulis dari arah lain. Dan arah ini jauh lebih mudah untuk berhitung.
+
+**Penjumlahan selang.**
+
+Kalau x di [4,5; 5,5] dan y di [2,5; 3,5], maka x + y paling kecil 4,5 + 2,5 = 7 dan paling besar 5,5 + 3,5 = 9. Ujung bawah dijumlah, ujung atas dijumlah.
+
+Lakukan itu di setiap α, dan hasilnya segitiga (6, 8, 10). Penjumlahan bilangan segitiga selalu segitiga, dengan setiap parameternya dijumlahkan.
+
+**Perkalian selang: kenapa empat hasil kali.**
+
+Untuk selang yang semuanya positif, hasil kali terkecil adalah ujung bawah dikali ujung bawah. Tetapi kalau ada selang yang memuat bilangan negatif, bukan lagi — negatif dikali negatif bisa menjadi yang terbesar. Menghitung keempat hasil kali ujung, lalu mengambil min dan max-nya, benar untuk selang apa pun.
+
+**Kenapa hasil kali tidak segitiga.**
+
+Ujung bawah hasil kali adalah (4 + α)(2 + α) = 8 + 6α + α². Ada α² — fungsi kuadrat dari α, bukan garis lurus. Sisi segitiga adalah garis lurus; sisi hasil kali melengkung.
+
+Di praktik, hasil kali sering **didekati** dengan segitiga (8, 15, 24) supaya mudah disimpan. Itu pendekatan, dan di α = 0,5 ia meleset 0,25 di setiap ujung.
+
+**A − A bukan nol.**
+
+Pengurangan selang: [a₁ − a₂, a₂ − a₁]. Rumus ini benar untuk dua besaran **terpisah** yang masing-masing di [4,5; 5,5] — selisih terkecilnya memang 4,5 − 5,5 = −1.
+
+Tetapi kalau keduanya adalah besaran yang **sama**, selisihnya pasti nol. Aritmetika selang tidak menyimpan informasi "ini besaran yang sama", sehingga ia melebih-lebihkan ketidakpastian.
+
+Dalam rumus sungguhan, masalah ini muncul diam-diam: misalnya waktu_selesai − waktu_mulai, keduanya dihitung dari durasi yang sama. Jalan keluarnya: sederhanakan rumus secara aljabar lebih dulu, sehingga setiap besaran tak pasti muncul sekali, baru hitung dengan α-cut.`
+    }
+  ],
+
+  kode: { python: String.raw`# ============================================
+# Variabel linguistik, hedge, alfa-cut, bilangan fuzzy
+# ============================================
+
+def panas(t):
+    """Naik lurus dari 30 C (derajat 0) sampai 38 C (derajat 1)."""
+    if t <= 30:
+        return 0.0
+    if t >= 38:
+        return 1.0
+    return (t - 30) / 8
+
+# --------------------------------------------
+# 1. Hedge: 'sangat', 'agak', 'tidak'
+# --------------------------------------------
+HEDGE = [
+    ("panas", lambda m: m),
+    ("sangat panas", lambda m: m ** 2),          # konsentrasi
+    ("agak panas", lambda m: m ** 0.5),          # dilasi
+    ("tidak panas", lambda m: 1 - m),
+    ("sangat tidak panas", lambda m: (1 - m) ** 2),
+]
+SUHU = [30, 32, 34, 36, 38]
+print("--- variabel 'suhu ruang server' dengan hedge ---")
+print("  " + format("istilah", "<20") + "".join(format(str(t) + " C", ">8") for t in SUHU))
+for nama, f in HEDGE:
+    print("  " + format(nama, "<20") + "".join(format(f(panas(t)), ">8.2f") for t in SUHU))
+print()
+print("  'sangat' mengkuadratkan: 0.5 menjadi 0.25 -- makin ketat.")
+print("  'agak' mengakarkan: 0.5 menjadi 0.71 -- makin longgar.")
+print("  Nilai 0 dan 1 tidak berubah oleh keduanya.")
+print("  Aturan 'JIKA suhu SANGAT panas' kini bisa ditulis tanpa")
+print("  membuat himpunan baru -- cukup satu operasi pada 'panas'.")
+
+# --------------------------------------------
+# 2. Alfa-cut: dari himpunan fuzzy ke selang biasa
+# --------------------------------------------
+def potong(f, alfa, lo=20, hi=60, langkah=0.01):
+    """Selang {x : f(x) >= alfa}, dicari dengan menyisir."""
+    xs = [lo + i * langkah for i in range(int((hi - lo) / langkah) + 1)]
+    masuk = [x for x in xs if f(x) >= alfa - 1e-12]
+    return (round(min(masuk), 2), round(max(masuk), 2)) if masuk else None
+
+print("\n--- alfa-cut 'panas' ---")
+for a in [0.25, 0.5, 0.75, 1.0]:
+    print("  alfa = " + format(a, "<5") + "-> suhu " + str(potong(panas, a)))
+sangat = lambda t: panas(t) ** 2
+print("  alfa = 0.5 untuk 'sangat panas' -> suhu " + str(potong(sangat, 0.5)))
+print()
+print("  Alfa-cut adalah jembatan ke logika biasa: 'panas dengan")
+print("  keyakinan minimal 0,5' berarti suhu 34 ke atas -- sebuah")
+print("  syarat if yang bisa ditulis di kode mana pun.")
+
+print("\n  menyusun ulang 'panas' dari tumpukan alfa-cut:")
+for n in [4, 10, 100]:
+    cut = [(k / n, potong(panas, k / n)) for k in range(1, n + 1)]
+    def dari_cut(t):
+        return max([a for a, (lo, hi) in cut if lo <= t <= hi], default=0.0)
+    galat = max(abs(dari_cut(t / 10) - panas(t / 10)) for t in range(300, 400))
+    print("  " + format(n, ">4") + " tingkat alfa -> galat terbesar " + format(galat, ".3f"))
+print("  Himpunan fuzzy = tumpukan selang biasa, satu untuk setiap alfa.")
+
+# --------------------------------------------
+# 3. Bilangan fuzzy dan aritmetikanya lewat alfa-cut
+# --------------------------------------------
+def segitiga(a, b, c):
+    """Alfa-cut bilangan fuzzy segitiga (a, b, c): [a + alfa(b-a), c - alfa(c-b)]"""
+    return lambda alfa: (a + alfa * (b - a), c - alfa * (c - b))
+
+A = segitiga(4, 5, 6)      # "sekitar 5 hari"
+B = segitiga(2, 3, 4)      # "sekitar 3 hari"
+print("\n--- 'sekitar 5 hari' + 'sekitar 3 hari' ---")
+print("  alfa    A              B              A + B          A x B")
+for alfa in [0.0, 0.5, 1.0]:
+    a1, a2 = A(alfa)
+    b1, b2 = B(alfa)
+    tambah = (a1 + b1, a2 + b2)
+    hasil_kali = [a1 * b1, a1 * b2, a2 * b1, a2 * b2]
+    kali = (min(hasil_kali), max(hasil_kali))
+    f = lambda s: "[" + format(s[0], "g") + ", " + format(s[1], "g") + "]"
+    print("  " + format(alfa, "<7") + format(f((a1, a2)), "<15") + format(f((b1, b2)), "<15")
+          + format(f(tambah), "<15") + f(kali))
+print()
+print("  A + B = segitiga (6, 8, 10): 'sekitar 8 hari', dan KETIDAK-")
+print("  PASTIANNYA ikut bertambah -- lebar 2 + 2 = 4.")
+print("  A x B di alfa 0,5 = [11.25, 19.25], padahal garis lurus dari")
+print("  [8, 24] ke [15, 15] memberi [11.5, 19.5]. Hasil kali dua")
+print("  bilangan segitiga BUKAN segitiga lagi -- sisinya melengkung.")
+
+print("\n--- 'sekitar 5' - 'sekitar 5' ---")
+for alfa in [0.0, 0.5, 1.0]:
+    a1, a2 = A(alfa)
+    print("  alfa " + format(alfa, "<4") + ": [" + format(a1 - a2, "g") + ", " + format(a2 - a1, "g") + "]")
+print("  Bukan nol. Aritmetika alfa-cut tidak tahu kedua 'sekitar 5'")
+print("  itu bilangan yang SAMA -- ia memperlakukannya sebagai dua")
+print("  besaran tak pasti yang terpisah.")` },
+  output: `--- variabel 'suhu ruang server' dengan hedge ---
+  istilah                 30 C    32 C    34 C    36 C    38 C
+  panas                   0.00    0.25    0.50    0.75    1.00
+  sangat panas            0.00    0.06    0.25    0.56    1.00
+  agak panas              0.00    0.50    0.71    0.87    1.00
+  tidak panas             1.00    0.75    0.50    0.25    0.00
+  sangat tidak panas      1.00    0.56    0.25    0.06    0.00
+
+  'sangat' mengkuadratkan: 0.5 menjadi 0.25 -- makin ketat.
+  'agak' mengakarkan: 0.5 menjadi 0.71 -- makin longgar.
+  Nilai 0 dan 1 tidak berubah oleh keduanya.
+  Aturan 'JIKA suhu SANGAT panas' kini bisa ditulis tanpa
+  membuat himpunan baru -- cukup satu operasi pada 'panas'.
+
+--- alfa-cut 'panas' ---
+  alfa = 0.25 -> suhu (32.0, 60.0)
+  alfa = 0.5  -> suhu (34.0, 60.0)
+  alfa = 0.75 -> suhu (36.0, 60.0)
+  alfa = 1.0  -> suhu (38.0, 60.0)
+  alfa = 0.5 untuk 'sangat panas' -> suhu (35.66, 60.0)
+
+  Alfa-cut adalah jembatan ke logika biasa: 'panas dengan
+  keyakinan minimal 0,5' berarti suhu 34 ke atas -- sebuah
+  syarat if yang bisa ditulis di kode mana pun.
+
+  menyusun ulang 'panas' dari tumpukan alfa-cut:
+     4 tingkat alfa -> galat terbesar 0.237
+    10 tingkat alfa -> galat terbesar 0.088
+   100 tingkat alfa -> galat terbesar 0.008
+  Himpunan fuzzy = tumpukan selang biasa, satu untuk setiap alfa.
+
+--- 'sekitar 5 hari' + 'sekitar 3 hari' ---
+  alfa    A              B              A + B          A x B
+  0.0    [4, 6]         [2, 4]         [6, 10]        [8, 24]
+  0.5    [4.5, 5.5]     [2.5, 3.5]     [7, 9]         [11.25, 19.25]
+  1.0    [5, 5]         [3, 3]         [8, 8]         [15, 15]
+
+  A + B = segitiga (6, 8, 10): 'sekitar 8 hari', dan KETIDAK-
+  PASTIANNYA ikut bertambah -- lebar 2 + 2 = 4.
+  A x B di alfa 0,5 = [11.25, 19.25], padahal garis lurus dari
+  [8, 24] ke [15, 15] memberi [11.5, 19.5]. Hasil kali dua
+  bilangan segitiga BUKAN segitiga lagi -- sisinya melengkung.
+
+--- 'sekitar 5' - 'sekitar 5' ---
+  alfa 0.0 : [-2, 2]
+  alfa 0.5 : [-1, 1]
+  alfa 1.0 : [0, 0]
+  Bukan nol. Aritmetika alfa-cut tidak tahu kedua 'sekitar 5'
+  itu bilangan yang SAMA -- ia memperlakukannya sebagai dua
+  besaran tak pasti yang terpisah.`,
+
+  kompleksitas: {
+    tabel: [
+      { operasi: 'Menerapkan hedge pada satu derajat', waktu: 'O(1)', memori: 'O(1)' },
+      { operasi: 'α-cut dengan menyisir semesta, langkah h', waktu: 'O(lebar/h)', memori: 'O(1) kalau cuma ujungnya disimpan' },
+      { operasi: 'α-cut bilangan segitiga', waktu: 'O(1)', memori: 'rumus tertutup' },
+      { operasi: 'Operasi dua bilangan fuzzy di L tingkat α', waktu: 'O(L)', memori: 'O(L) selang hasil' },
+      { operasi: 'Menyusun ulang himpunan dari L tingkat α', waktu: 'O(L) per titik', memori: 'galat sekitar 1/L' }
+    ],
+    intuisi: `Hedge hampir gratis — satu pangkat per derajat. Yang mahal di topik ini adalah α-cut untuk himpunan yang bentuknya sembarang, karena harus menyisir semesta. Untuk bilangan segitiga dan trapesium, α-cut punya rumus tertutup, dan semuanya menjadi O(1) per tingkat α.
+
+Baris terakhir adalah pertukaran utama aritmetika fuzzy: lebih banyak tingkat α memberi hasil yang lebih tepat, dengan galat yang turun kira-kira seperti 1/L — program menunjukkan 0,237, 0,088, dan 0,008 untuk 4, 10, dan 100 tingkat. Untuk sebagian besar keperluan, 10 sampai 20 tingkat sudah cukup.`
+  },
+
+  kesalahanUmum: [
+    {
+      salah: 'Membuat himpunan baru dengan tangan untuk "sangat panas" dengan menggeser "panas" ke kanan.',
+      kenapa: 'Menggeser mengubah titik di mana derajat mulai naik dan mencapai 1, sehingga suhu yang sepenuhnya panas bisa menjadi tidak sepenuhnya sangat panas, atau sebaliknya. Itu bukan arti "sangat".',
+      benar: 'Pakai hedge μ² yang mempertahankan derajat 0 dan 1 dan hanya mengetatkan bagian di antaranya.'
+    },
+    {
+      salah: 'Menganggap "tidak sangat panas" sama dengan "sangat tidak panas".',
+      kenapa: 'Yang pertama 1 − μ², yang kedua (1 − μ)². Di 34 °C, hasilnya 0,75 dan 0,25.',
+      benar: 'Terapkan hedge dari yang paling dekat ke himpunan dasar, dan tulis urutannya dengan jelas.'
+    },
+    {
+      salah: 'Menjumlahkan bilangan fuzzy dengan menjumlahkan derajat keanggotaannya.',
+      kenapa: 'Derajat bukan besarannya. Menjumlahkan derajat bisa menghasilkan nilai di atas 1 dan tidak berarti apa pun tentang "sekitar 5 + sekitar 3".',
+      benar: 'Jumlahkan α-cut-nya: di setiap tingkat α, jumlahkan ujung bawah dengan ujung bawah dan ujung atas dengan ujung atas.'
+    },
+    {
+      salah: 'Menganggap hasil kali dua bilangan segitiga tetap segitiga.',
+      kenapa: 'Ujung selang hasil kali adalah fungsi kuadrat dari α, sehingga sisinya melengkung. Di α = 0,5 hasil sebenarnya [11,25; 19,25], bukan [11,5; 19,5].',
+      benar: 'Hitung α-cut hasil kali di beberapa tingkat, atau sebut dengan jelas bahwa segitiga hanyalah pendekatan.'
+    },
+    {
+      salah: 'Menghitung rumus yang memuat besaran tak pasti yang sama lebih dari sekali dengan aritmetika α-cut apa adanya.',
+      kenapa: 'Aritmetika selang menganggap setiap kemunculan sebagai besaran terpisah, sehingga ketidakpastian dilebih-lebihkan. "Sekitar 5" dikurangi dirinya sendiri memberi [−2, 2], bukan 0.',
+      benar: 'Sederhanakan rumus secara aljabar lebih dulu supaya setiap besaran tak pasti muncul sekali.'
+    }
+  ],
+
+  analogi: `Bayangkan kamu menanyakan **kopi** kepada teman-teman.
+
+**Hedge.** "Kopinya panas?" — "Iya, lumayan." "Sangat panas?" — "Hmm, belum sampai sangat."
+
+Untuk teman itu, kopinya panas dengan derajat, katakanlah, 0,7. "Sangat panas" menuntut lebih: 0,7 dikuadratkan menjadi 0,49 — belum meyakinkan. Kata "sangat" tidak memindahkan batas "panas"; ia menaikkan standarnya. Kopi yang benar-benar mendidih tetap sepenuhnya "sangat panas", dan kopi dingin tetap sama sekali tidak.
+
+**α-cut.** Barista punya aturan: "sajikan kopi hanya kalau panasnya meyakinkan — minimal 0,5." Aturan fuzzy itu diubah menjadi aturan termometer: sajikan kalau suhunya minimal 70 °C. Barista tidak perlu tahu apa-apa soal derajat keanggotaan; ia cuma perlu termometer dan satu angka.
+
+**Tumpukan α-cut.** Sekarang barista punya beberapa aturan: "panas meyakinkan 0,25: minimal 60 °C", "0,5: minimal 70 °C", "0,75: minimal 80 °C". Dari tumpukan aturan tegas itu, kamu bisa menyusun kembali seberapa "panas" setiap suhu. Makin banyak aturan, makin halus hasilnya.
+
+**Bilangan fuzzy.** Kamu bertanya berapa lama menyeduh dan menyajikan. "Menyeduh sekitar 5 menit, mengantar sekitar 3 menit." Totalnya sekitar 8 menit — tetapi kamu tidak bisa lebih yakin tentang totalnya daripada tentang bagian-bagiannya. Kalau masing-masing bisa meleset satu menit, totalnya bisa meleset dua.
+
+**A − A.** Kamu bertanya, "berapa selisih waktu menyeduh kopi ini dengan waktu menyeduh kopi ini?" Jawabannya jelas nol — itu kopi yang sama. Tetapi kalau kamu menghitungnya dengan "sekitar 5 dikurangi sekitar 5", seolah-olah dua kopi berbeda, kamu mendapat "antara −2 dan 2 menit". Rumusmu lupa bahwa kedua "sekitar 5" itu satu kopi.`,
+
+  latihan: [
+    'Hitung derajat "sangat sangat panas" (μ⁴) dan "agak sangat panas" untuk 32, 34, dan 36 °C.',
+    'Tunjukkan dengan angka bahwa "tidak sangat panas" dan "sangat tidak panas" berbeda di 32 °C.',
+    'Hitung α-cut "agak panas" di α = 0,5 dengan rumus, lalu periksa dengan fungsi potong di program.',
+    'Tulis aturan "nyalakan alarm kalau suhu sangat panas dengan keyakinan minimal 0,8" sebagai satu syarat if.',
+    'Susun ulang himpunan "panas" dari 20 tingkat α dan catat galat terbesarnya.',
+    'Hitung (4, 5, 6) + (2, 3, 4) + (1, 2, 3) lewat α-cut, lalu tentukan lebar ketidakpastian totalnya.',
+    'Hitung α-cut (4, 5, 6) × (2, 3, 4) di α = 0,25 dan 0,75, lalu tunjukkan bahwa hasilnya tidak segaris dengan α = 0 dan α = 1.',
+    'Hitung (−1, 0, 1) × (2, 3, 4) lewat α-cut, dan jelaskan kenapa keempat hasil kali ujung harus diperiksa.',
+    'Hitung A + A dan 2 × A untuk A = (4, 5, 6) lewat α-cut, lalu bandingkan hasilnya.',
+    'Rencanakan tiga tugas proyek kelompokmu dengan durasi fuzzy segitiga, lalu hitung durasi totalnya dan jelaskan ketidakpastiannya.'
   ]
 });
