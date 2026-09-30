@@ -32,7 +32,7 @@ Jekyll, yang kalau dibiarkan akan mengabaikan berkas berawalan titik.
 
 ## Isi saat ini
 
-**220 topik** di **35 mata kuliah**, ditambah glosarium.
+**221 topik** di **35 mata kuliah**, ditambah glosarium.
 
 | Semester | Mata kuliah |
 |----------|-------------|

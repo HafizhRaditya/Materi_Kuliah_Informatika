@@ -14,6 +14,11 @@
    lalu analisis paket.
 
    Topik di sini memakai `judulLogicSyntax` menjadi "Bedah Konsep".
+
+   Topik kelima (router MikroTik: user, DHCP, NAT, firewall)
+   disusun dari laporan Praktikum Jaringan Komputer semester 4
+   yang sebelumnya terlewat -- keterangannya ada di kepala
+   bagian tambahan di bawah.
    ============================================================ */
 
 TOPICS.push({
@@ -1577,5 +1582,530 @@ Terakhir, dan ini bukan sekadar catatan kaki: **kendaraan yang lewat gerbang itu
     'Tuliskan display filter untuk: hanya lalu lintas DNS, hanya paket ke alamat 10.0.0.5, dan hanya paket SYN pembuka sambungan.',
     'Jelaskan tiga langkah TCP three-way handshake beserta flag di tiap langkah, lalu jelaskan kenapa panggilan video sering memilih UDP.',
     'Jelaskan kenapa isi lalu lintas HTTPS tidak bisa dibaca dari hasil rekaman biasa, dan informasi apa yang tetap terlihat.'
+  ]
+});
+
+
+/* ------------------------------------------------------------
+   TAMBAHAN dari berkas praktikum sendiri (satu topik di bawah).
+
+   Sumbernya laporan "Semester Empat/Praktikum Jarkom" pertemuan
+   2, 5, dan 6: identity dan user, DHCP server dan client, NAT
+   masquerade beserta lima aksi NAT, lalu filter rules untuk
+   HTTP, ping, dan Winbox. Nama anggota kelompok dan kata sandi
+   yang tertulis di laporan sengaja tidak dipakai.
+
+   RouterOS tidak bisa dijalankan di komputer ini, jadi
+   mekanismenya DIMODELKAN dengan Python dan keluarannya berasal
+   dari model itu. Daftar policy grup user bawaan diambil dari
+   dokumentasi resmi RouterOS (help.mikrotik.com, halaman User).
+   Alamat 203.0.113.x dan 198.51.100.x adalah blok dokumentasi
+   RFC 5737.
+   ------------------------------------------------------------ */
+TOPICS.push({
+  id: 'jarkom-mikrotik',
+  judul: 'Router MikroTik: User, DHCP, NAT & Firewall',
+  kategori: 'jaringan-komputer',
+  tag: ['MikroTik', 'RouterOS', 'Winbox', 'DHCP', 'NAT', 'masquerade', 'firewall', 'filter rules'],
+  ringkas: 'Empat hal yang membuat satu router kecil menyambungkan satu ruangan laptop ke internet dengan aman — dan dua aturan firewall praktikum yang ternyata memblokir lebih banyak, atau lebih sedikit, dari yang dimaksud.',
+
+  fungsi: `**Memahami apa yang sebenarnya dikerjakan router saat kamu mengklik DHCP Setup, menambah aturan NAT, dan menulis filter rules di Winbox — supaya konfigurasinya bisa dijelaskan dan diperbaiki, bukan cuma diulang dari modul.**
+
+Topik-topik sebelumnya membahas alamat IP di atas kertas: subnetting, VLSM, dan paket yang lewat di Wireshark. Di Praktikum Jaringan Komputer semester 4, semuanya dipasang di router sungguhan: MikroTik dengan RouterOS.
+
+Terpakai di:
+
+- **Jaringan kantor, sekolah, dan warnet** — satu router yang membagikan alamat dan berbagi satu sambungan internet
+- **Keamanan perangkat jaringan** — siapa yang boleh masuk ke router, dan dari mana
+- **Server di jaringan lokal** — CCTV atau situs yang harus bisa dibuka dari internet lewat port forwarding
+- **Mencari masalah** — kenapa laptop dapat alamat 169.254, kenapa ping ke router tidak dibalas, kenapa situs tertentu tidak terbuka
+
+Yang paling penting dipahami: **router bekerja dengan tabel dan urutan.** DHCP mencatat siapa memakai alamat apa, NAT mencatat koneksi siapa yang sedang berjalan, dan firewall membaca aturan dari atas ke bawah lalu berhenti di aturan pertama yang cocok.`,
+
+  praktik: {
+    tujuan: 'Kamu bisa membuat user dengan hak yang tepat, menyiapkan DHCP server dan client, menyambungkan jaringan lokal ke internet dengan NAT, dan menulis filter rules yang memblokir tepat yang dimaksud.',
+    alat: ['Router MikroTik dengan RouterOS', 'Winbox', 'Laptop yang tersambung ke ether2', 'Kabel dari ether1 ke sumber internet'],
+    langkah: [
+      { judul: 'Mulai dari konfigurasi kosong',
+        isi: `Reset dengan opsi No Default Configuration dan Do Not Backup, atau lewat terminal: \`/system reset-configuration no-defaults=yes skip-backup=yes\`. Setelah itu router tidak punya alamat IP, DHCP, NAT, maupun firewall.` },
+      { judul: 'Atur identity dan user',
+        isi: `Beri nama router di System > Identity. Ganti kata sandi admin, lalu buat user dengan grup read dan write. Periksa hak tiap grup dengan \`/user group print\`.` },
+      { judul: 'Sambungkan ether1 ke internet',
+        isi: `Tambahkan DHCP client di ether1. Tunggu sampai statusnya bound: router sudah mendapat alamat, gateway, dan DNS dari jaringan di atasnya.` },
+      { judul: 'Siapkan jaringan lokal di ether2',
+        isi: `Beri ether2 alamat seperti \`192.168.10.1/24\`, lalu jalankan DHCP Setup pada ether2. Wizard itu membuat pool alamat, DHCP server, dan pengaturan jaringan untuk klien sekaligus.` },
+      { judul: 'Tambahkan NAT masquerade',
+        isi: `Buat aturan NAT dengan chain srcnat, out-interface ether1, dan action masquerade. Uji dengan ping ke 8.8.8.8 dari laptop.` },
+      { judul: 'Tulis filter rules, lalu uji dari dua arah',
+        isi: `Blokir HTTP di chain forward, ping ke router di chain input, dan Winbox dari ether2. Setelah itu uji juga dari arah internet dan dari router sendiri, bukan hanya dari laptop.` }
+    ],
+    cek: [
+      'Kamu bisa menyebut hak apa saja yang dimiliki grup read, termasuk yang mengejutkan',
+      'Laptop mendapat alamat dari pool, dan kamu bisa membaca daftar sewa di IP > DHCP Server > Leases',
+      'Kamu bisa menjelaskan kenapa masquerade lebih cocok daripada src-nat untuk sambungan ISP berbasis DHCP',
+      'Router tetap bisa melakukan ping ke internet setelah aturan pemblokir ping dipasang'
+    ]
+  },
+
+  judulLogicSyntax: 'Bedah Konsep — kenapa urutan dan arah menentukan segalanya',
+
+  konsep: `Semua angka di topik ini berasal dari program di bawah. RouterOS tidak bisa dijalankan di sini, jadi mekanismenya dimodelkan dengan Python. Daftar hak grup user diambil dari dokumentasi resmi RouterOS.
+
+**User dan grup: read ternyata boleh reboot**
+
+Setiap user RouterOS masuk satu grup, dan setiap grup adalah daftar **policy** — hak satuan. Tiga grup bawaannya:
+
+| Policy | read | write | full |
+|---|---|---|---|
+| read | ya | ya | ya |
+| write | - | ya | ya |
+| reboot | ya | ya | ya |
+| sensitive | ya | ya | ya |
+| policy | - | - | ya |
+| ftp | - | - | ya |
+
+- Beda **write** dari **read** cuma satu policy: \`write\`, hak mengubah konfigurasi.
+- Beda **full** dari **write**: \`policy\` (mengelola user dan grup), \`ftp\`, dan \`rest-api\`.
+- Yang mengejutkan: **read punya policy reboot.** User yang "cuma boleh melihat" tetap bisa me-restart router — dan memutus internet satu ruangan.
+
+Kalau butuh user yang benar-benar hanya melihat, buat grup sendiri tanpa \`reboot\` dan pakai grup itu.
+
+**DHCP: empat pesan dan satu tabel sewa**
+
+Laptop yang baru tersambung belum punya alamat, jadi ia berteriak ke seluruh jaringan:
+
+1. **DISCOVER** — dari 0.0.0.0 ke 255.255.255.255: "ada DHCP server?"
+2. **OFFER** — server menawarkan alamat yang masih bebas di pool
+3. **REQUEST** — laptop meminta alamat yang ditawarkan
+4. **ACK** — server mengesahkan, beserta mask, gateway, DNS, dan **masa sewa**
+
+Server mencatat setiap sewa: alamat MAC mana memakai alamat mana, sampai kapan. Dari simulasi dengan pool 5 alamat dan sewa 10 menit:
+
+- Tujuh perangkat tersambung: lima dapat alamat, **dua tidak dapat** — pool habis. Di laptop, kegagalan ini muncul sebagai alamat 169.254.x.x dari topik subnetting.
+- Laptop pertama mati lalu menyala di menit 4: ia mendapat **alamat yang sama**, karena sewanya masih berlaku.
+- Perangkat yang pergi tanpa memperpanjang sewa: di menit 12 alamatnya kembali ke pool dan dipakai perangkat yang tadi gagal.
+
+Karena itu masa sewa adalah pertukaran. Sewa panjang membuat alamat perangkat yang sudah pergi tertahan lama; sewa pendek membuat klien lebih sering memperpanjang. Klien biasanya mulai memperpanjang saat separuh masa sewa berlalu.
+
+**NAT masquerade: satu alamat publik untuk seruangan**
+
+Alamat 192.168.x.x tidak bisa dipakai di internet. NAT menulis ulang alamat sumber setiap koneksi keluar menjadi alamat publik router, dan mencatatnya di tabel supaya balasannya bisa dikembalikan:
+
+| Dari jaringan lokal | Setelah NAT |
+|---|---|
+| 192.168.10.10:50000 | 203.0.113.7:50000 |
+| 192.168.10.11:50000 | 203.0.113.7:50001 |
+
+Dua laptop kebetulan memakai port sumber yang sama, jadi router mengganti port salah satunya. Balasan ke port 50001 dikembalikan ke laptop kedua. Program ini memilih port berikutnya yang bebas; router sungguhan punya caranya sendiri, tetapi prinsipnya sama.
+
+Paket **baru** dari internet ke 203.0.113.7:8080 tidak punya catatan di tabel, sehingga router tidak tahu harus meneruskannya ke siapa. Itulah sebabnya jaringan di balik NAT aman dari koneksi masuk secara bawaan — dan itulah sebabnya server lokal butuh **dst-nat** (port forwarding).
+
+**Masquerade atau src-nat**
+
+Keduanya bekerja di chain srcnat. Bedanya dari mana alamat baru diambil:
+
+- **masquerade** — membaca alamat antarmuka keluar **saat itu**
+- **src-nat** — memakai alamat tetap di to-addresses
+
+Saat ISP mengganti alamat WAN dari 203.0.113.7 menjadi 203.0.113.50:
+
+| Aksi | Alamat sumber | Hasil |
+|---|---|---|
+| masquerade | 203.0.113.50 | balasan kembali |
+| src-nat | 203.0.113.7 | balasan tidak kembali |
+
+Untuk ether1 yang alamatnya dari DHCP client, masquerade adalah pilihan yang benar. src-nat cocok untuk alamat publik statis. Tiga aksi lain dari laporan praktikum: **dst-nat** mengubah alamat tujuan (port forwarding), **redirect** membelokkan ke router itu sendiri, dan **netmap** memetakan satu subnet ke subnet lain satu lawan satu.
+
+**Firewall filter: dari atas, berhenti di yang pertama cocok**
+
+Filter punya tiga chain menurut **arah** paket terhadap router:
+
+- **input** — menuju router itu sendiri: ping ke router, login Winbox
+- **forward** — melewati router: laptop membuka situs di internet
+- **output** — keluar dari router: router melakukan ping ke 8.8.8.8
+
+Aturan di satu chain dibaca dari atas. Aturan pertama yang cocok menentukan nasib paket; kalau tidak ada yang cocok, paket **lolos**. Tiga aturan praktikum, diuji dengan enam paket:
+
+| Paket | Hasil |
+|---|---|
+| laptop membuka situs HTTP | drop, aturan 1 |
+| laptop membuka situs HTTPS | lolos |
+| laptop ping router | drop, aturan 2 |
+| Winbox dari LAN | drop, aturan 3 |
+| Winbox dari internet | **lolos** |
+| balasan ping router ke 8.8.8.8 | **drop, aturan 2** |
+
+Dua baris terakhir adalah kejutannya:
+
+- Aturan Winbox memakai in-interface ether2, jadi yang diblokir hanya akses dari jaringan lokal. Akses dari internet lewat ether1 — arah yang justru paling berbahaya — tetap terbuka.
+- Aturan ping memblokir **semua** ICMP yang masuk ke router, termasuk balasan untuk ping yang dikirim router sendiri. Setelah aturan itu dipasang, \`ping 8.8.8.8\` dari terminal router gagal, padahal internetnya baik-baik saja.
+
+Perbaikannya adalah pola yang juga dipakai konfigurasi bawaan RouterOS: taruh aturan **accept untuk koneksi established dan related** di paling atas. Balasan untuk koneksi yang dimulai router langsung lolos di aturan pertama, sedangkan ping baru dari laptop tetap diblokir. Ditambah satu aturan untuk Winbox dari ether1, keenam paket berakhir sesuai maksudnya.
+
+**drop dan log-prefix**
+
+**drop** membuang paket diam-diam, sehingga pengirim menunggu sampai Request Timed Out. **reject** mengirim penolakan, sehingga pengirim langsung tahu. Untuk akses dari internet, drop lebih umum karena tidak memberi tahu apa pun kepada pemindai.
+
+\`log-prefix\` memberi label pada catatan log setiap kali aturan itu cocok, misalnya BLOK_PING. Labelnya hanya dipakai kalau \`log=yes\` diaktifkan pada aturan itu. Tanpa label, log router hanya berisi deretan paket yang sulit dibedakan aturannya.`,
+
+  logicSyntax: [
+    {
+      bahasa: 'python',
+      kode: String.raw`# ether1 ke internet, ether2 ke jaringan lokal
+/ip dhcp-client add interface=ether1 disabled=no
+/ip address add address=192.168.10.1/24 interface=ether2
+/ip pool add name=pool-lan ranges=192.168.10.10-192.168.10.254
+/ip dhcp-server add name=dhcp-lan interface=ether2 address-pool=pool-lan disabled=no
+/ip dhcp-server network add address=192.168.10.0/24 gateway=192.168.10.1 dns-server=8.8.8.8
+/ip firewall nat add chain=srcnat out-interface=ether1 action=masquerade`,
+      penjelasan: `Enam baris yang sama dengan hasil klik DHCP Client, IP Address, DHCP Setup, dan NAT di Winbox — dan kenapa urutannya seperti itu.
+
+**Kenapa ether1 dulu.**
+
+DHCP client di ether1 memberi router tiga hal dari jaringan di atasnya: alamat untuk ether1, **rute bawaan** ke gateway ISP, dan DNS. Tanpa rute bawaan, router tidak tahu ke mana harus mengirim paket yang tujuannya bukan jaringan lokal. Status bound berarti ketiganya sudah diterima.
+
+**Alamat ether2 menentukan jaringan lokal.**
+
+\`192.168.10.1/24\` memberi dua informasi sekaligus: alamat router di jaringan lokal (.1), dan besarnya jaringan (/24, 254 alamat pakai). Alamat ini nantinya menjadi gateway setiap laptop.
+
+**Pool tidak harus seluruh subnet.**
+
+Pool dimulai dari .10, bukan .2. Alamat .2 sampai .9 sengaja disisakan untuk perangkat yang butuh alamat tetap — printer, server, CCTV — supaya DHCP tidak pernah membagikannya ke laptop. Kalau alamat tetap berada di dalam pool, suatu saat DHCP memberikan alamat yang sama ke perangkat lain dan keduanya bertabrakan.
+
+**Dua bagian DHCP server.**
+
+\`dhcp-server\` menentukan di antarmuka mana server mendengarkan dan dari pool mana alamat diambil. \`dhcp-server network\` menentukan apa yang ikut dibagikan bersama alamat: gateway dan DNS. Gateway itulah yang memberi tahu laptop ke mana harus mengirim paket yang tujuannya di luar jaringan lokal. Kalau gateway yang dibagikan salah, laptop tersambung ke router tetapi tidak ke internet.
+
+**Masquerade terakhir.**
+
+Aturan NAT memakai out-interface ether1, jadi yang diterjemahkan hanya paket yang keluar ke internet. Lalu lintas antarlaptop di jaringan lokal tidak disentuh. Karena masquerade membaca alamat ether1 setiap kali ada koneksi baru, aturan ini tetap benar walaupun ISP mengganti alamat lewat DHCP.
+
+Wizard DHCP Setup di Winbox mengerjakan baris ketiga sampai kelima sekaligus. Menuliskannya satu per satu berguna untuk memahami apa yang sebenarnya dibuat wizard itu.`
+    },
+    {
+      bahasa: 'python',
+      kode: String.raw`/ip firewall filter
+# 1-2: balasan untuk koneksi yang sudah ada selalu lolos
+add chain=input connection-state=established,related action=accept
+add chain=forward connection-state=established,related action=accept
+# 3-5: aturan praktikum
+add chain=forward protocol=tcp dst-port=80 action=drop log=yes log-prefix=BLOK_HTTP
+add chain=input protocol=icmp action=drop log=yes log-prefix=BLOK_PING
+add chain=input protocol=tcp dst-port=8291 in-interface=ether2 action=drop log=yes log-prefix=BLOK_WINBOX
+# 6: Winbox dari internet juga ditutup
+add chain=input protocol=tcp dst-port=8291 in-interface=ether1 action=drop log=yes log-prefix=WINBOX_WAN`,
+      penjelasan: `Aturan praktikum ditambah tiga aturan yang membuatnya bekerja sesuai maksud.
+
+**Kenapa accept established harus paling atas.**
+
+Router mengikuti setiap koneksi dengan **connection tracking**. Paket pertama sebuah koneksi berstatus new; balasan dan paket-paket berikutnya berstatus established. Saat router melakukan ping ke 8.8.8.8, permintaannya keluar lewat chain output, dan balasannya masuk lewat chain input dengan status established.
+
+Tanpa aturan 1, balasan itu turun ke aturan ping dan dibuang. Dengan aturan 1 di atasnya, balasan sudah diterima sebelum sempat sampai ke aturan ping. Ping baru dari laptop tetap berstatus new, jadi tetap diblokir. Urutan inilah yang membuatnya berbeda: aturan yang sama di bawah aturan ping tidak akan pernah tercapai.
+
+Aturan 2 berguna untuk chain forward: setelah koneksi disetujui sekali, paket-paket berikutnya lolos di aturan pertama tanpa diperiksa ulang oleh semua aturan di bawahnya.
+
+**Kenapa in-interface menentukan arah.**
+
+Aturan Winbox praktikum memakai \`in-interface=ether2\`: hanya paket yang datang dari jaringan lokal yang cocok. Paket yang datang lewat ether1 tidak cocok, turun ke bawah daftar, dan lolos karena tidak ada aturan lain yang menangkapnya. Aturan 6 menutup arah itu. Di jaringan sungguhan, yang lebih umum justru sebaliknya: izinkan Winbox dari jaringan pengelola, tutup dari mana pun selain itu.
+
+**Kenapa HTTP diblokir di forward, bukan input.**
+
+Laptop yang membuka situs di internet mengirim paket yang **melewati** router, bukan **menuju** router. Aturan di chain input tidak pernah melihat paket itu. Memilih chain yang salah adalah alasan paling umum aturan firewall "tidak berpengaruh".
+
+**Batas blokir port 80.**
+
+Aturan ini memblokir HTTP tanpa enkripsi. Situs HTTPS di port 443 tetap terbuka, dan hampir semua situs sekarang memakai HTTPS. Untuk memblokir situs tertentu, dibutuhkan cara lain seperti daftar alamat atau DNS — di luar cakupan praktikum ini.`
+    }
+  ],
+
+  kode: { python: String.raw`# ============================================
+# MikroTik: hak user, DHCP, NAT masquerade, dan firewall filter
+# ============================================
+# RouterOS tidak bisa dijalankan di sini, jadi mekanismenya
+# dimodelkan dengan Python. Alamat 203.0.113.x dan 198.51.100.x
+# adalah blok dokumentasi (RFC 5737), bukan alamat sungguhan.
+
+# --------------------------------------------
+# 1. Grup user bawaan RouterOS (dari dokumentasi resmi)
+# --------------------------------------------
+GRUP = {
+    "read": "local,telnet,ssh,reboot,read,test,winbox,password,web,"
+            "sniff,sensitive,api,romon,!ftp,!write,!policy",
+    "write": "local,telnet,ssh,reboot,read,write,test,winbox,password,"
+             "web,sniff,sensitive,api,romon,!ftp,!policy",
+    "full": "local,telnet,ssh,ftp,reboot,read,write,policy,test,winbox,"
+            "password,web,sniff,sensitive,api,romon,rest-api",
+}
+hak = {g: {p for p in s.split(",") if not p.startswith("!")}
+       for g, s in GRUP.items()}
+
+print("--- grup user bawaan ---")
+print("  policy     read  write  full")
+for p in ["read", "write", "reboot", "sensitive", "policy", "ftp"]:
+    print("  " + format(p, "<10") + "".join(
+        format("ya" if p in hak[g] else "-", ">6") for g in GRUP))
+print("  write - read :", ", ".join(sorted(hak["write"] - hak["read"])))
+print("  full - write :", ", ".join(sorted(hak["full"] - hak["write"])))
+
+# --------------------------------------------
+# 2. DHCP server: DORA, pool, dan masa sewa
+# --------------------------------------------
+POOL = ["192.168.10." + str(i) for i in range(10, 15)]      # 5 alamat
+SEWA = 10                                                    # menit
+sewa = {}                                                    # mac -> (ip, habis)
+
+def dhcp(mac, t, cetak=False):
+    """Satu putaran DORA. Kembalikan IP atau None."""
+    if cetak:
+        print("  DISCOVER  " + mac + "  0.0.0.0 -> 255.255.255.255")
+    if mac in sewa and sewa[mac][1] > t:                     # sewa lama masih ada
+        ip = sewa[mac][0]
+    else:
+        dipakai = {ip for ip, habis in sewa.values() if habis > t}
+        bebas = [ip for ip in POOL if ip not in dipakai]
+        if not bebas:
+            return None
+        ip = bebas[0]
+    if cetak:
+        print("  OFFER     " + ip)
+        print("  REQUEST   " + mac + " minta " + ip)
+        print("  ACK       " + ip + "/24, gateway 192.168.10.1, sewa "
+              + str(SEWA) + " menit")
+    sewa[mac] = (ip, t + SEWA)
+    return ip
+
+print("\n--- DHCP: laptop pertama tersambung (menit 0) ---")
+dhcp("aa:00:00:00:00:01", 0, cetak=True)
+
+print("\n--- tujuh perangkat, pool cuma 5 alamat ---")
+for i in range(2, 8):
+    mac = "aa:00:00:00:00:0" + str(i)
+    ip = dhcp(mac, 1)
+    print("  " + mac + "  " + (ip if ip else "tidak dapat IP (pool habis)"))
+
+print("\n--- laptop pertama mati lalu menyala lagi (menit 4) ---")
+print("  aa:00:00:00:00:01  " + dhcp("aa:00:00:00:00:01", 4)
+      + "  (alamat yang sama)")
+
+print("\n--- menit 12: perangkat 03 sudah pergi, sewanya habis ---")
+for mac in ["aa:00:00:00:00:01", "aa:00:00:00:00:02", "aa:00:00:00:00:04",
+            "aa:00:00:00:00:05"]:
+    sewa[mac] = (sewa[mac][0], 12 + SEWA)                   # yang masih ada memperpanjang
+print("  aa:00:00:00:00:06  " + str(dhcp("aa:00:00:00:00:06", 12)))
+
+# --------------------------------------------
+# 3. NAT masquerade
+# --------------------------------------------
+tabel = {}                                                   # (ip_luar, port_luar) -> (ip_lokal, port_lokal)
+
+def keluar(ip_wan, sumber, tujuan):
+    ip, port = sumber
+    luar = port
+    while (ip_wan, luar) in tabel:                           # port sudah dipakai: cari lain
+        luar += 1
+    tabel[(ip_wan, luar)] = sumber
+    return ip_wan, luar
+
+def masuk(tujuan):
+    return tabel.get(tujuan)
+
+WEB = "198.51.100.20"
+print("\n--- NAT masquerade, IP WAN 203.0.113.7 ---")
+for sumber in [("192.168.10.10", 50000), ("192.168.10.11", 50000)]:
+    ip, port = keluar("203.0.113.7", sumber, (WEB, 443))
+    print("  " + sumber[0] + ":" + str(sumber[1]) + " -> " + WEB
+          + ":443  jadi  " + ip + ":" + str(port))
+asal = masuk(("203.0.113.7", 50001))
+print("  balasan ke 203.0.113.7:50001 diteruskan ke " + asal[0] + ":" + str(asal[1]))
+print("  internet -> 203.0.113.7:8080 (koneksi baru): "
+      + ("diteruskan" if masuk(("203.0.113.7", 8080)) else "tak ada catatan"))
+
+def ip_sumber(aksi, ip_antarmuka):
+    # masquerade membaca IP antarmuka keluar; src-nat memakai alamat tetap
+    return ip_antarmuka if aksi == "masquerade" else "203.0.113.7"
+
+print("\n--- ISP mengganti IP WAN menjadi 203.0.113.50 ---")
+ip_wan = "203.0.113.50"
+for aksi in ["masquerade", "src-nat"]:
+    ip = ip_sumber(aksi, ip_wan)
+    print("  " + format(aksi, "<12") + "sumber " + format(ip, "<14")
+          + ("balasan kembali" if ip == ip_wan else "balasan tidak kembali"))
+
+# --------------------------------------------
+# 4. Firewall filter: aturan dibaca dari atas, yang cocok pertama menang
+# --------------------------------------------
+def cocok(aturan, pkt):
+    return all(pkt.get(k) == v or (k == "state" and pkt.get(k) in v)
+               for k, v in aturan.items() if k not in ("aksi", "log"))
+
+def saring(daftar, pkt):
+    for no, aturan in enumerate(daftar, 1):
+        if cocok(aturan, pkt):
+            return aturan["aksi"], no, aturan.get("log", "")
+    return "accept", "-", ""                                 # tidak ada yang cocok: lolos
+
+PRAKTIKUM = [
+    {"chain": "forward", "proto": "tcp", "port": 80, "aksi": "drop", "log": "BLOK_HTTP"},
+    {"chain": "input", "proto": "icmp", "aksi": "drop", "log": "BLOK_PING"},
+    {"chain": "input", "proto": "tcp", "port": 8291, "masuk": "ether2",
+     "aksi": "drop", "log": "BLOK_WINBOX"},
+]
+PAKET = [
+    ("laptop buka situs HTTP", {"chain": "forward", "proto": "tcp", "port": 80,
+                                "masuk": "ether2", "state": "new"}),
+    ("laptop buka situs HTTPS", {"chain": "forward", "proto": "tcp", "port": 443,
+                                 "masuk": "ether2", "state": "new"}),
+    ("laptop ping router", {"chain": "input", "proto": "icmp", "masuk": "ether2",
+                            "state": "new"}),
+    ("Winbox dari LAN", {"chain": "input", "proto": "tcp", "port": 8291,
+                         "masuk": "ether2", "state": "new"}),
+    ("Winbox dari internet", {"chain": "input", "proto": "tcp", "port": 8291,
+                              "masuk": "ether1", "state": "new"}),
+    ("balasan ping router->8.8.8.8", {"chain": "input", "proto": "icmp",
+                                      "masuk": "ether1", "state": "established"}),
+]
+
+def uji(judul, daftar):
+    print("\n--- " + judul + " ---")
+    for nama, pkt in PAKET:
+        aksi, no, log = saring(daftar, pkt)
+        print("  " + format(nama, "<30") + format(aksi, "<7") + "aturan " + str(no)
+              + ("  log " + log if log else ""))
+
+uji("aturan praktikum", PRAKTIKUM)
+
+PERBAIKAN = [
+    {"chain": "input", "state": ("established", "related"), "aksi": "accept"},
+    {"chain": "forward", "state": ("established", "related"), "aksi": "accept"},
+] + PRAKTIKUM + [
+    {"chain": "input", "proto": "tcp", "port": 8291, "masuk": "ether1",
+     "aksi": "drop", "log": "WINBOX_WAN"},
+]
+uji("ditambah accept established di atas, blok Winbox WAN", PERBAIKAN)` },
+  output: `--- grup user bawaan ---
+  policy     read  write  full
+  read          ya    ya    ya
+  write          -    ya    ya
+  reboot        ya    ya    ya
+  sensitive     ya    ya    ya
+  policy         -     -    ya
+  ftp            -     -    ya
+  write - read : write
+  full - write : ftp, policy, rest-api
+
+--- DHCP: laptop pertama tersambung (menit 0) ---
+  DISCOVER  aa:00:00:00:00:01  0.0.0.0 -> 255.255.255.255
+  OFFER     192.168.10.10
+  REQUEST   aa:00:00:00:00:01 minta 192.168.10.10
+  ACK       192.168.10.10/24, gateway 192.168.10.1, sewa 10 menit
+
+--- tujuh perangkat, pool cuma 5 alamat ---
+  aa:00:00:00:00:02  192.168.10.11
+  aa:00:00:00:00:03  192.168.10.12
+  aa:00:00:00:00:04  192.168.10.13
+  aa:00:00:00:00:05  192.168.10.14
+  aa:00:00:00:00:06  tidak dapat IP (pool habis)
+  aa:00:00:00:00:07  tidak dapat IP (pool habis)
+
+--- laptop pertama mati lalu menyala lagi (menit 4) ---
+  aa:00:00:00:00:01  192.168.10.10  (alamat yang sama)
+
+--- menit 12: perangkat 03 sudah pergi, sewanya habis ---
+  aa:00:00:00:00:06  192.168.10.12
+
+--- NAT masquerade, IP WAN 203.0.113.7 ---
+  192.168.10.10:50000 -> 198.51.100.20:443  jadi  203.0.113.7:50000
+  192.168.10.11:50000 -> 198.51.100.20:443  jadi  203.0.113.7:50001
+  balasan ke 203.0.113.7:50001 diteruskan ke 192.168.10.11:50000
+  internet -> 203.0.113.7:8080 (koneksi baru): tak ada catatan
+
+--- ISP mengganti IP WAN menjadi 203.0.113.50 ---
+  masquerade  sumber 203.0.113.50  balasan kembali
+  src-nat     sumber 203.0.113.7   balasan tidak kembali
+
+--- aturan praktikum ---
+  laptop buka situs HTTP        drop   aturan 1  log BLOK_HTTP
+  laptop buka situs HTTPS       accept aturan -
+  laptop ping router            drop   aturan 2  log BLOK_PING
+  Winbox dari LAN               drop   aturan 3  log BLOK_WINBOX
+  Winbox dari internet          accept aturan -
+  balasan ping router->8.8.8.8  drop   aturan 2  log BLOK_PING
+
+--- ditambah accept established di atas, blok Winbox WAN ---
+  laptop buka situs HTTP        drop   aturan 3  log BLOK_HTTP
+  laptop buka situs HTTPS       accept aturan -
+  laptop ping router            drop   aturan 4  log BLOK_PING
+  Winbox dari LAN               drop   aturan 5  log BLOK_WINBOX
+  Winbox dari internet          drop   aturan 6  log WINBOX_WAN
+  balasan ping router->8.8.8.8  accept aturan 1`,
+
+  kompleksitas: {
+    tabel: [
+      { operasi: 'Mencari alamat bebas di pool', waktu: 'O(p) untuk p alamat pool', memori: 'O(k) sewa aktif' },
+      { operasi: 'Menerjemahkan paket NAT', waktu: 'O(1) per paket dengan tabel hash', memori: 'O(c) koneksi aktif' },
+      { operasi: 'Menyaring satu paket', waktu: 'O(r) untuk r aturan di satu chain', memori: 'O(r)' },
+      { operasi: 'Paket established dengan aturan accept di atas', waktu: 'O(1): berhenti di aturan pertama', memori: 'O(c) connection tracking' }
+    ],
+    intuisi: `Router kecil menangani ribuan paket per detik, jadi yang penting adalah biaya **per paket**.
+
+NAT dan connection tracking memakai tabel yang dicari dengan kunci koneksi, sehingga menerjemahkan satu paket tidak bergantung pada banyaknya koneksi lain. Tabelnya yang membesar: setiap koneksi aktif memakan satu entri, dan router dengan memori kecil bisa kehabisan entri saat terlalu banyak koneksi terbuka.
+
+Filter rules dibaca berurutan, jadi biayanya sebanding dengan posisi aturan yang cocok. Karena sebagian besar paket adalah bagian dari koneksi yang sudah berjalan, aturan accept established di urutan pertama tidak hanya memperbaiki logika, tetapi juga membuat sebagian besar paket selesai diperiksa di aturan pertama.`
+  },
+
+  kesalahanUmum: [
+    {
+      salah: 'Memberi grup read kepada orang yang tidak boleh mengganggu router, karena dianggap hanya bisa melihat.',
+      kenapa: 'Grup read bawaan RouterOS punya policy reboot, sehingga user itu tetap bisa me-restart router.',
+      benar: 'Buat grup sendiri dengan policy yang benar-benar dibutuhkan, tanpa reboot, lalu periksa dengan /user group print.'
+    },
+    {
+      salah: 'Memblokir semua ICMP di chain input tanpa aturan accept established di atasnya.',
+      kenapa: 'Balasan ping yang dikirim router sendiri juga masuk lewat chain input, sehingga ikut dibuang dan router tampak tidak tersambung ke internet.',
+      benar: 'Taruh accept untuk connection-state established,related di paling atas chain input.'
+    },
+    {
+      salah: 'Mengira aturan Winbox dengan in-interface jaringan lokal sudah mengamankan router.',
+      kenapa: 'Aturan hanya cocok untuk paket dari antarmuka itu. Akses dari antarmuka internet tidak cocok dan lolos, padahal arah itulah yang paling berbahaya.',
+      benar: 'Uji dari setiap antarmuka. Batasi akses pengelolaan ke jaringan tertentu, dan tutup dari antarmuka internet.'
+    },
+    {
+      salah: 'Memakai src-nat dengan alamat tetap untuk sambungan ISP yang alamatnya dari DHCP.',
+      kenapa: 'Saat ISP mengganti alamat, src-nat tetap memakai alamat lama, sehingga balasan dari internet tidak pernah kembali.',
+      benar: 'Pakai masquerade untuk antarmuka beralamat dinamis. Simpan src-nat untuk alamat publik statis.'
+    },
+    {
+      salah: 'Memasukkan alamat printer atau server bertetapan ke dalam rentang pool DHCP.',
+      kenapa: 'DHCP tidak tahu alamat itu dipakai perangkat bertetapan, sehingga suatu saat membagikannya ke laptop dan terjadi tabrakan alamat.',
+      benar: 'Sisakan sebagian alamat di luar pool untuk perangkat bertetapan, atau buat static lease di DHCP server.'
+    },
+    {
+      salah: 'Menulis aturan blokir situs di chain input.',
+      kenapa: 'Lalu lintas laptop ke internet melewati router lewat chain forward, jadi aturan di input tidak pernah melihatnya.',
+      benar: 'Tentukan dulu arah paket terhadap router: menuju router berarti input, melewati router berarti forward, dari router berarti output.'
+    }
+  ],
+
+  analogi: `Bayangkan router sebagai **pos satpam di gerbang kompleks perumahan**.
+
+**User dan grup** adalah kartu akses petugas. Kartu "read" katanya hanya untuk melihat buku tamu — tetapi ternyata juga bisa mematikan palang gerbang. Membaca label kartu tidak cukup; yang menentukan adalah daftar hak yang tercetak di baliknya.
+
+**DHCP** adalah bagian penerima tamu yang membagikan nomor parkir. Tamu datang tanpa nomor, berteriak minta tempat, lalu diberi satu nomor dengan batas waktu. Kalau semua nomor habis, tamu baru tidak dapat tempat. Tamu yang pulang tanpa bilang, nomornya baru bebas setelah waktunya habis.
+
+**NAT** adalah alamat kompleks. Surat dari setiap rumah keluar dengan satu alamat yang sama — alamat kompleks — dan satpam mencatat rumah mana mengirim surat ke mana. Balasan yang datang dicocokkan dengan catatan itu. Surat dari orang asing yang bukan balasan tidak punya catatan, jadi tidak diantar ke rumah mana pun.
+
+**Firewall** adalah daftar perintah satpam, dibaca dari atas: "tamu yang membawa balasan untuk warga, persilakan", "tolak pedagang keliling", "tolak orang yang mau masuk pos". Satpam berhenti di perintah pertama yang cocok. Kalau perintah "tolak semua yang mengetuk pos" ditulis di atas perintah "balasan untuk warga boleh masuk", kurir yang membawa balasan untuk satpam sendiri pun ikut ditolak.`,
+
+  latihan: [
+    'Jalankan /user group print di router lab, lalu tulis policy yang dimiliki grup read dan write.',
+    'Buat grup sendiri yang hanya bisa membaca tanpa bisa reboot, lalu uji dengan user baru.',
+    'Kecilkan pool DHCP menjadi 3 alamat, sambungkan 4 perangkat, lalu catat alamat yang didapat perangkat keempat.',
+    'Buka daftar Leases di DHCP server, lalu jelaskan arti kolom alamat MAC, alamat IP, dan sisa masa sewa.',
+    'Buat static lease untuk satu laptop, lalu buktikan laptop itu selalu mendapat alamat yang sama.',
+    'Ubah program supaya dua koneksi dari laptop yang sama ke tujuan berbeda memakai port sumber yang sama, lalu lihat tabel NAT-nya.',
+    'Buat aturan dst-nat yang meneruskan port 8080 di router ke port 80 sebuah server lokal, lalu jelaskan urutan terjemahannya.',
+    'Pasang aturan pemblokir ping tanpa accept established, lalu buktikan ping dari terminal router ke 8.8.8.8 gagal.',
+    'Ubah action pemblokir HTTP dari drop menjadi reject, lalu bandingkan yang terlihat di peramban laptop.',
+    'Aktifkan log=yes dengan log-prefix pada satu aturan, picu aturan itu, lalu cari catatannya di menu Log.'
   ]
 });
