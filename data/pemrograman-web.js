@@ -1270,7 +1270,7 @@ Formulir yang dikirim dengan POST menaruh datanya di badan:
 | baris permintaan | POST /daftar HTTP/1.1 |
 | Content-Type | application/x-www-form-urlencoded |
 | Content-Length | 31 |
-| badan | nim=H1D024001&prodi=Informatika |
+| badan | nim=H1D000000&prodi=Informatika |
 
 Content-Length memberi tahu peladen berapa byte badan yang harus dibaca. Formatnya sama dengan query string; PHP mengurainya ke \`$_POST\`.
 
@@ -1459,7 +1459,7 @@ function tampil($judul, $permintaan) {
 tampil("GET dengan query string",
     "GET /halo?nama=Rina HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n");
 
-$badan = "nim=H1D024001&prodi=Informatika";
+$badan = "nim=H1D000000&prodi=Informatika";
 tampil("POST dari formulir",
     "POST /daftar HTTP/1.1\r\nHost: localhost\r\n"
     . "Content-Type: application/x-www-form-urlencoded\r\n"
@@ -1504,13 +1504,13 @@ echo "  membaca dan menulis teks seperti di atas.\n";` },
   > Content-Length: 31
   > Connection: close
   >
-  > nim=H1D024001&prodi=Informatika
+  > nim=H1D000000&prodi=Informatika
   JAWABAN (dikirim peladen):
   < HTTP/1.1 200 OK
   < Connection: close
   < Content-Type: text/plain; charset=utf-8
   <
-  < diterima: nim=H1D024001, prodi=Informatika
+  < diterima: nim=H1D000000, prodi=Informatika
 
 --- GET pertama ke /jadwal ---
   PERMINTAAN (dikirim klien):
@@ -1967,7 +1967,7 @@ echo "  (Peladen bawaan PHP tidak mengenal frasa untuk 422 -- klien\n";
 echo "  membaca angkanya, bukan frasanya.)\n";
 
 $SAH = ['nama' => 'Rina Kartika', 'email' => 'rina@contoh.ac.id',
-        'nim' => 'H1D024001', 'angkatan' => '2024', 'setuju' => 'ya'];
+        'nim' => 'H1D000000', 'angkatan' => '2024', 'setuju' => 'ya'];
 
 echo "\n--- 2. tanpa PRG: peladen langsung menjawab POST ---\n";
 minta('POST', '/tanpa-prg', $SAH);
