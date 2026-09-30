@@ -14,6 +14,11 @@
    Tiga topik tambahan (merancang REST API, kueri di aplikasi
    web, autentikasi sesi & token) disusun dari REFERENSI LUAR.
    Keterangan lengkapnya ada di kepala bagian tambahan di bawah.
+
+   Dua topik Laravel (rute, controller & Blade; migration,
+   Eloquent & validasi) disusun dari berkas kuliah sendiri yang
+   sebelumnya terlewat -- keterangannya ada di kepala bagian
+   Laravel di akhir berkas.
    ============================================================ */
 
 TOPICS.push({
@@ -3397,5 +3402,1036 @@ Jalan tengahnya: surat jalan yang berlaku cuma **lima belas menit**, dan kalau h
     'Tunjukkan bahwa token masih sah setelah pengguna keluar, lalu tambahkan daftar cabut dan jelaskan apa yang hilang dari keunggulan token.',
     'Rancang pasangan token akses dan token penyegar: umur masing-masing, di mana disimpan, dan apa yang terjadi saat pengguna keluar.',
     'Untuk proyek web kelompokmu, tentukan apakah sesi atau token yang lebih cocok, dan jelaskan alasannya dengan tabel perbandingan di topik ini.'
+  ]
+});
+
+
+/* ------------------------------------------------------------
+   TAMBAHAN dari berkas kuliah sendiri (dua topik di bawah).
+
+   Sumbernya modul Laravel 13 di "Pemweb II/Materi Laravel" dan
+   laporan proyek akhir KopiKita, yang dibangun dengan Laravel
+   dan Filament. Keduanya terlewat saat berkas ini pertama kali
+   disusun, sehingga Pemrograman Web II sempat hanya membahas
+   PHP murni dengan PDO.
+
+   Kode Laravel di sini BENAR-BENAR DIJALANKAN memakai pustaka
+   Laravel 13.14 yang terpasang di komputer ini (komponen
+   Routing, Database, Validation, dan View dipakai langsung,
+   tanpa aplikasi penuh) dengan SQLite di memori. Setiap
+   keluaran dan pesan galat di prosa diambil dari hasilnya.
+
+   Dua ketidakcocokan di contoh modul -- resource bernama
+   'produk' dengan variabel $product dan nama rute products.*,
+   serta $request->validated() pada Request biasa -- ditunjukkan
+   akibatnya lewat program, lalu diberi bentuk yang benar.
+   ------------------------------------------------------------ */
+TOPICS.push({
+  id: 'pemweb2-laravel-rute',
+  judul: 'Laravel: Rute, Controller & Blade',
+  kategori: 'pemweb2',
+  tag: ['Laravel', 'routing', 'Route::resource', 'controller', 'route model binding', 'Blade', 'CSRF', 'method spoofing'],
+  ringkas: 'Satu baris rute membuat tujuh alamat, satu nama variabel yang meleset membuat form edit kosong tanpa pesan galat, dan dua pasang kurung kurawal menentukan apakah halamanmu aman dari XSS.',
+
+  fungsi: `**Memahami apa yang sebenarnya dikerjakan Laravel antara URL yang diketik pengguna dan HTML yang sampai ke peramban — supaya kode yang "tinggal ikut modul" tidak lagi terasa seperti sihir, dan galatnya bisa dilacak.**
+
+Pola MVC dan routing sudah dikenal dari CodeIgniter 4 di Pemrograman Web I. Laravel memakai pola yang sama, tetapi mengotomatiskan jauh lebih banyak: satu baris membuat tujuh rute, parameter URL langsung berubah menjadi objek dari basis data, dan templat dikompilasi menjadi PHP. Otomatisasi itu menghemat waktu — sampai ada yang meleset dan kamu tidak tahu bagian mana yang bekerja.
+
+Terpakai di:
+
+- **Proyek CRUD** — pola daftar, tambah, ubah, hapus yang ada di hampir setiap tugas dan proyek akhir
+- **Form ubah dan hapus** — yang harus mengirim PUT dan DELETE padahal HTML cuma kenal GET dan POST
+- **Tampilan yang aman** — keluaran Blade yang meloloskan atau menahan HTML dari pengguna
+- **Membaca galat** — 404, 405, dan 419 masing-masing menunjuk ke bagian yang berbeda
+
+Yang paling sering menjebak: **route model binding bergantung pada nama.** Kalau nama parameter rute dan nama variabel di controller tidak sama, Laravel tidak mengeluh — ia memberi objek kosong, dan form edit tampil tanpa isi.`,
+
+  praktik: {
+    tujuan: 'Kamu bisa membuat rute resource, membaca daftar rutenya, menjelaskan kenapa form ubah butuh @method, memastikan route model binding bekerja, dan memilih antara {{ }} dan {!! !!} dengan alasan yang benar.',
+    alat: ['Laragon dengan PHP 8.2 ke atas dan Composer', 'Proyek Laravel 13', 'Peramban dengan DevTools'],
+    langkah: [
+      { judul: 'Buat model, migration, dan controller sekaligus',
+        isi: `Jalankan \`php artisan make:model Product -mcr\`. Opsi \`-m\` membuat migration, \`-c\` controller, dan \`-r\` menjadikannya resource controller dengan tujuh method kosong.` },
+      { judul: 'Daftarkan rute resource',
+        isi: `Tulis \`Route::resource('products', ProductController::class);\` di \`routes/web.php\`, lalu jalankan \`php artisan route:list\`. Perhatikan nama tiap rute dan nama parameter di dalam kurung kurawal.` },
+      { judul: 'Cocokkan nama parameter dengan controller',
+        isi: `Resource \`products\` menghasilkan parameter \`{product}\`. Method \`edit(Product $product)\` harus memakai nama variabel yang sama persis. Coba ganti resource menjadi \`produk\` dan lihat apa yang terjadi pada form edit.` },
+      { judul: 'Buat form ubah dengan @csrf dan @method',
+        isi: `Form HTML hanya bisa mengirim GET dan POST. Tambahkan \`@csrf\` dan \`@method('PUT')\` di dalam form, lalu periksa di tab Elements DevTools: keduanya menjadi input tersembunyi.` },
+      { judul: 'Uji apa yang terjadi kalau salah satunya dilupakan',
+        isi: `Hapus \`@method('PUT')\` dan kirim form: 405. Kembalikan, lalu hapus \`@csrf\`: 419 Page Expired. Dua angka itu menunjuk dua penyebab yang berbeda.` },
+      { judul: 'Bandingkan dua cara menampilkan teks',
+        isi: `Simpan nama produk \`<b>Promo</b> Kopi\`, lalu tampilkan sekali dengan \`{{ }}\` dan sekali dengan \`{!! !!}\`. Lihat kode sumber halaman untuk melihat bedanya.` }
+    ],
+    cek: [
+      'Kamu bisa menyebut tujuh rute resource beserta method, URI, dan namanya tanpa melihat catatan',
+      'Form edit menampilkan data produk yang benar, dan URL dengan id yang tidak ada menghasilkan 404',
+      'Kamu bisa menjelaskan kenapa form hapus memakai method POST padahal rutenya DELETE',
+      'Setiap \`{!! !!}\` di proyekmu hanya menampilkan HTML yang kamu tulis sendiri, bukan masukan pengguna'
+    ]
+  },
+
+  judulLogicSyntax: 'Bedah Kode — nama yang harus cocok, dan dua pasang kurung kurawal yang berbeda nasib',
+
+  konsep: `**Perjalanan satu permintaan**
+
+Setiap permintaan ke aplikasi Laravel melewati jalur yang sama:
+
+1. \`public/index.php\` — satu-satunya berkas PHP yang bisa dibuka langsung dari luar
+2. kernel HTTP — menyiapkan permintaan, termasuk membaca kolom \`_method\`
+3. middleware grup \`web\` — cookie, sesi, pesan galat dari sesi, pemeriksaan CSRF, dan route model binding
+4. router — mencari rute yang cocok dengan method dan URL
+5. controller — mengambil data lewat model, memilih view
+6. view Blade — menghasilkan HTML yang dikirim balik
+
+Galat yang kamu lihat menunjukkan di tahap mana permintaan berhenti: 405 dan 404 dari router atau binding, 419 dari middleware CSRF.
+
+**Satu baris, tujuh rute**
+
+Semua keluaran di topik ini berasal dari program di bawah, yang dijalankan dengan pustaka Laravel 13.14 sungguhan. \`Route::resource('products', ...)\` menghasilkan:
+
+| Method | URI | Nama rute |
+|---|---|---|
+| GET | /products | products.index |
+| GET | /products/create | products.create |
+| POST | /products | products.store |
+| GET | /products/{product} | products.show |
+| GET | /products/{product}/edit | products.edit |
+| PUT/PATCH | /products/{product} | products.update |
+| DELETE | /products/{product} | products.destroy |
+
+Bagian terakhir nama rute sekaligus nama method di controller: \`products.edit\` memanggil \`edit()\`. Dua hal lain ditentukan otomatis dari kata \`products\`:
+
+- **nama rute** — \`products.index\`, \`products.edit\`, dan seterusnya. Inilah yang dipakai \`route('products.index')\`.
+- **nama parameter** — bentuk tunggal kata itu, \`{product}\`. Laravel membuat bentuk tunggal dengan aturan bahasa Inggris, jadi \`produk\` tetap \`produk\`.
+
+**Method spoofing**
+
+Form HTML hanya bisa mengirim GET dan POST. Untuk memanggil rute PUT atau DELETE, form mengirim POST beserta kolom tersembunyi \`_method\`:
+
+| Permintaan | Hasil |
+|---|---|
+| POST + _method=PUT, override mati | 405 MethodNotAllowed |
+| POST + _method=PUT, override hidup | update dipanggil |
+| POST + _method=DELETE, override hidup | destroy dipanggil |
+
+Kernel HTTP Laravel selalu menghidupkan override itu. Program di bawah memakai router tanpa kernel, sehingga harus menghidupkannya sendiri — dan baris pertama tabel menunjukkan apa yang terjadi tanpa itu. Hasil yang sama muncul di aplikasi sungguhan kalau form lupa \`@method('PUT')\`: yang sampai ke router adalah POST, dan tidak ada rute POST untuk \`/products/1\`.
+
+**Route model binding**
+
+Controller cukup meminta \`Product $product\`, dan Laravel mengambil baris dengan id dari URL:
+
+| URL | Hasil |
+|---|---|
+| /products/1/edit | produk #1 Kopi Arabika Gayo |
+| /products/99/edit | ModelNotFoundException, menjadi 404 |
+| /produk/1/edit | objek Product **kosong** |
+
+Baris ketiga adalah jebakannya. Laravel mencocokkan **nama variabel** di controller dengan **nama parameter** di rute. Resource \`produk\` punya parameter \`{produk}\`, sedangkan controller meminta \`$product\` — tidak cocok. Laravel tidak mengeluh; ia membuat \`new Product\` yang kosong. Form edit tampil tanpa isi, dan tombol simpan tidak mengubah apa pun.
+
+Modul kuliah memakai \`Route::resource('produk', ...)\` sebagai contoh di bab routing, sedangkan controllernya di bab CRUD memakai \`$product\` dan \`route('products.index')\`. Kalau keduanya digabung apa adanya, binding menghasilkan objek kosong seperti di atas, dan \`route('products.index')\` gagal dengan pesan Route [products.index] not defined. Proyek akhir di modul memakai \`Route::resource('products', ...)\` — pakai itu.
+
+**Blade: templat yang dikompilasi**
+
+Blade tidak ditafsirkan setiap kali halaman dibuka. Templat dikompilasi sekali menjadi PHP biasa, disimpan di \`storage/framework/views\`, dan baru dikompilasi ulang kalau templatnya berubah:
+
+| Blade | PHP hasil kompilasi |
+|---|---|
+| {{ $nama }} | echo e($nama) |
+| {!! $nama !!} | echo $nama |
+| @csrf | echo csrf_field() |
+| @method('PUT') | echo method_field('PUT') |
+
+Fungsi \`e()\` memanggil \`htmlspecialchars\`. Dengan nama produk \`<b>Promo</b> Kopi\`:
+
+- \`{{ $nama }}\` menghasilkan \`&lt;b&gt;Promo&lt;/b&gt; Kopi\` — tampil sebagai teks apa adanya
+- \`{!! $nama !!}\` menghasilkan \`<b>Promo</b> Kopi\` — peramban menjalankannya sebagai HTML
+
+Untuk tag tebal, akibatnya cuma huruf tebal. Untuk tag lain, akibatnya XSS — celah yang dibahas di topik Keamanan Aplikasi Web.
+
+**CSRF: 419**
+
+\`@csrf\` menulis input tersembunyi \`_token\` berisi token dari sesi. Middleware grup \`web\` — di Laravel 13.14 kelasnya bernama PreventRequestForgery — memeriksa token itu di setiap POST, PUT, PATCH, dan DELETE. Kalau hilang atau tidak cocok, jawabannya 419 Page Expired. Program di bawah tidak menjalankan \`@csrf\` karena ia butuh sesi; yang ditampilkan hanya hasil kompilasinya.`,
+
+  logicSyntax: [
+    {
+      bahasa: 'php',
+      kode: String.raw`// routes/web.php
+Route::resource('products', ProductController::class);
+//              ^^^^^^^^ parameter: {product}
+
+// app/Http/Controllers/ProductController.php
+public function edit(Product $product)     // nama variabel = nama parameter
+{
+    return view('products.edit', compact('product'));
+}
+
+// Kalau resource-nya memang harus bernama 'produk':
+Route::resource('produk', ProductController::class)
+    ->parameters(['produk' => 'product']);`,
+      penjelasan: `Tiga bagian kode yang harus sepakat soal satu kata — dan apa yang terjadi kalau tidak.
+
+**Dari mana \`{product}\` berasal.**
+
+Resource registrar mengambil nama resource, \`products\`, lalu membuat bentuk tunggalnya untuk parameter URL. Untuk kata bahasa Inggris hasilnya wajar: \`products\` menjadi \`product\`, \`categories\` menjadi \`category\`. Untuk kata bahasa Indonesia, pembuat bentuk tunggal tidak mengenalinya, jadi \`produk\` tetap \`produk\`.
+
+**Bagaimana binding mencarinya.**
+
+Saat rute cocok, middleware \`SubstituteBindings\` melihat setiap parameter method controller yang bertipe model Eloquent. Untuk tiap parameter, ia mencari parameter rute dengan **nama yang sama** dengan nama variabelnya, atau bentuk snake_case-nya. Kalau ketemu, ia menjalankan kueri \`where id = ...\` dan melempar ModelNotFoundException bila baris tidak ada — yang di aplikasi penuh diubah menjadi 404.
+
+Kalau tidak ketemu, binding dilewati sama sekali. Parameter \`Product $product\` lalu diisi oleh service container seperti dependensi biasa: container membuat \`new Product\`. Tidak ada galat, tidak ada peringatan — hanya objek yang properti \`exists\`-nya false.
+
+**Kenapa kesalahan ini sulit dilacak.**
+
+Halaman edit tetap terbuka dengan status 200. Kolom-kolom form kosong, dan kalau pengguna mengisinya lalu menyimpan, \`$product->update()\` tidak mengubah baris mana pun karena model kosong itu tidak mewakili baris apa pun di tabel. Satu-satunya petunjuk adalah form yang kosong — dan itu mudah dikira masalah di Blade.
+
+**Dua cara memperbaikinya.**
+
+- Samakan kata-katanya: resource \`products\` dan variabel \`$product\`, seperti di proyek akhir modul.
+- Atau pertahankan URL berbahasa Indonesia, tetapi beri tahu registrar nama parameternya dengan \`->parameters(['produk' => 'product'])\`. URL tetap \`/produk/1/edit\`, parameternya menjadi \`{product}\`, dan binding bekerja.
+
+Nama rute ikut nama resource: resource \`produk\` menghasilkan \`produk.index\`, bukan \`products.index\`. Setiap \`route(...)\` dan \`redirect()->route(...)\` di controller dan Blade harus memakai nama yang sama.`
+    },
+    {
+      bahasa: 'php',
+      kode: String.raw`{{-- resources/views/products/edit.blade.php --}}
+<form action="{{ route('products.update', $product->id) }}" method="POST">
+    @csrf
+    @method('PUT')
+    <input name="name" value="{{ old('name', $product->name) }}">
+    @error('name')
+        <div class="invalid-feedback">{{ $message }}</div>
+    @enderror
+    <button type="submit">Simpan</button>
+</form>`,
+      penjelasan: `Form edit dari modul, dibaca baris demi baris dari sudut permintaan yang akhirnya dikirim peramban.
+
+**\`method="POST"\` padahal rutenya PUT.**
+
+HTML hanya mengenal GET dan POST untuk form. Peramban akan selalu mengirim POST ke \`/products/1\`. Tanpa bantuan, router mencari rute POST untuk URI itu, tidak menemukannya, dan menjawab 405.
+
+**\`@method('PUT')\` menulis input tersembunyi.**
+
+Hasil kompilasinya \`method_field('PUT')\`, yang menulis \`<input type="hidden" name="_method" value="PUT">\`. Kernel HTTP membaca kolom itu dan memperlakukan permintaan sebagai PUT sebelum router mencari rute. Karena itu urutannya penting: override terjadi di kernel, sebelum routing, sehingga rute \`products.update\` bisa ditemukan.
+
+**\`@csrf\` menulis token sesi.**
+
+Hasilnya input tersembunyi \`_token\`. Token itu hanya diketahui halaman yang dibuat oleh aplikasimu sendiri untuk sesi pengguna itu. Situs lain yang mencoba mengirim form ke alamatmu tidak bisa membacanya, sehingga permintaannya ditolak dengan 419.
+
+**\`old('name', $product->name)\`.**
+
+Kalau validasi gagal, Laravel mengalihkan kembali ke form dan menyimpan masukan pengguna di sesi untuk satu permintaan. \`old('name')\` mengambil masukan itu; argumen kedua adalah nilai cadangan dari basis data untuk pertama kali form dibuka. Tanpa argumen kedua, form edit pertama kali tampil kosong.
+
+**\`{{ }}\` di semua tempat.**
+
+Nilai dari basis data dan dari pengguna ditampilkan lewat \`{{ }}\`, yang di-escape oleh \`e()\`. Itu juga berlaku di dalam atribut \`value="..."\`: tanda kutip ganda di nama produk menjadi \`&quot;\`, sehingga tidak bisa menutup atribut lebih awal dan menyisipkan atribut lain.`
+    }
+  ],
+
+  kode: { php: String.raw`<?php
+// ============================================
+// Laravel: rute resource, method spoofing, route model binding, Blade
+// ============================================
+// Memakai pustaka Laravel 13 (laravel/framework) tanpa aplikasi
+// penuh. Simpan di akar proyek Laravel mana pun, lalu jalankan
+// "php nama-berkas.php". Basis datanya SQLite di memori, jadi basis
+// data proyekmu tidak tersentuh.
+require __DIR__ . '/vendor/autoload.php';
+
+use Illuminate\Container\Container;
+use Illuminate\Contracts\Routing\Registrar;
+use Illuminate\Database\Capsule\Manager as Capsule;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Events\Dispatcher;
+use Illuminate\Filesystem\Filesystem;
+use Illuminate\Http\Request;
+use Illuminate\Routing\Middleware\SubstituteBindings;
+use Illuminate\Routing\Router;
+use Illuminate\View\Compilers\BladeCompiler;
+use Illuminate\View\Engines\EngineResolver;
+use Illuminate\View\Factory;
+use Illuminate\View\FileViewFinder;
+
+$app = new Container;
+Container::setInstance($app);
+$events = new Dispatcher($app);
+
+$db = new Capsule($app);
+$db->addConnection(['driver' => 'sqlite', 'database' => ':memory:']);
+$db->setEventDispatcher($events);
+$db->setAsGlobal();
+$db->bootEloquent();
+$db->schema()->create('products', function ($t) {
+    $t->id();
+    $t->string('name');
+});
+
+class Product extends Model
+{
+    protected $fillable = ['name'];
+    public $timestamps = false;
+}
+Product::create(['name' => 'Kopi Arabika Gayo']);          // id = 1
+
+class ProductController
+{
+    public function index()   { return 'index: daftar produk'; }
+    public function create()  { return 'create: form tambah'; }
+    public function store()   { return 'store: simpan baru'; }
+    public function show(Product $product)    { return self::isi('show', $product); }
+    public function edit(Product $product)    { return self::isi('edit', $product); }
+    public function update(Product $product)  { return self::isi('update', $product); }
+    public function destroy(Product $product) { return self::isi('destroy', $product); }
+
+    private static function isi($aksi, Product $p)
+    {
+        return $aksi . ': ' . ($p->exists
+            ? 'produk #' . $p->id . ' ' . $p->name
+            : 'Product KOSONG (exists=false)');
+    }
+}
+
+$router = new Router($events, $app);
+$app->instance(Registrar::class, $router);
+$router->middleware(SubstituteBindings::class)->group(function ($r) {
+    $r->resource('products', ProductController::class);
+    $r->resource('produk', ProductController::class);   // sengaja beda nama
+});
+
+// --------------------------------------------
+// 1. Satu baris resource = tujuh rute
+// --------------------------------------------
+echo "--- Route::resource('products', ...) ---\n";
+foreach ($router->getRoutes() as $rute) {
+    if (!str_starts_with($rute->uri(), 'products')) {
+        continue;
+    }
+    $metode = implode('|', array_diff($rute->methods(), ['HEAD']));
+    echo '  ' . str_pad($metode, 10) . str_pad('/' . $rute->uri(), 25)
+        . $rute->getName() . "\n";
+}
+
+echo "\n--- nama parameter mengikuti nama resource ---\n";
+foreach (['products.edit', 'produk.edit'] as $nama) {
+    echo '  ' . str_pad($nama, 15) . '/'
+        . $router->getRoutes()->getByName($nama)->uri() . "\n";
+}
+
+function kirim(Router $router, string $metode, string $uri, array $data = []): string
+{
+    try {
+        $jawab = $router->dispatch(Request::create($uri, $metode, $data));
+        return $jawab->getStatusCode() . ' ' . $jawab->getContent();
+    } catch (Throwable $e) {
+        return class_basename($e);
+    }
+}
+
+// --------------------------------------------
+// 2. Method spoofing: form HTML hanya kenal GET dan POST
+// --------------------------------------------
+echo "\n--- POST /products/1 dengan _method=PUT ---\n";
+echo '  tanpa override : ' . kirim($router, 'POST', '/products/1', ['_method' => 'PUT']) . "\n";
+Request::enableHttpMethodParameterOverride();      // kernel HTTP Laravel melakukannya
+echo '  dengan override: ' . kirim($router, 'POST', '/products/1', ['_method' => 'PUT']) . "\n";
+echo '  _method=DELETE : ' . kirim($router, 'POST', '/products/1', ['_method' => 'DELETE']) . "\n";
+
+// --------------------------------------------
+// 3. Route model binding: {product} diisi dari basis data
+// --------------------------------------------
+echo "\n--- route model binding ---\n";
+foreach (['/products/1/edit', '/products/99/edit', '/produk/1/edit'] as $uri) {
+    echo '  GET ' . str_pad($uri, 18) . '-> ' . kirim($router, 'GET', $uri) . "\n";
+}
+
+// --------------------------------------------
+// 4. Blade: templat dikompilasi menjadi PHP biasa
+// --------------------------------------------
+$blade = new BladeCompiler(new Filesystem, sys_get_temp_dir());
+echo "\n--- hasil kompilasi Blade ---\n";
+foreach (['{{ $nama }}', '{!! $nama !!}', '@csrf', "@method('PUT')"] as $potong) {
+    echo '  ' . str_pad($potong, 15) . '=> ' . $blade->compileString($potong) . "\n";
+}
+
+$templat = <<<'BLADE'
+<p>{{ $nama }}</p>
+<p>{!! $nama !!}</p>
+@forelse ($produk as $p)
+<li>{{ $loop->iteration }}. {{ $p }}</li>
+@empty
+<li>Belum ada produk.</li>
+@endforelse
+BLADE;
+
+$env = new Factory(new EngineResolver, new FileViewFinder(new Filesystem, []), $events);
+function tampil(string $php, array $data): string
+{
+    extract($data);
+    ob_start();
+    eval('?>' . $php);
+    return ob_get_clean();
+}
+$php = $blade->compileString($templat);
+
+echo "\n--- dirender dengan dua produk ---\n";
+$keluar = tampil($php, ['__env' => $env, 'nama' => '<b>Promo</b> Kopi',
+                        'produk' => ['Gayo', 'Toraja']]);
+echo '  ' . str_replace("\n", "\n  ", rtrim($keluar)) . "\n";
+
+echo "\n--- dirender dengan daftar kosong ---\n";
+$keluar = tampil($php, ['__env' => $env, 'nama' => 'Toko', 'produk' => []]);
+echo '  ' . str_replace("\n", "\n  ", rtrim($keluar)) . "\n";` },
+  output: `--- Route::resource('products', ...) ---
+  GET       /products                products.index
+  GET       /products/create         products.create
+  POST      /products                products.store
+  GET       /products/{product}      products.show
+  GET       /products/{product}/edit products.edit
+  PUT|PATCH /products/{product}      products.update
+  DELETE    /products/{product}      products.destroy
+
+--- nama parameter mengikuti nama resource ---
+  products.edit  /products/{product}/edit
+  produk.edit    /produk/{produk}/edit
+
+--- POST /products/1 dengan _method=PUT ---
+  tanpa override : MethodNotAllowedHttpException
+  dengan override: 200 update: produk #1 Kopi Arabika Gayo
+  _method=DELETE : 200 destroy: produk #1 Kopi Arabika Gayo
+
+--- route model binding ---
+  GET /products/1/edit  -> 200 edit: produk #1 Kopi Arabika Gayo
+  GET /products/99/edit -> ModelNotFoundException
+  GET /produk/1/edit    -> 200 edit: Product KOSONG (exists=false)
+
+--- hasil kompilasi Blade ---
+  {{ $nama }}    => <?php echo e($nama); ?>
+  {!! $nama !!}  => <?php echo $nama; ?>
+  @csrf          => <?php echo csrf_field(); ?>
+  @method('PUT') => <?php echo method_field('PUT'); ?>
+
+--- dirender dengan dua produk ---
+  <p>&lt;b&gt;Promo&lt;/b&gt; Kopi</p>
+  <p><b>Promo</b> Kopi</p>
+  <li>1. Gayo</li>
+  <li>2. Toraja</li>
+
+--- dirender dengan daftar kosong ---
+  <p>Toko</p>
+  <p>Toko</p>
+  <li>Belum ada produk.</li>`,
+
+  kompleksitas: {
+    tabel: [
+      { operasi: 'Mencocokkan rute', waktu: 'O(r) untuk r rute dengan method yang sama', memori: 'O(r) daftar rute' },
+      { operasi: 'Route model binding', waktu: 'satu kueri per parameter model', memori: 'O(1) per model' },
+      { operasi: 'Kompilasi Blade', waktu: 'sekali per perubahan templat', memori: 'satu berkas PHP per templat' },
+      { operasi: 'Merender view', waktu: 'O(panjang keluaran)', memori: 'O(panjang keluaran)' }
+    ],
+    intuisi: `Router Laravel mengelompokkan rute menurut method HTTP, lalu memeriksa rute dalam kelompok itu satu per satu sampai ada yang cocok. Untuk aplikasi mahasiswa dengan puluhan rute, itu tidak terasa. Untuk aplikasi besar, \`php artisan route:cache\` menyimpan daftar rute dalam bentuk yang sudah dikompilasi sehingga tidak perlu disusun ulang di setiap permintaan.
+
+Biaya yang lebih nyata ada di binding: setiap parameter model berarti satu kueri basis data sebelum controller mulai bekerja. Blade hampir gratis setelah kompilasi pertama, karena yang dijalankan di setiap permintaan adalah PHP biasa yang sudah jadi.`
+  },
+
+  kesalahanUmum: [
+    {
+      salah: 'Menulis resource dengan nama berbahasa Indonesia, misalnya produk, tetapi controller meminta Product $product.',
+      kenapa: 'Parameter rutenya menjadi {produk}, tidak cocok dengan variabel $product, sehingga binding dilewati dan controller menerima objek Product kosong tanpa galat apa pun.',
+      benar: 'Samakan nama resource dan variabel, atau tambahkan ->parameters([\'produk\' => \'product\']) pada rute resource.'
+    },
+    {
+      salah: 'Memakai route(\'products.index\') padahal resource didaftarkan dengan nama produk.',
+      kenapa: 'Nama rute dibuat dari nama resource, jadi yang ada adalah produk.index. Laravel melempar galat Route [products.index] not defined.',
+      benar: 'Periksa nama sebenarnya dengan php artisan route:list, lalu pakai nama itu di controller dan Blade.'
+    },
+    {
+      salah: 'Lupa @method(\'PUT\') atau @method(\'DELETE\') di form ubah dan hapus.',
+      kenapa: 'Peramban mengirim POST, dan tidak ada rute POST untuk URI satu produk, sehingga jawabannya 405 Method Not Allowed.',
+      benar: 'Selalu pasangkan method="POST" dengan @method sesuai rute tujuannya.'
+    },
+    {
+      salah: 'Lupa @csrf di form POST, PUT, atau DELETE.',
+      kenapa: 'Middleware CSRF menolak permintaan yang tidak membawa token sesi dengan 419 Page Expired, yang sering dikira masalah sesi atau cache.',
+      benar: 'Tulis @csrf di setiap form yang tidak memakai GET.'
+    },
+    {
+      salah: 'Menampilkan data dari pengguna dengan {!! !!} supaya format HTML-nya ikut tampil.',
+      kenapa: '{!! !!} tidak meng-escape apa pun, sehingga HTML atau skrip yang dimasukkan pengguna dijalankan oleh peramban setiap orang yang membuka halaman itu.',
+      benar: 'Pakai {{ }} untuk semua data. Kalau memang butuh format, simpan teks biasa lalu format di templat, atau bersihkan HTML-nya dengan penyaring daftar-putih sebelum disimpan.'
+    },
+    {
+      salah: 'Menulis kueri Eloquent langsung di file Blade, misalnya memanggil relasi di dalam @foreach.',
+      kenapa: 'View jadi ikut mengatur data, dan relasi yang dipanggil di dalam perulangan menjalankan satu kueri per baris — masalah N+1 dari topik kueri.',
+      benar: 'Siapkan semua data di controller, muat relasi di awal dengan with(), lalu kirim ke view lewat compact().'
+    }
+  ],
+
+  analogi: `Bayangkan **resepsionis hotel** yang menerima tamu.
+
+**Router** adalah resepsionisnya. Tamu datang dengan tujuan tertulis — "GET /products/1/edit" — dan resepsionis mencocokkannya dengan daftar layanan di mejanya. Kalau tidak ada layanan yang cocok untuk tujuan itu, tamu ditolak di depan: 404 atau 405.
+
+**Route::resource** seperti paket layanan standar untuk satu jenis kamar: lihat daftar, pesan, lihat detail, ubah pesanan, batalkan. Sekali daftar, tujuh layanan langsung ada di buku resepsionis, masing-masing dengan nama.
+
+**Route model binding** seperti tamu yang menyebut nomor kamar. Resepsionis mencari kunci dengan nomor itu dan menyerahkannya ke petugas. Tetapi resepsionis hanya mencari kalau label di formulir tamu, "product", sama dengan label di rak kunci. Kalau rak kuncinya berlabel "produk", resepsionis tidak mencari apa-apa — ia memberi petugas kunci kosong baru. Petugas membuka "kamar" yang tidak ada, dan tidak ada yang berteriak.
+
+**@csrf** adalah gelang tamu yang dipasang saat check-in. Orang dari luar yang mencoba memesan layanan atas nama tamu tidak punya gelangnya, jadi ditolak.
+
+**Blade \`{{ }}\`** seperti papan pengumuman yang ditulis ulang oleh petugas dengan huruf biasa: apa pun yang dititipkan tamu, tampil sebagai tulisan. **\`{!! !!}\`** menempelkan titipan tamu apa adanya — termasuk kalau titipannya berisi perintah untuk tamu lain.`,
+
+  latihan: [
+    'Jalankan php artisan route:list di proyek Laravel-mu, lalu cocokkan ketujuh rute resource dengan tabel di atas.',
+    'Buat resource bernama produk dengan controller yang meminta Product $product, buka halaman edit, lalu perbaiki dengan ->parameters().',
+    'Buka URL edit dengan id yang tidak ada dan pastikan hasilnya 404. Jelaskan tahap mana yang menghasilkan 404 itu.',
+    'Hapus @method(\'PUT\') dari form edit, kirim form, lalu catat kode status dan pesan galatnya.',
+    'Hapus @csrf dari form tambah, kirim form, lalu jelaskan kenapa kode statusnya 419.',
+    'Buka folder storage/framework/views setelah membuka satu halaman, lalu cari hasil kompilasi dari satu templat Blade-mu.',
+    'Tampilkan nama produk yang mengandung tanda kutip ganda di dalam atribut value dengan {{ }}, lalu periksa kode sumber halaman.',
+    'Pindahkan satu kueri yang ada di file Blade ke controller, dan hitung jumlah kueri sebelum dan sesudahnya.',
+    'Buat layout dengan @yield(\'content\') dan dua halaman yang memakai @extends, lalu jelaskan apa yang terjadi kalau @section tidak ditulis.',
+    'Tambahkan satu rute bernama biasa dengan ->name(), lalu pakai route() dengan nama itu di sebuah tautan.'
+  ]
+});
+
+
+TOPICS.push({
+  id: 'pemweb2-laravel-data',
+  judul: 'Laravel: Migration, Eloquent & Validasi',
+  kategori: 'pemweb2',
+  tag: ['Laravel', 'migration', 'Eloquent', 'ORM', 'mass assignment', '$fillable', 'validasi', 'soft delete', 'paginate'],
+  ringkas: 'Struktur tabel yang dicatat seperti riwayat commit, model yang diam-diam membuang kolom titipan, dan aturan max:100 yang meloloskan angka 500.',
+
+  fungsi: `**Memahami tiga lapisan yang menjaga data di aplikasi Laravel — migration untuk struktur tabel, Eloquent untuk isi tabel, dan validasi untuk data yang masuk — beserta aturan-aturan diam yang sering tidak disadari.**
+
+Topik PHP Berorientasi Objek & PDO membangun kelas model sendiri di atas PDO. Laravel sudah menyediakan semuanya: migration menggantikan skrip SQL yang dikirim lewat grup, Eloquent menggantikan kelas model buatan sendiri, dan validasi menggantikan deretan \`if\` di awal setiap controller.
+
+Terpakai di:
+
+- **Kerja kelompok** — setiap anggota menjalankan \`php artisan migrate\` dan mendapat struktur tabel yang sama persis
+- **Form tambah dan ubah** — validasi, pesan galat per kolom, dan pengisian ulang dengan \`old()\`
+- **Keamanan data** — menolak kolom yang tidak boleh diisi dari form
+- **Hapus yang bisa dibatalkan** — soft delete untuk data yang tidak boleh hilang begitu saja
+
+Yang paling sering tidak disadari: **banyak aturan Laravel bekerja tanpa suara.** Kolom di luar \`$fillable\` dibuang tanpa peringatan. Aturan \`max:100\` pada teks mengukur panjang, bukan nilai. Mengubah berkas migration yang sudah dijalankan tidak berpengaruh apa pun di komputer temanmu.`,
+
+  praktik: {
+    tujuan: 'Kamu bisa menjalankan dan membatalkan migration dengan memahami batch-nya, menulis model yang aman dari mass assignment, menulis aturan validasi yang benar untuk angka dari form, dan memakai soft delete serta paginasi.',
+    alat: ['Laragon dengan PHP 8.2 ke atas dan Composer', 'Proyek Laravel 13', 'DB Browser for SQLite atau phpMyAdmin untuk melihat tabel migrations'],
+    langkah: [
+      { judul: 'Jalankan migration dan lihat catatannya',
+        isi: `Jalankan \`php artisan migrate\`, lalu buka tabel \`migrations\` di basis data. Setiap berkas yang sudah dijalankan tercatat di sana beserta nomor batch-nya.` },
+      { judul: 'Tambah kolom lewat migration baru',
+        isi: `Jangan mengubah berkas migration yang sudah dijalankan. Buat berkas baru dengan \`php artisan make:migration add_soft_deletes_to_products\`, isi dengan \`Schema::table\`, lalu jalankan migrate lagi.` },
+      { judul: 'Coba rollback',
+        isi: `Jalankan \`php artisan migrate:rollback\`. Hanya batch terakhir yang dibatalkan, dengan menjalankan method \`down()\` setiap berkas di batch itu.` },
+      { judul: 'Isi $fillable dan uji kolom titipan',
+        isi: `Kirim form tambah produk dengan kolom tambahan lewat DevTools, misalnya \`id\`. Periksa baris yang tersimpan: kolom di luar \`$fillable\` tidak ikut.` },
+      { judul: 'Tulis aturan validasi untuk angka',
+        isi: `Pasangkan \`integer\` atau \`numeric\` dengan setiap \`min\` dan \`max\` untuk kolom angka. Uji dengan stok 500 dan batas 100, dengan dan tanpa \`integer\`.` },
+      { judul: 'Aktifkan soft delete',
+        isi: `Tambahkan trait \`SoftDeletes\` di model, hapus satu produk, lalu bandingkan \`Product::count()\` dengan jumlah baris di tabel.` }
+    ],
+    cek: [
+      'Kamu bisa menjelaskan isi tabel migrations dan apa yang dibatalkan oleh satu kali rollback',
+      'Tidak ada berkas migration yang sudah pernah dijalankan yang kamu ubah isinya',
+      'Setiap aturan min, max, dan between untuk kolom angka didampingi integer atau numeric',
+      'Controllermu memakai $request->validate() atau FormRequest, bukan $request->validated() pada Request biasa'
+    ]
+  },
+
+  judulLogicSyntax: 'Bedah Kode — aturan-aturan yang bekerja tanpa suara',
+
+  konsep: `**Migration: riwayat struktur tabel**
+
+Berkas migration adalah perubahan struktur tabel yang ditulis sebagai kode. Setiap berkas punya dua method: \`up()\` untuk menerapkan perubahan dan \`down()\` untuk membatalkannya. Laravel mencatat berkas yang sudah dijalankan di tabel \`migrations\`, beserta **nomor batch** — satu nomor untuk setiap kali \`migrate\` dijalankan.
+
+Semua keluaran di topik ini berasal dari program di bawah, yang dijalankan dengan pustaka Laravel 13.14 sungguhan:
+
+| Langkah | Isi tabel migrations | Kolom tabel products |
+|---|---|---|
+| migrate pertama | batch 1: create_products_table | id sampai updated_at |
+| migration baru, migrate lagi | batch 1, batch 2: add_soft_deletes | tambah deleted_at |
+| migrate:rollback | batch 1 saja | deleted_at hilang lagi |
+
+Dari catatan itulah Laravel tahu berkas mana yang belum dijalankan. Akibatnya penting untuk kerja kelompok: kalau kamu **mengubah isi** berkas migration yang sudah tercatat, \`migrate\` di komputer temanmu menganggapnya sudah dijalankan dan tidak melakukan apa-apa. Perubahan struktur selalu ditulis sebagai berkas migration **baru**.
+
+Tiga perintah yang sering tertukar:
+
+- \`migrate:rollback\` — membatalkan batch terakhir lewat \`down()\`
+- \`migrate:refresh\` — membatalkan semua batch lewat \`down()\`, lalu menjalankan semuanya lagi
+- \`migrate:fresh\` — menghapus **semua tabel** tanpa memanggil \`down()\`, lalu menjalankan semuanya lagi. Seluruh isi tabel hilang
+
+**Eloquent dan mass assignment**
+
+\`Product::create($data)\` mengisi banyak kolom sekaligus dari satu array — biasanya array dari form. Bahayanya: pengguna bisa menambahkan kolom sendiri ke form lewat DevTools. Karena itu Eloquent hanya mengisi kolom yang terdaftar di \`$fillable\`:
+
+| | id | created_at |
+|---|---|---|
+| dikirim dari form | 500 | 2000-01-01 |
+| tersimpan | 1 | diisi otomatis saat disimpan |
+
+Kedua kolom titipan **dibuang tanpa peringatan**. Untuk produk, akibatnya cuma id yang tidak bisa dipilih sendiri. Untuk tabel pengguna dengan kolom \`role\` atau \`is_admin\`, \`$fillable\` adalah satu-satunya penghalang antara form pendaftaran dan hak admin.
+
+\`$casts\` mengubah tipe saat nilai dibaca: \`price\` dengan \`decimal:2\` menjadi teks \`'85000.00'\`, dan \`stock\` dengan \`integer\` menjadi angka \`12\` walaupun dikirim sebagai teks \`'12'\`.
+
+**Validasi: pesan asli Laravel**
+
+Aturan dari form produk di modul, dengan masukan yang salah:
+
+- nama \`'Ko'\` — The name field must be at least 3 characters.
+- harga \`'-5'\` — The price field must be at least 0.
+- stok \`'2.5'\` — The stock field must be an integer.
+
+Perhatikan: arti \`min\` berbeda di tiap baris. Untuk nama, \`min:3\` berarti **panjang** minimal 3 huruf. Untuk harga, \`min:0\` berarti **nilai** minimal 0. Yang membedakan adalah aturan lain di kolom yang sama.
+
+**Aturan max:100 yang meloloskan 500**
+
+Semua isian form sampai ke peladen sebagai **teks**. Aturan ukuran — \`min\`, \`max\`, \`between\`, \`size\` — memperlakukan nilai sebagai angka **hanya** kalau kolom itu juga punya aturan \`numeric\`, \`integer\`, atau \`decimal\`. Kalau tidak, yang diukur adalah panjang teksnya:
+
+| Aturan untuk stok '500' | Hasil |
+|---|---|
+| required, max:100 | LOLOS — panjang '500' cuma 3 |
+| required, integer, max:100 | DITOLAK — nilai 500 lebih dari 100 |
+
+Tidak ada galat, tidak ada peringatan. Aturannya kelihatan benar dan lolos uji dengan angka kecil.
+
+**validate() dan validated()**
+
+Dua nama yang mirip, dua tempat yang berbeda:
+
+- \`$request->validate([...])\` — ada di setiap Request. Menjalankan aturan dan mengembalikan data yang lolos.
+- \`$request->validated()\` — hanya ada di **FormRequest**, kelas validasi terpisah buatan \`php artisan make:request\`.
+
+Memanggil \`validated()\` pada Request biasa menghasilkan: Method Illuminate\\Http\\Request::validated does not exist. Kerangka controller di bab Controller modul memakai bentuk ini dengan \`Request $request\`; bab CRUD sesudahnya memakai \`validate()\` — bentuk yang benar untuk Request biasa.
+
+Kalau validasi gagal di aplikasi penuh, Laravel melempar ValidationException. Untuk form biasa, pengguna dialihkan kembali ke form beserta pesan galat dan masukannya — itulah sumber \`$errors\` dan \`old()\` di Blade. Untuk permintaan yang meminta JSON, jawabannya 422 beserta daftar galat. Ini pola PRG dari topik Form di Pemrograman Web I, dikerjakan otomatis.
+
+**Soft delete dan paginasi**
+
+Dengan trait \`SoftDeletes\`, \`delete()\` tidak menghapus baris; ia mengisi \`deleted_at\`. Setelah satu produk dihapus dari 23:
+
+- \`Product::count()\` — 22
+- \`Product::withTrashed()->count()\` — 23
+- baris sebenarnya di tabel — 23
+- setelah \`restore()\` — 22 kembali menjadi 23
+
+Setiap kueri Eloquent pada model itu otomatis ditambahi syarat \`deleted_at is null\`. Kueri SQL mentah dan \`DB::table()\` tidak — mereka tetap melihat baris yang "terhapus".
+
+\`paginate(10)\` pada halaman 3 dari 23 produk memberi \`firstItem()\` 21 dan \`lastItem()\` 23, dan penomoran \`firstItem() + $i\` dari modul menghasilkan 21, 22, 23. Biaya paginasi offset di halaman yang jauh dibahas di topik Kueri di Aplikasi Web.`,
+
+  logicSyntax: [
+    {
+      bahasa: 'php',
+      kode: String.raw`// app/Models/Product.php
+class Product extends Model
+{
+    use SoftDeletes;
+
+    protected $fillable = ['name', 'description', 'price', 'stock'];
+
+    protected $casts = [
+        'price' => 'decimal:2',
+        'stock' => 'integer',
+    ];
+}
+
+// database/migrations/..._add_soft_deletes_to_products.php
+public function up(): void
+{
+    Schema::table('products', function (Blueprint $table) {
+        $table->softDeletes();
+    });
+}
+
+public function down(): void
+{
+    Schema::table('products', function (Blueprint $table) {
+        $table->dropSoftDeletes();
+    });
+}`,
+      penjelasan: `Model dan migration untuk tabel yang sama — dan kenapa keduanya harus berubah bersamaan.
+
+**\`$fillable\` adalah daftar izin, bukan daftar kolom.**
+
+Daftar itu tidak harus memuat semua kolom tabel; justru sebaiknya tidak. \`id\`, \`created_at\`, \`updated_at\`, dan \`deleted_at\` diurus Laravel sendiri dan tidak pernah boleh datang dari form. Kolom yang menentukan hak — peran pengguna, status pembayaran, pemilik data — juga tidak masuk daftar; kolom itu diisi di controller dengan nilai yang ditentukan peladen.
+
+Kebalikannya adalah \`$guarded\`: daftar kolom yang **dilarang**. \`$guarded = []\` berarti tidak ada yang dilarang, dan setiap kolom tabel bisa diisi dari form. Kelihatannya praktis, tetapi setiap kolom baru yang ditambahkan ke tabel kelak otomatis ikut terbuka.
+
+**Kenapa pembuangan kolom tidak bersuara.**
+
+Secara bawaan Eloquent membuang kolom yang tidak diizinkan tanpa pesan. Akibat baiknya, array dari form yang juga berisi kolom lain seperti \`_token\` tetap bisa dipakai langsung; akibat buruknya, kolom yang lupa didaftarkan hilang tanpa jejak. Selama pengembangan, \`Model::preventSilentlyDiscardingAttributes()\` di AppServiceProvider membuatnya melempar galat — cara cepat menemukan kolom yang lupa didaftarkan.
+
+**\`down()\` harus membatalkan \`up()\` dengan tepat.**
+
+\`softDeletes()\` menambahkan satu kolom, \`deleted_at\`. \`dropSoftDeletes()\` menghapus kolom yang sama. Kalau \`down()\` dibiarkan kosong, \`migrate:rollback\` mencatat batch itu sebagai dibatalkan padahal kolomnya masih ada — dan \`migrate\` berikutnya gagal karena mencoba menambahkan kolom yang sudah ada.
+
+**Trait dan kolom harus datang bersama.**
+
+\`use SoftDeletes\` membuat setiap kueri model menambahkan syarat \`deleted_at is null\`. Kalau trait dipasang sebelum migration yang menambahkan kolomnya dijalankan, kueri pertama langsung gagal karena kolom \`deleted_at\` tidak ada.`
+    },
+    {
+      bahasa: 'php',
+      kode: String.raw`// Cara 1: validate() di controller
+public function store(Request $request)
+{
+    $data = $request->validate([
+        'name'  => 'required|min:3|max:255',
+        'price' => 'required|numeric|min:0',
+        'stock' => 'required|integer|min:0|max:100000',
+    ]);
+    Product::create($data);
+    return redirect()->route('products.index')->with('success', 'Tersimpan');
+}
+
+// Cara 2: FormRequest (php artisan make:request StoreProductRequest)
+class StoreProductRequest extends FormRequest
+{
+    public function authorize(): bool { return true; }
+    public function rules(): array
+    {
+        return ['name' => 'required|min:3|max:255' /* ... */];
+    }
+}
+
+public function store(StoreProductRequest $request)
+{
+    Product::create($request->validated());   // di sini validated() ada
+    return redirect()->route('products.index');
+}`,
+      penjelasan: `Dua cara memvalidasi yang sama-sama benar — dan kenapa bentuk campurannya gagal.
+
+**Cara 1: \`validate()\`.**
+
+Method ini ada di setiap Request karena didaftarkan Laravel saat aplikasi dimulai. Ia menjalankan aturan; kalau gagal, ia melempar ValidationException dan baris-baris sesudahnya **tidak pernah dijalankan**. Kalau berhasil, ia mengembalikan array yang **hanya berisi kolom yang punya aturan**. Kolom titipan dari form tidak ikut, bahkan sebelum \`$fillable\` menyaringnya.
+
+**Cara 2: FormRequest.**
+
+Aturan dipindah ke kelas sendiri. Laravel menjalankan validasinya **sebelum** method controller dipanggil, sehingga saat \`store\` mulai bekerja datanya pasti sudah lolos. \`validated()\` mengambil hasil validasi yang sudah terjadi itu. Cara ini rapi kalau aturan yang sama dipakai di beberapa tempat, atau kalau ada pemeriksaan hak akses di \`authorize()\`.
+
+**Bentuk campuran yang gagal.**
+
+\`store(Request $request)\` lalu \`$request->validated()\` mencampur keduanya: Request biasa tidak pernah divalidasi dan tidak punya method \`validated()\`. Hasilnya bukan data kosong, melainkan galat Method ... does not exist, persis seperti yang dicetak program di bawah.
+
+**Kenapa \`max:100000\` pada stok aman, dan \`max:100\` tanpa \`integer\` tidak.**
+
+Aturan ukuran membaca aturan lain di kolom yang sama untuk memutuskan apa yang diukur. \`integer\` membuat \`max\` membandingkan nilai. Tanpa itu, \`max:100\` membandingkan panjang teks, dan angka apa pun di bawah seratus digit lolos. Letak \`integer\` di dalam daftar aturan tidak penting; yang penting ia ada.`
+    }
+  ],
+
+  kode: { php: String.raw`<?php
+// ============================================
+// Laravel: migration, Eloquent, validasi, soft delete, paginasi
+// ============================================
+// Memakai pustaka Laravel 13 (laravel/framework) tanpa aplikasi
+// penuh. Simpan di akar proyek Laravel mana pun, lalu jalankan
+// "php nama-berkas.php". Basis datanya SQLite di memori, dan berkas
+// migration ditulis ke folder sementara.
+require __DIR__ . '/vendor/autoload.php';
+
+use Illuminate\Container\Container;
+use Illuminate\Database\Capsule\Manager as Capsule;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Migrations\DatabaseMigrationRepository;
+use Illuminate\Database\Migrations\Migrator;
+use Illuminate\Events\Dispatcher;
+use Illuminate\Filesystem\Filesystem;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Facade;
+use Illuminate\Translation\FileLoader;
+use Illuminate\Translation\Translator;
+use Illuminate\Validation\Factory as PabrikValidasi;
+
+$app = new Container;
+Container::setInstance($app);
+$db = new Capsule($app);
+$db->addConnection(['driver' => 'sqlite', 'database' => ':memory:']);
+$db->setEventDispatcher(new Dispatcher($app));
+$db->setAsGlobal();
+$db->bootEloquent();
+$app->instance('db', $db->getDatabaseManager());
+$app->bind('db.schema', fn () => $db->getConnection()->getSchemaBuilder());
+Facade::setFacadeApplication($app);                 // supaya Schema:: berfungsi
+
+// --------------------------------------------
+// 1. Migration: dua berkas, dijalankan dalam dua batch
+// --------------------------------------------
+$fs = new Filesystem;
+$dir = sys_get_temp_dir() . '/migrasi-' . getmypid();
+$fs->ensureDirectoryExists($dir);
+
+$fs->put($dir . '/2026_01_01_000000_create_products_table.php', <<<'PHP'
+<?php
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void
+    {
+        Schema::create('products', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->text('description')->nullable();
+            $table->decimal('price', 10, 2);
+            $table->integer('stock')->default(0);
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('products');
+    }
+};
+PHP);
+
+$repo = new DatabaseMigrationRepository($db->getDatabaseManager(), 'migrations');
+$repo->createRepository();
+$migrator = new Migrator($repo, $db->getDatabaseManager(), $fs);
+
+function kolom(): string
+{
+    $daftar = implode(', ', Capsule::schema()->getColumnListing('products'));
+    return wordwrap($daftar, 58, "\n         ");
+}
+function catatan(): string
+{
+    $baris = Capsule::table('migrations')->orderBy('id')->get();
+    return $baris->map(fn ($m) => '  batch ' . $m->batch . ': ' . $m->migration)->implode("\n");
+}
+
+echo "--- php artisan migrate (batch 1) ---\n";
+$migrator->run([$dir]);
+echo catatan() . "\n";
+echo "  kolom: " . kolom() . "\n";
+
+$fs->put($dir . '/2026_01_02_000000_add_soft_deletes_to_products.php', <<<'PHP'
+<?php
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void
+    {
+        Schema::table('products', function (Blueprint $table) {
+            $table->softDeletes();                 // kolom deleted_at
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('products', function (Blueprint $table) {
+            $table->dropSoftDeletes();
+        });
+    }
+};
+PHP);
+
+echo "\n--- migration baru, php artisan migrate lagi (batch 2) ---\n";
+$migrator->run([$dir]);
+echo catatan() . "\n";
+echo "  kolom: " . kolom() . "\n";
+
+echo "\n--- php artisan migrate:rollback ---\n";
+$migrator->rollback([$dir]);
+echo catatan() . "\n";
+echo "  kolom: " . kolom() . "\n";
+$migrator->run([$dir]);                              // naikkan lagi untuk bagian berikut
+$fs->deleteDirectory($dir);
+
+// --------------------------------------------
+// 2. Eloquent: $fillable menyaring mass assignment
+// --------------------------------------------
+class Product extends Model
+{
+    use SoftDeletes;
+
+    protected $fillable = ['name', 'description', 'price', 'stock'];
+    protected $casts = ['price' => 'decimal:2', 'stock' => 'integer'];
+}
+
+echo "\n--- Product::create() dengan kolom titipan ---\n";
+$masukan = ['name' => 'Kopi Gayo', 'price' => '85000', 'stock' => '12',
+            'id' => 500, 'created_at' => '2000-01-01'];
+$p = Product::create($masukan);
+echo '  dikirim : id=500, created_at=2000-01-01' . "\n";
+echo '  tersimpan: id=' . $p->id . ', created_at ' . ($p->created_at->year === 2000
+    ? 'tertimpa!' : 'diisi otomatis saat disimpan') . "\n";
+echo '  price = ' . var_export($p->price, true) . ', stock = '
+    . var_export($p->stock, true) . "\n";
+
+// --------------------------------------------
+// 3. Validasi: aturan dan pesan asli Laravel
+// --------------------------------------------
+$bahasa = new Translator(
+    new FileLoader($fs, __DIR__ . '/vendor/laravel/framework/src/Illuminate/Translation/lang'),
+    'en'
+);
+$validasi = new PabrikValidasi($bahasa, $app);
+
+$aturan = [
+    'name'  => 'required|min:3|max:255',
+    'price' => 'required|numeric|min:0',
+    'stock' => 'required|integer|min:0',
+];
+echo "\n--- aturan dari form produk, masukan salah ---\n";
+$v = $validasi->make(['name' => 'Ko', 'price' => '-5', 'stock' => '2.5'], $aturan);
+foreach ($v->errors()->all() as $pesan) {
+    echo '  ' . $pesan . "\n";
+}
+
+echo "\n--- stok '500' dengan max:100 ---\n";
+foreach (['required|max:100', 'required|integer|max:100'] as $a) {
+    $v = $validasi->make(['stock' => '500'], ['stock' => $a]);
+    echo '  ' . str_pad($a, 26) . ($v->fails() ? 'DITOLAK' : 'LOLOS') . "\n";
+}
+
+echo "\n--- \$request->validated() pada Request biasa ---\n";
+try {
+    Request::create('/products', 'POST', ['name' => 'Kopi'])->validated();
+} catch (BadMethodCallException $e) {
+    echo '  ' . $e->getMessage() . "\n";
+}
+
+// --------------------------------------------
+// 4. Paginasi dan soft delete
+// --------------------------------------------
+for ($i = 2; $i <= 23; $i++) {
+    Product::create(['name' => 'Produk ' . $i, 'price' => 1000 * $i]);
+}
+$hal = Product::orderBy('id')->paginate(10, ['*'], 'page', 3);
+echo "\n--- paginate(10), halaman 3 ---\n";
+echo '  total ' . $hal->total() . ', halaman terakhir ' . $hal->lastPage()
+    . ', firstItem ' . $hal->firstItem() . ', lastItem ' . $hal->lastItem() . "\n";
+foreach ($hal as $i => $produk) {
+    echo '  ' . ($hal->firstItem() + $i) . '. ' . $produk->name . "\n";
+}
+
+echo "\n--- soft delete ---\n";
+Product::find(2)->delete();
+echo '  Product::count()               : ' . Product::count() . "\n";
+echo '  Product::withTrashed()->count(): ' . Product::withTrashed()->count() . "\n";
+echo '  baris di tabel                 : ' . Capsule::table('products')->count() . "\n";
+$terhapus = Product::onlyTrashed()->first();
+echo '  onlyTrashed: ' . $terhapus->name . ', deleted_at terisi: '
+    . ($terhapus->deleted_at ? 'ya' : 'tidak') . "\n";
+$terhapus->restore();
+echo '  setelah restore(), count()     : ' . Product::count() . "\n";` },
+  output: `--- php artisan migrate (batch 1) ---
+  batch 1: 2026_01_01_000000_create_products_table
+  kolom: id, name, description, price, stock, created_at,
+         updated_at
+
+--- migration baru, php artisan migrate lagi (batch 2) ---
+  batch 1: 2026_01_01_000000_create_products_table
+  batch 2: 2026_01_02_000000_add_soft_deletes_to_products
+  kolom: id, name, description, price, stock, created_at,
+         updated_at, deleted_at
+
+--- php artisan migrate:rollback ---
+  batch 1: 2026_01_01_000000_create_products_table
+  kolom: id, name, description, price, stock, created_at,
+         updated_at
+
+--- Product::create() dengan kolom titipan ---
+  dikirim : id=500, created_at=2000-01-01
+  tersimpan: id=1, created_at diisi otomatis saat disimpan
+  price = '85000.00', stock = 12
+
+--- aturan dari form produk, masukan salah ---
+  The name field must be at least 3 characters.
+  The price field must be at least 0.
+  The stock field must be an integer.
+
+--- stok '500' dengan max:100 ---
+  required|max:100          LOLOS
+  required|integer|max:100  DITOLAK
+
+--- $request->validated() pada Request biasa ---
+  Method Illuminate\\Http\\Request::validated does not exist.
+
+--- paginate(10), halaman 3 ---
+  total 23, halaman terakhir 3, firstItem 21, lastItem 23
+  21. Produk 21
+  22. Produk 22
+  23. Produk 23
+
+--- soft delete ---
+  Product::count()               : 22
+  Product::withTrashed()->count(): 23
+  baris di tabel                 : 23
+  onlyTrashed: Produk 2, deleted_at terisi: ya
+  setelah restore(), count()     : 23`,
+
+  kompleksitas: {
+    tabel: [
+      { operasi: 'migrate', waktu: 'O(b) untuk b berkas yang belum dijalankan', memori: 'satu baris per berkas di tabel migrations' },
+      { operasi: 'migrate:rollback', waktu: 'O(k) untuk k berkas di batch terakhir', memori: 'O(1)' },
+      { operasi: 'Product::create()', waktu: 'satu INSERT', memori: 'O(jumlah kolom)' },
+      { operasi: 'Validasi', waktu: 'O(jumlah aturan)', memori: 'O(jumlah kolom)' },
+      { operasi: 'paginate()', waktu: 'dua kueri: COUNT dan SELECT dengan LIMIT/OFFSET', memori: 'O(ukuran halaman)' }
+    ],
+    intuisi: `Migration dan validasi murah dan sebanding dengan jumlah berkas atau aturan. Yang perlu diwaspadai adalah hal-hal yang terjadi diam-diam di setiap kueri.
+
+\`paginate()\` selalu menjalankan dua kueri: satu untuk menghitung total baris supaya bisa menampilkan jumlah halaman, satu untuk mengambil isi halaman. Pada tabel besar, kueri COUNT itu sendiri bisa lambat. \`simplePaginate()\` melewati kueri COUNT dan hanya menampilkan tombol sebelumnya dan berikutnya.
+
+Soft delete menambahkan syarat \`deleted_at is null\` ke setiap kueri model. Pada tabel besar yang sering dicari, kolom itu biasanya perlu ikut dalam indeks.`
+  },
+
+  kesalahanUmum: [
+    {
+      salah: 'Menulis aturan max:100 atau min:1 untuk kolom angka tanpa integer atau numeric.',
+      kenapa: 'Isian form selalu berupa teks. Tanpa aturan tipe angka, min dan max mengukur panjang teks, sehingga stok 500 lolos dari max:100.',
+      benar: 'Selalu pasangkan integer, numeric, atau decimal dengan aturan ukuran pada kolom angka.'
+    },
+    {
+      salah: 'Memanggil $request->validated() di method yang menerima Request biasa.',
+      kenapa: 'validated() hanya ada di FormRequest. Pada Request biasa, Laravel melempar galat Method Illuminate\\Http\\Request::validated does not exist.',
+      benar: 'Pakai $data = $request->validate([...]) untuk Request biasa, atau buat FormRequest lalu pakai $request->validated().'
+    },
+    {
+      salah: 'Mengubah isi berkas migration yang sudah dijalankan, lalu meminta teman menjalankan migrate.',
+      kenapa: 'Berkas itu sudah tercatat di tabel migrations, jadi migrate menganggapnya selesai dan tidak menjalankannya lagi. Struktur tabel antaranggota kelompok jadi berbeda.',
+      benar: 'Buat berkas migration baru untuk setiap perubahan struktur. Ubah berkas lama hanya kalau belum pernah dijalankan siapa pun.'
+    },
+    {
+      salah: 'Menjalankan migrate:fresh untuk memperbaiki masalah migration di basis data yang berisi data penting.',
+      kenapa: 'migrate:fresh menghapus semua tabel tanpa memanggil down(), sehingga seluruh isinya hilang.',
+      benar: 'Pakai migrate:rollback atau migration baru. Simpan migrate:fresh untuk basis data pengembangan yang isinya bisa dibuat ulang dengan seeder.'
+    },
+    {
+      salah: 'Menulis $guarded = [] supaya tidak perlu mendaftar kolom satu per satu.',
+      kenapa: 'Semua kolom jadi bisa diisi dari form, termasuk kolom yang menentukan hak akses, dan setiap kolom yang ditambahkan kelak ikut terbuka.',
+      benar: 'Daftarkan kolom yang boleh diisi di $fillable, dan isi kolom sensitif di controller dengan nilai dari peladen.'
+    },
+    {
+      salah: 'Memakai soft delete pada tabel yang punya kolom unik, seperti email, tanpa memikirkan baris yang terhapus.',
+      kenapa: 'Baris yang di-soft delete masih ada di tabel. Indeks unik dan aturan validasi unique tetap menghitungnya, sehingga email yang sama tidak bisa didaftarkan lagi.',
+      benar: 'Tentukan dulu apakah data terhapus boleh dipakai ulang. Kalau boleh, pakai Rule::unique(...)->withoutTrashed() dan sesuaikan indeks uniknya.'
+    }
+  ],
+
+  analogi: `Bayangkan **gudang toko** dengan tiga petugas.
+
+**Migration** adalah buku catatan renovasi gudang. Setiap halaman berisi satu perubahan — "tambah rak baru", "pasang kolom label tanggal hapus" — dan cara membongkarnya kembali. Petugas mencentang halaman yang sudah dikerjakan beserta nomor rombongan kerjanya. Kalau kamu menulis ulang halaman yang sudah dicentang, petugas di gudang cabang tidak akan mengerjakannya lagi: baginya halaman itu sudah selesai. Perubahan baru selalu ditulis di halaman baru.
+
+**$fillable** adalah daftar barang yang boleh diterima di pintu masuk. Kurir yang menyelipkan barang di luar daftar tidak dimarahi; barangnya cukup ditinggal di luar. Karena tidak ada keributan, kamu baru sadar ada barang yang ditolak kalau memeriksanya sendiri.
+
+**Validasi** adalah petugas penimbang. Aturan \`max:100\` tanpa \`integer\` seperti menyuruh petugas "pastikan tidak lebih dari 100" tanpa bilang 100 apa. Ia mengukur panjang label, bukan berat barang. Label "500" cuma tiga huruf, jadi lolos.
+
+**Soft delete** adalah rak barang retur. Barang yang "dihapus" dipindah ke rak belakang dengan label tanggal. Daftar stok di depan tidak menampilkannya, tetapi barangnya masih ada — dan masih memakai nomor seri yang sama.`,
+
+  latihan: [
+    'Jalankan migrate, buat migration baru, jalankan lagi, lalu tuliskan isi tabel migrations setelah setiap langkah.',
+    'Kosongkan method down() di migration soft delete, jalankan rollback lalu migrate, dan jelaskan galat yang muncul.',
+    'Tambahkan kolom is_featured ke tabel produk tanpa memasukkannya ke $fillable, lalu buktikan kolom itu tidak bisa diisi dari form.',
+    'Aktifkan Model::preventSilentlyDiscardingAttributes() dan kirim form dengan kolom titipan. Catat galatnya.',
+    'Uji aturan between:1,10 untuk stok dengan masukan 50, dengan dan tanpa integer.',
+    'Pindahkan aturan validasi form tambah produk ke FormRequest, lalu ganti controller supaya memakai validated().',
+    'Kirim form tambah produk dengan fetch yang meminta JSON dan masukan yang salah, lalu bandingkan jawabannya dengan pengiriman form biasa.',
+    'Hapus satu produk dengan soft delete, lalu bandingkan hasil Product::count() dengan DB::table(\'products\')->count().',
+    'Buat tabel pengguna dengan email unik dan soft delete, hapus satu pengguna, lalu coba daftarkan email yang sama.',
+    'Tampilkan penomoran baris di halaman 2 paginasi dengan firstItem(), lalu jelaskan kenapa $loop->iteration saja tidak cukup.'
   ]
 });
